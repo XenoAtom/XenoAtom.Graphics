@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  push:
+    paths-ignore:
+    - 'doc/**'
+    - 'img/**'
+    - 'readme.md'
+  pull_request:
+
+jobs:
+  build:
+    runs-on: 'ubuntu-latest'
+    steps:
+    - name: Set up vulkan dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+            mesa-vulkan-drivers \
+            libvulkan1 \
+            vulkan-tools
+    - name: "Build, Test and Pack"
+      uses: xoofx/.github/.github/actions/dotnet-releaser-action@main   
+      with:
+        NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}

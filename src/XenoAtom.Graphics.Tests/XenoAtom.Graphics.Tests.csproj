@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+    <DefineConstants Condition="'$(IsWindows)' == 'true'">$(DefineConstants);TEST_VULKAN;TEST_OPENGL;TEST_OPENGLES</DefineConstants>
+    <DefineConstants Condition="'$(IsLinux)' == 'true'">$(DefineConstants);TEST_VULKAN;TEST_OPENGL;TEST_OPENGLES</DefineConstants>
+    <DefineConstants Condition="'$(IsMacOS)' == 'true'">$(DefineConstants);TEST_METAL;TEST_OPENGL</DefineConstants>
+    <StartupObject>Program</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--<PackageReference Include="Veldrid.SPIRV" Version="$(VeldridSpirvVersion)" />-->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageReference Include="xunit" Version="2.8.1" />
+    <PackageReference Include="xunit.console" Version="2.8.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Xunit.SkippableFact" Version="1.4.13" />
+    <ProjectReference Include="..\XenoAtom.Graphics.Utilities\XenoAtom.Graphics.Utilities.csproj" />
+    <ProjectReference Include="..\XenoAtom.Graphics\XenoAtom.Graphics.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Shaders/*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Shaders\ComputeCubemapGenerator.comp" />
+    <None Remove="Shaders\ComputeImage2DArrayGenerator.comp" />
+    <None Remove="Shaders\ComputeTextureGenerator.comp" />
+    <None Remove="Shaders\F16VertexAttribs.frag" />
+    <None Remove="Shaders\F16VertexAttribs.vert" />
+    <None Remove="Shaders\FullScreenBlit.frag" />
+    <None Remove="Shaders\FullScreenBlit.vert" />
+    <None Remove="Shaders\FullScreenTriSampleTexture2D.frag" />
+    <None Remove="Shaders\FullScreenTriSampleTexture2D.vert" />
+    <None Remove="Shaders\FullScreenTriSampleTextureArray.vert" />
+    <None Remove="Shaders\FullScreenWriteDepth.frag" />
+    <None Remove="Shaders\FullScreenWriteDepth.vert" />
+    <None Remove="Shaders\VertexLayoutTestShader.frag" />
+    <None Remove="Shaders\VertexLayoutTestShader.vert" />
+  </ItemGroup>
+
+</Project>

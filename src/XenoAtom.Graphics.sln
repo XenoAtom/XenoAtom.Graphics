@@ -1,0 +1,118 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35004.147
+MinimumVisualStudioVersion = 15.0.26124.0
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XenoAtom.Graphics", "XenoAtom.Graphics\XenoAtom.Graphics.csproj", "{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XenoAtom.Graphics.Utilities", "XenoAtom.Graphics.Utilities\XenoAtom.Graphics.Utilities.csproj", "{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XenoAtom.Graphics.Tests", "XenoAtom.Graphics.Tests\XenoAtom.Graphics.Tests.csproj", "{63CBCF9E-E4B6-4932-90FA-4671F7351685}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "00-General", "00-General", "{D8C8CC77-4032-4D65-8214-092144D803F9}"
+	ProjectSection(SolutionItems) = preProject
+		..\.editorconfig = ..\.editorconfig
+		..\.gitattributes = ..\.gitattributes
+		..\.gitignore = ..\.gitignore
+		..\.github\workflows\ci.yml = ..\.github\workflows\ci.yml
+		Directory.Build.props = Directory.Build.props
+		dotnet-releaser.toml = dotnet-releaser.toml
+		global.json = global.json
+		..\LICENSE = ..\LICENSE
+		..\readme2.md = ..\readme2.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "10-Documentation", "10-Documentation", "{DA4D924F-A336-4881-8162-2F8620E96CDF}"
+	ProjectSection(SolutionItems) = preProject
+		..\doc\readme.md = ..\doc\readme.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|ARM = Debug|ARM
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|ARM = Release|ARM
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Debug|ARM.Build.0 = Debug|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Debug|x64.Build.0 = Debug|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Debug|x86.Build.0 = Debug|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Release|ARM.ActiveCfg = Release|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Release|ARM.Build.0 = Release|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Release|x64.ActiveCfg = Release|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Release|x64.Build.0 = Release|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Release|x86.ActiveCfg = Release|Any CPU
+		{60D56E4A-FA7A-4664-BEF0-0A29F41518BF}.Release|x86.Build.0 = Release|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Debug|ARM.Build.0 = Debug|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Debug|x64.Build.0 = Debug|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Debug|x86.Build.0 = Debug|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Release|ARM.ActiveCfg = Release|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Release|ARM.Build.0 = Release|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Release|x64.ActiveCfg = Release|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Release|x64.Build.0 = Release|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Release|x86.ActiveCfg = Release|Any CPU
+		{3C8555BB-2BD9-4973-BFD9-DCAFDCD5955D}.Release|x86.Build.0 = Release|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Debug|ARM.Build.0 = Debug|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Debug|x64.Build.0 = Debug|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Debug|x86.Build.0 = Debug|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Release|ARM.ActiveCfg = Release|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Release|ARM.Build.0 = Release|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Release|x64.ActiveCfg = Release|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Release|x64.Build.0 = Release|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Release|x86.ActiveCfg = Release|Any CPU
+		{63CBCF9E-E4B6-4932-90FA-4671F7351685}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {212564A4-FE40-45A2-8AE6-A466B277810C}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
+EndGlobal
