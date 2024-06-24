@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using static XenoAtom.Interop.vulkan;
+
 
 namespace XenoAtom.Graphics.Vk
 {
@@ -23,11 +23,12 @@ namespace XenoAtom.Graphics.Vk
             lock (_lock)
             {
                 VkDescriptorPool pool = GetPool(counts);
-                VkDescriptorSetAllocateInfo dsAI = VkDescriptorSetAllocateInfo.New();
+                VkDescriptorSetAllocateInfo dsAI = new VkDescriptorSetAllocateInfo();
                 dsAI.descriptorSetCount = 1;
                 dsAI.pSetLayouts = &setLayout;
                 dsAI.descriptorPool = pool;
-                VkResult result = vkAllocateDescriptorSets(_gd.Device, ref dsAI, out VkDescriptorSet set);
+                VkDescriptorSet set;
+                VkResult result = vkAllocateDescriptorSets(_gd.Device, dsAI, &set);
                 VulkanUtil.CheckResult(result);
 
                 return new DescriptorAllocationToken(set, pool);
@@ -74,23 +75,23 @@ namespace XenoAtom.Graphics.Vk
             uint descriptorCount = 100;
             uint poolSizeCount = 7;
             VkDescriptorPoolSize* sizes = stackalloc VkDescriptorPoolSize[(int)poolSizeCount];
-            sizes[0].type = VkDescriptorType.UniformBuffer;
+            sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             sizes[0].descriptorCount = descriptorCount;
-            sizes[1].type = VkDescriptorType.SampledImage;
+            sizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
             sizes[1].descriptorCount = descriptorCount;
-            sizes[2].type = VkDescriptorType.Sampler;
+            sizes[2].type = VK_DESCRIPTOR_TYPE_SAMPLER;
             sizes[2].descriptorCount = descriptorCount;
-            sizes[3].type = VkDescriptorType.StorageBuffer;
+            sizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             sizes[3].descriptorCount = descriptorCount;
-            sizes[4].type = VkDescriptorType.StorageImage;
+            sizes[4].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
             sizes[4].descriptorCount = descriptorCount;
-            sizes[5].type = VkDescriptorType.UniformBufferDynamic;
+            sizes[5].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
             sizes[5].descriptorCount = descriptorCount;
-            sizes[6].type = VkDescriptorType.StorageBufferDynamic;
+            sizes[6].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
             sizes[6].descriptorCount = descriptorCount;
 
-            VkDescriptorPoolCreateInfo poolCI = VkDescriptorPoolCreateInfo.New();
-            poolCI.flags = VkDescriptorPoolCreateFlags.FreeDescriptorSet;
+            VkDescriptorPoolCreateInfo poolCI = new VkDescriptorPoolCreateInfo();
+            poolCI.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
             poolCI.maxSets = totalSets;
             poolCI.pPoolSizes = sizes;
             poolCI.poolSizeCount = poolSizeCount;
@@ -163,10 +164,10 @@ namespace XenoAtom.Graphics.Vk
                 }
             }
 
-            internal void Free(VkDevice device, DescriptorAllocationToken token, DescriptorResourceCounts counts)
+            internal unsafe void Free(VkDevice device, DescriptorAllocationToken token, DescriptorResourceCounts counts)
             {
                 VkDescriptorSet set = token.Set;
-                vkFreeDescriptorSets(device, Pool, 1, ref set);
+                vkFreeDescriptorSets(device, Pool, 1, &set);
 
                 RemainingSets += 1;
 

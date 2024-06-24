@@ -1,4 +1,4 @@
-﻿using Vulkan;
+﻿using static XenoAtom.Interop.vulkan;
 
 namespace XenoAtom.Graphics.Vk
 {
@@ -71,7 +71,7 @@ namespace XenoAtom.Graphics.Vk
                 VkFormats.VdToVkPixelFormat(description.Format, (description.Usage & TextureUsage.DepthStencil) != 0),
                 description.Usage,
                 description.SampleCount,
-                nativeTexture);
+                new VkImage(new((nint)nativeTexture)));
         }
 
         protected override TextureView CreateTextureViewCore(ref TextureViewDescription description)

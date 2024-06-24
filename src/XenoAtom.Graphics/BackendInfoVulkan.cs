@@ -2,7 +2,8 @@
 using System;
 using System.Collections.ObjectModel;
 using XenoAtom.Graphics.Vk;
-using Vulkan;
+using XenoAtom.Interop;
+using static XenoAtom.Interop.vulkan;
 
 namespace XenoAtom.Graphics
 {
@@ -14,37 +15,37 @@ namespace XenoAtom.Graphics
     public class BackendInfoVulkan
     {
         private readonly VkGraphicsDevice _gd;
-        private readonly Lazy<ReadOnlyCollection<string>> _instanceLayers;
-        private readonly ReadOnlyCollection<string> _instanceExtensions;
+        private readonly Lazy<ReadOnlyCollection<ReadOnlyMemoryUtf8>> _instanceLayers;
+        private readonly ReadOnlyCollection<ReadOnlyMemoryUtf8> _instanceExtensions;
         private readonly Lazy<ReadOnlyCollection<ExtensionProperties>> _deviceExtensions;
 
         internal BackendInfoVulkan(VkGraphicsDevice gd)
         {
             _gd = gd;
-            _instanceLayers = new Lazy<ReadOnlyCollection<string>>(() => new ReadOnlyCollection<string>(VulkanUtil.EnumerateInstanceLayers()));
-            _instanceExtensions = new ReadOnlyCollection<string>(VulkanUtil.GetInstanceExtensions());
+            _instanceLayers = new Lazy<ReadOnlyCollection<ReadOnlyMemoryUtf8>>(() => new ReadOnlyCollection<ReadOnlyMemoryUtf8>(VulkanUtil.EnumerateInstanceLayers()));
+            _instanceExtensions = new ReadOnlyCollection<ReadOnlyMemoryUtf8>(VulkanUtil.GetInstanceExtensions());
             _deviceExtensions = new Lazy<ReadOnlyCollection<ExtensionProperties>>(EnumerateDeviceExtensions);
         }
 
         /// <summary>
         /// Gets the underlying VkInstance used by the GraphicsDevice.
         /// </summary>
-        public IntPtr Instance => _gd.Instance.Handle;
+        public IntPtr Instance => _gd.Instance.Value.Handle;
 
         /// <summary>
         /// Gets the underlying VkDevice used by the GraphicsDevice.
         /// </summary>
-        public IntPtr Device => _gd.Device.Handle;
+        public IntPtr Device => _gd.Device.Value.Handle;
 
         /// <summary>
         /// Gets the underlying VkPhysicalDevice used by the GraphicsDevice.
         /// </summary>
-        public IntPtr PhysicalDevice => _gd.PhysicalDevice.Handle;
+        public IntPtr PhysicalDevice => _gd.PhysicalDevice.Value.Handle;
 
         /// <summary>
         /// Gets the VkQueue which is used by the GraphicsDevice to submit graphics work.
         /// </summary>
-        public IntPtr GraphicsQueue => _gd.GraphicsQueue.Handle;
+        public IntPtr GraphicsQueue => _gd.GraphicsQueue.Value.Handle;
 
         /// <summary>
         /// Gets the queue family index of the graphics VkQueue.
@@ -61,9 +62,9 @@ namespace XenoAtom.Graphics
         /// </summary>
         public string DriverInfo => _gd.DriverInfo;
 
-        public ReadOnlyCollection<string> AvailableInstanceLayers => _instanceLayers.Value;
+        public ReadOnlyCollection<ReadOnlyMemoryUtf8> AvailableInstanceLayers => _instanceLayers.Value;
 
-        public ReadOnlyCollection<string> AvailableInstanceExtensions => _instanceExtensions;
+        public ReadOnlyCollection<ReadOnlyMemoryUtf8> AvailableInstanceExtensions => _instanceExtensions;
 
         public ReadOnlyCollection<ExtensionProperties> AvailableDeviceExtensions => _deviceExtensions.Value;
 
@@ -101,7 +102,7 @@ namespace XenoAtom.Graphics
                     $"has {nameof(TextureUsage)}.{nameof(TextureUsage.Staging)}.");
             }
 
-            return vkTexture.OptimalDeviceImage.Handle;
+            return (ulong)vkTexture.OptimalDeviceImage.Value.Handle;
         }
 
         /// <summary>

@@ -1,13 +1,11 @@
 ﻿using System;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using static XenoAtom.Interop.vulkan;
+
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Text;
-
-using static Vulkan.RawConstants;
 
 namespace XenoAtom.Graphics.Vk
 {
@@ -64,8 +62,8 @@ namespace XenoAtom.Graphics.Vk
             : base(ref description, gd.Features, gd.UniformBufferMinOffsetAlignment, gd.StructuredBufferMinOffsetAlignment)
         {
             _gd = gd;
-            VkCommandPoolCreateInfo poolCI = VkCommandPoolCreateInfo.New();
-            poolCI.flags = VkCommandPoolCreateFlags.ResetCommandBuffer;
+            VkCommandPoolCreateInfo poolCI = new VkCommandPoolCreateInfo();
+            poolCI.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
             poolCI.queueFamilyIndex = gd.GraphicsQueueIndex;
             VkResult result = vkCreateCommandPool(_gd.Device, ref poolCI, null, out _pool);
             CheckResult(result);
@@ -81,17 +79,18 @@ namespace XenoAtom.Graphics.Vk
                 if (_availableCommandBuffers.Count > 0)
                 {
                     VkCommandBuffer cachedCB = _availableCommandBuffers.Dequeue();
-                    VkResult resetResult = vkResetCommandBuffer(cachedCB, VkCommandBufferResetFlags.None);
+                    VkResult resetResult = vkResetCommandBuffer(cachedCB, (VkCommandBufferResetFlagBits)0);
                     CheckResult(resetResult);
                     return cachedCB;
                 }
             }
 
-            VkCommandBufferAllocateInfo cbAI = VkCommandBufferAllocateInfo.New();
+            VkCommandBufferAllocateInfo cbAI = new VkCommandBufferAllocateInfo();
             cbAI.commandPool = _pool;
             cbAI.commandBufferCount = 1;
-            cbAI.level = VkCommandBufferLevel.Primary;
-            VkResult result = vkAllocateCommandBuffers(_gd.Device, ref cbAI, out VkCommandBuffer cb);
+            cbAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            VkCommandBuffer cb = default;
+            VkResult result = vkAllocateCommandBuffers(_gd.Device, cbAI, &cb);
             CheckResult(result);
             return cb;
         }
@@ -156,8 +155,7 @@ namespace XenoAtom.Graphics.Vk
 
             _currentStagingInfo = GetStagingResourceInfo();
 
-            VkCommandBufferBeginInfo beginInfo = VkCommandBufferBeginInfo.New();
-            beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmit;
+            VkCommandBufferBeginInfo beginInfo = new() { flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT };
             vkBeginCommandBuffer(_cb, ref beginInfo);
             _commandBufferBegun = true;
 
@@ -178,12 +176,12 @@ namespace XenoAtom.Graphics.Vk
                 color = new VkClearColorValue(clearColor.R, clearColor.G, clearColor.B, clearColor.A)
             };
 
-            if (_activeRenderPass != VkRenderPass.Null)
+            if (_activeRenderPass != default)
             {
                 VkClearAttachment clearAttachment = new VkClearAttachment
                 {
                     colorAttachment = index,
-                    aspectMask = VkImageAspectFlags.Color,
+                    aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     clearValue = clearValue
                 };
 
@@ -195,7 +193,7 @@ namespace XenoAtom.Graphics.Vk
                     rect = new VkRect2D(0, 0, colorTex.Width, colorTex.Height)
                 };
 
-                vkCmdClearAttachments(_cb, 1, ref clearAttachment, 1, ref clearRect);
+                vkCmdClearAttachments(_cb, 1, &clearAttachment, 1, &clearRect);
             }
             else
             {
@@ -209,11 +207,11 @@ namespace XenoAtom.Graphics.Vk
         {
             VkClearValue clearValue = new VkClearValue { depthStencil = new VkClearDepthStencilValue(depth, stencil) };
 
-            if (_activeRenderPass != VkRenderPass.Null)
+            if (_activeRenderPass != default)
             {
                 VkImageAspectFlags aspect = FormatHelpers.IsStencilFormat(_currentFramebuffer.DepthTarget.Value.Target.Format)
-                    ? VkImageAspectFlags.Depth | VkImageAspectFlags.Stencil
-                    : VkImageAspectFlags.Depth;
+                    ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
+                    : VK_IMAGE_ASPECT_DEPTH_BIT;
                 VkClearAttachment clearAttachment = new VkClearAttachment
                 {
                     aspectMask = aspect,
@@ -231,7 +229,7 @@ namespace XenoAtom.Graphics.Vk
                         rect = new VkRect2D(0, 0, renderableWidth, renderableHeight)
                     };
 
-                    vkCmdClearAttachments(_cb, 1, ref clearAttachment, 1, ref clearRect);
+                    vkCmdClearAttachments(_cb, 1, &clearAttachment, 1, &clearRect);
                 }
             }
             else
@@ -271,7 +269,7 @@ namespace XenoAtom.Graphics.Vk
 
         private void PreDrawCommand()
         {
-            TransitionImages(_preDrawSampledImages, VkImageLayout.ShaderReadOnlyOptimal);
+            TransitionImages(_preDrawSampledImages, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             _preDrawSampledImages.Clear();
 
             EnsureRenderPassActive();
@@ -280,7 +278,7 @@ namespace XenoAtom.Graphics.Vk
                 _currentGraphicsResourceSets,
                 _graphicsResourceSetsChanged,
                 _currentGraphicsPipeline.ResourceSetCount,
-                VkPipelineBindPoint.Graphics,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
                 _currentGraphicsPipeline.PipelineLayout);
         }
 
@@ -291,7 +289,7 @@ namespace XenoAtom.Graphics.Vk
             VkPipelineBindPoint bindPoint,
             VkPipelineLayout pipelineLayout)
         {
-            VkPipeline pipeline = bindPoint == VkPipelineBindPoint.Graphics ? _currentGraphicsPipeline : _currentComputePipeline;
+            VkPipeline pipeline = bindPoint == VK_PIPELINE_BIND_POINT_GRAPHICS ? _currentGraphicsPipeline : _currentComputePipeline;
 
             VkDescriptorSet* descriptorSets = stackalloc VkDescriptorSet[(int)resourceSetCount];
             uint* dynamicOffsets = stackalloc uint[pipeline.DynamicOffsetsCount];
@@ -372,8 +370,8 @@ namespace XenoAtom.Graphics.Vk
                 VkResourceSet vkSet = Util.AssertSubtype<ResourceSet, VkResourceSet>(
                     _currentComputeResourceSets[currentSlot].Set);
 
-                TransitionImages(vkSet.SampledTextures, VkImageLayout.ShaderReadOnlyOptimal);
-                TransitionImages(vkSet.StorageTextures, VkImageLayout.General);
+                TransitionImages(vkSet.SampledTextures, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                TransitionImages(vkSet.StorageTextures, VK_IMAGE_LAYOUT_GENERAL);
                 for (int texIdx = 0; texIdx < vkSet.StorageTextures.Count; texIdx++)
                 {
                     VkTexture storageTex = vkSet.StorageTextures[texIdx];
@@ -388,7 +386,7 @@ namespace XenoAtom.Graphics.Vk
                 _currentComputeResourceSets,
                 _computeResourceSetsChanged,
                 _currentComputePipeline.ResourceSetCount,
-                VkPipelineBindPoint.Compute,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
                 _currentComputePipeline.PipelineLayout);
         }
 
@@ -403,7 +401,7 @@ namespace XenoAtom.Graphics.Vk
 
         protected override void ResolveTextureCore(Texture source, Texture destination)
         {
-            if (_activeRenderPass != VkRenderPass.Null)
+            if (_activeRenderPass != default)
             {
                 EndCurrentRenderPass();
             }
@@ -413,8 +411,8 @@ namespace XenoAtom.Graphics.Vk
             VkTexture vkDestination = Util.AssertSubtype<Texture, VkTexture>(destination);
             _currentStagingInfo.Resources.Add(vkDestination.RefCount);
             VkImageAspectFlags aspectFlags = ((source.Usage & TextureUsage.DepthStencil) == TextureUsage.DepthStencil)
-                ? VkImageAspectFlags.Depth | VkImageAspectFlags.Stencil
-                : VkImageAspectFlags.Color;
+                ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
+                : VK_IMAGE_ASPECT_COLOR_BIT;
             VkImageResolve region = new VkImageResolve
             {
                 extent = new VkExtent3D { width = source.Width, height = source.Height, depth = source.Depth },
@@ -422,21 +420,21 @@ namespace XenoAtom.Graphics.Vk
                 dstSubresource = new VkImageSubresourceLayers { layerCount = 1, aspectMask = aspectFlags }
             };
 
-            vkSource.TransitionImageLayout(_cb, 0, 1, 0, 1, VkImageLayout.TransferSrcOptimal);
-            vkDestination.TransitionImageLayout(_cb, 0, 1, 0, 1, VkImageLayout.TransferDstOptimal);
+            vkSource.TransitionImageLayout(_cb, 0, 1, 0, 1, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+            vkDestination.TransitionImageLayout(_cb, 0, 1, 0, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
             vkCmdResolveImage(
                 _cb,
                 vkSource.OptimalDeviceImage,
-                 VkImageLayout.TransferSrcOptimal,
+                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 vkDestination.OptimalDeviceImage,
-                VkImageLayout.TransferDstOptimal,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 1,
-                ref region);
+                &region);
 
             if ((vkDestination.Usage & TextureUsage.Sampled) != 0)
             {
-                vkDestination.TransitionImageLayout(_cb, 0, 1, 0, 1, VkImageLayout.ShaderReadOnlyOptimal);
+                vkDestination.TransitionImageLayout(_cb, 0, 1, 0, 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             }
         }
 
@@ -454,7 +452,7 @@ namespace XenoAtom.Graphics.Vk
             {
                 BeginCurrentRenderPass();
             }
-            if (_activeRenderPass != VkRenderPass.Null)
+            if (_activeRenderPass != default)
             {
                 EndCurrentRenderPass();
                 _currentFramebuffer.TransitionToFinalLayout(_cb);
@@ -466,7 +464,7 @@ namespace XenoAtom.Graphics.Vk
 
         protected override void SetFramebufferCore(Framebuffer fb)
         {
-            if (_activeRenderPass.Handle != VkRenderPass.Null)
+            if (_activeRenderPass != default)
             {
                 EndCurrentRenderPass();
             }
@@ -501,7 +499,7 @@ namespace XenoAtom.Graphics.Vk
 
         private void EnsureRenderPassActive()
         {
-            if (_activeRenderPass == VkRenderPass.Null)
+            if (_activeRenderPass == default)
             {
                 BeginCurrentRenderPass();
             }
@@ -509,7 +507,7 @@ namespace XenoAtom.Graphics.Vk
 
         private void EnsureNoRenderPass()
         {
-            if (_activeRenderPass != VkRenderPass.Null)
+            if (_activeRenderPass != default)
             {
                 EndCurrentRenderPass();
             }
@@ -517,7 +515,7 @@ namespace XenoAtom.Graphics.Vk
 
         private void BeginCurrentRenderPass()
         {
-            Debug.Assert(_activeRenderPass == VkRenderPass.Null);
+            Debug.Assert(_activeRenderPass == default);
             Debug.Assert(_currentFramebuffer != null);
             _currentFramebufferEverActive = true;
 
@@ -537,8 +535,8 @@ namespace XenoAtom.Graphics.Vk
                 }
             }
 
-            VkRenderPassBeginInfo renderPassBI = VkRenderPassBeginInfo.New();
-            renderPassBI.renderArea = new VkRect2D(_currentFramebuffer.RenderableWidth, _currentFramebuffer.RenderableHeight);
+            VkRenderPassBeginInfo renderPassBI = new VkRenderPassBeginInfo();
+            renderPassBI.renderArea = new VkRect2D(0, 0, _currentFramebuffer.RenderableWidth, _currentFramebuffer.RenderableHeight);
             renderPassBI.framebuffer = _currentFramebuffer.CurrentFramebuffer;
 
             if (!haveAnyAttachments || !haveAllClearValues)
@@ -546,7 +544,7 @@ namespace XenoAtom.Graphics.Vk
                 renderPassBI.renderPass = _newFramebuffer
                     ? _currentFramebuffer.RenderPassNoClear_Init
                     : _currentFramebuffer.RenderPassNoClear_Load;
-                vkCmdBeginRenderPass(_cb, ref renderPassBI, VkSubpassContents.Inline);
+                vkCmdBeginRenderPass(_cb, ref renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
                 _activeRenderPass = renderPassBI.renderPass;
 
                 if (haveAnyClearValues)
@@ -564,10 +562,10 @@ namespace XenoAtom.Graphics.Vk
                             _validColorClearValues[i] = false;
                             VkClearValue vkClearValue = _clearValues[i];
                             RgbaFloat clearColor = new RgbaFloat(
-                                vkClearValue.color.float32_0,
-                                vkClearValue.color.float32_1,
-                                vkClearValue.color.float32_2,
-                                vkClearValue.color.float32_3);
+                                vkClearValue.color.float32[0],
+                                vkClearValue.color.float32[1],
+                                vkClearValue.color.float32[2],
+                                vkClearValue.color.float32[3]);
                             ClearColorTarget(i, clearColor);
                         }
                     }
@@ -586,7 +584,7 @@ namespace XenoAtom.Graphics.Vk
                         _clearValues[_currentFramebuffer.ColorTargets.Count] = _depthClearValue.Value;
                         _depthClearValue = null;
                     }
-                    vkCmdBeginRenderPass(_cb, ref renderPassBI, VkSubpassContents.Inline);
+                    vkCmdBeginRenderPass(_cb, ref renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
                     _activeRenderPass = _currentFramebuffer.RenderPassClear;
                     Util.ClearArray(_validColorClearValues);
                 }
@@ -597,18 +595,18 @@ namespace XenoAtom.Graphics.Vk
 
         private void EndCurrentRenderPass()
         {
-            Debug.Assert(_activeRenderPass != VkRenderPass.Null);
+            Debug.Assert(_activeRenderPass != default);
             vkCmdEndRenderPass(_cb);
             _currentFramebuffer.TransitionToIntermediateLayout(_cb);
-            _activeRenderPass = VkRenderPass.Null;
+            _activeRenderPass = default;
 
             // Place a barrier between RenderPasses, so that color / depth outputs
             // can be read in subsequent passes.
             vkCmdPipelineBarrier(
                 _cb,
-                VkPipelineStageFlags.BottomOfPipe,
-                VkPipelineStageFlags.TopOfPipe,
-                VkDependencyFlags.None,
+                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                (VkDependencyFlagBits)0,
                 0,
                 null,
                 0,
@@ -620,9 +618,9 @@ namespace XenoAtom.Graphics.Vk
         private protected override void SetVertexBufferCore(uint index, DeviceBuffer buffer, uint offset)
         {
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(buffer);
-            Vulkan.VkBuffer deviceBuffer = vkBuffer.DeviceBuffer;
-            ulong offset64 = offset;
-            vkCmdBindVertexBuffers(_cb, index, 1, ref deviceBuffer, ref offset64);
+            XenoAtom.Interop.vulkan.VkBuffer deviceBuffer = vkBuffer.DeviceBuffer;
+            VkDeviceSize offset64 = offset;
+            vkCmdBindVertexBuffers(_cb, index, 1, &deviceBuffer, &offset64);
             _currentStagingInfo.Resources.Add(vkBuffer.RefCount);
         }
 
@@ -641,7 +639,7 @@ namespace XenoAtom.Graphics.Vk
                 Util.EnsureArrayMinimumSize(ref _currentGraphicsResourceSets, vkPipeline.ResourceSetCount);
                 ClearSets(_currentGraphicsResourceSets);
                 Util.EnsureArrayMinimumSize(ref _graphicsResourceSetsChanged, vkPipeline.ResourceSetCount);
-                vkCmdBindPipeline(_cb, VkPipelineBindPoint.Graphics, vkPipeline.DevicePipeline);
+                vkCmdBindPipeline(_cb, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline.DevicePipeline);
                 _currentGraphicsPipeline = vkPipeline;
             }
             else if (pipeline.IsComputePipeline && _currentComputePipeline != pipeline)
@@ -649,7 +647,7 @@ namespace XenoAtom.Graphics.Vk
                 Util.EnsureArrayMinimumSize(ref _currentComputeResourceSets, vkPipeline.ResourceSetCount);
                 ClearSets(_currentComputeResourceSets);
                 Util.EnsureArrayMinimumSize(ref _computeResourceSetsChanged, vkPipeline.ResourceSetCount);
-                vkCmdBindPipeline(_cb, VkPipelineBindPoint.Compute, vkPipeline.DevicePipeline);
+                vkCmdBindPipeline(_cb, VK_PIPELINE_BIND_POINT_COMPUTE, vkPipeline.DevicePipeline);
                 _currentComputePipeline = vkPipeline;
             }
 
@@ -691,11 +689,11 @@ namespace XenoAtom.Graphics.Vk
         {
             if (index == 0 || _gd.Features.MultipleViewports)
             {
-                VkRect2D scissor = new VkRect2D((int)x, (int)y, (int)width, (int)height);
+                VkRect2D scissor = new VkRect2D((int)x, (int)y, width, height);
                 if (_scissorRects[index] != scissor)
                 {
                     _scissorRects[index] = scissor;
-                    vkCmdSetScissor(_cb, index, 1, ref scissor);
+                    vkCmdSetScissor(_cb, index, 1, &scissor);
                 }
             }
         }
@@ -721,7 +719,7 @@ namespace XenoAtom.Graphics.Vk
                     maxDepth = viewport.MaxDepth
                 };
 
-                vkCmdSetViewport(_cb, index, 1, ref vkViewport);
+                vkCmdSetViewport(_cb, index, 1, &vkViewport);
             }
         }
 
@@ -753,24 +751,24 @@ namespace XenoAtom.Graphics.Vk
                 size = sizeInBytes
             };
 
-            vkCmdCopyBuffer(_cb, srcVkBuffer.DeviceBuffer, dstVkBuffer.DeviceBuffer, 1, ref region);
+            vkCmdCopyBuffer(_cb, srcVkBuffer.DeviceBuffer, dstVkBuffer.DeviceBuffer, 1, &region);
 
             bool needToProtectUniform = destination.Usage.HasFlag(BufferUsage.UniformBuffer);
 
             VkMemoryBarrier barrier;
-            barrier.sType = VkStructureType.MemoryBarrier;
-            barrier.srcAccessMask = VkAccessFlags.TransferWrite;
-            barrier.dstAccessMask = needToProtectUniform ? VkAccessFlags.UniformRead : VkAccessFlags.VertexAttributeRead;
+            barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = needToProtectUniform ? VK_ACCESS_UNIFORM_READ_BIT : VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
             barrier.pNext = null;
             vkCmdPipelineBarrier(
                 _cb,
-                VkPipelineStageFlags.Transfer, needToProtectUniform ?
-                    VkPipelineStageFlags.VertexShader | VkPipelineStageFlags.ComputeShader |
-                    VkPipelineStageFlags.FragmentShader | VkPipelineStageFlags.GeometryShader |
-                    VkPipelineStageFlags.TessellationControlShader | VkPipelineStageFlags.TessellationEvaluationShader
-                    : VkPipelineStageFlags.VertexInput,
-                VkDependencyFlags.None,
-                1, ref barrier,
+                VK_PIPELINE_STAGE_TRANSFER_BIT, needToProtectUniform ?
+                    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
+                    VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VkPipelineStageFlagBits.VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT
+                    : VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                (VkDependencyFlagBits)0,
+                1, &barrier,
                 0, null,
                 0, null);
         }
@@ -823,7 +821,7 @@ namespace XenoAtom.Graphics.Vk
             {
                 VkImageSubresourceLayers srcSubresource = new VkImageSubresourceLayers
                 {
-                    aspectMask = VkImageAspectFlags.Color,
+                    aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     layerCount = layerCount,
                     mipLevel = srcMipLevel,
                     baseArrayLayer = srcBaseArrayLayer
@@ -831,7 +829,7 @@ namespace XenoAtom.Graphics.Vk
 
                 VkImageSubresourceLayers dstSubresource = new VkImageSubresourceLayers
                 {
-                    aspectMask = VkImageAspectFlags.Color,
+                    aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     layerCount = layerCount,
                     mipLevel = dstMipLevel,
                     baseArrayLayer = dstBaseArrayLayer
@@ -852,7 +850,7 @@ namespace XenoAtom.Graphics.Vk
                     1,
                     srcBaseArrayLayer,
                     layerCount,
-                    VkImageLayout.TransferSrcOptimal);
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
                 dstVkTexture.TransitionImageLayout(
                     cb,
@@ -860,16 +858,16 @@ namespace XenoAtom.Graphics.Vk
                     1,
                     dstBaseArrayLayer,
                     layerCount,
-                    VkImageLayout.TransferDstOptimal);
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
                 vkCmdCopyImage(
                     cb,
                     srcVkTexture.OptimalDeviceImage,
-                    VkImageLayout.TransferSrcOptimal,
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                     dstVkTexture.OptimalDeviceImage,
-                    VkImageLayout.TransferDstOptimal,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     1,
-                    ref region);
+                    &region);
 
                 if ((srcVkTexture.Usage & TextureUsage.Sampled) != 0)
                 {
@@ -879,7 +877,7 @@ namespace XenoAtom.Graphics.Vk
                         1,
                         srcBaseArrayLayer,
                         layerCount,
-                        VkImageLayout.ShaderReadOnlyOptimal);
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
                 }
 
                 if ((dstVkTexture.Usage & TextureUsage.Sampled) != 0)
@@ -890,12 +888,12 @@ namespace XenoAtom.Graphics.Vk
                         1,
                         dstBaseArrayLayer,
                         layerCount,
-                        VkImageLayout.ShaderReadOnlyOptimal);
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
                 }
             }
             else if (sourceIsStaging && !destIsStaging)
             {
-                Vulkan.VkBuffer srcBuffer = srcVkTexture.StagingBuffer;
+                XenoAtom.Interop.vulkan.VkBuffer srcBuffer = srcVkTexture.StagingBuffer;
                 VkSubresourceLayout srcLayout = srcVkTexture.GetSubresourceLayout(
                     srcVkTexture.CalculateSubresource(srcMipLevel, srcBaseArrayLayer));
                 VkImage dstImage = dstVkTexture.OptimalDeviceImage;
@@ -905,11 +903,11 @@ namespace XenoAtom.Graphics.Vk
                     1,
                     dstBaseArrayLayer,
                     layerCount,
-                    VkImageLayout.TransferDstOptimal);
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
                 VkImageSubresourceLayers dstSubresource = new VkImageSubresourceLayers
                 {
-                    aspectMask = VkImageAspectFlags.Color,
+                    aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     layerCount = layerCount,
                     mipLevel = dstMipLevel,
                     baseArrayLayer = dstBaseArrayLayer
@@ -943,7 +941,7 @@ namespace XenoAtom.Graphics.Vk
                     imageSubresource = dstSubresource
                 };
 
-                vkCmdCopyBufferToImage(cb, srcBuffer, dstImage, VkImageLayout.TransferDstOptimal, 1, ref regions);
+                vkCmdCopyBufferToImage(cb, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &regions);
 
                 if ((dstVkTexture.Usage & TextureUsage.Sampled) != 0)
                 {
@@ -953,7 +951,7 @@ namespace XenoAtom.Graphics.Vk
                         1,
                         dstBaseArrayLayer,
                         layerCount,
-                        VkImageLayout.ShaderReadOnlyOptimal);
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
                 }
             }
             else if (!sourceIsStaging && destIsStaging)
@@ -965,13 +963,13 @@ namespace XenoAtom.Graphics.Vk
                     1,
                     srcBaseArrayLayer,
                     layerCount,
-                    VkImageLayout.TransferSrcOptimal);
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-                Vulkan.VkBuffer dstBuffer = dstVkTexture.StagingBuffer;
+                XenoAtom.Interop.vulkan.VkBuffer dstBuffer = dstVkTexture.StagingBuffer;
 
                 VkImageAspectFlags aspect = (srcVkTexture.Usage & TextureUsage.DepthStencil) != 0
-                    ? VkImageAspectFlags.Depth
-                    : VkImageAspectFlags.Color;
+                    ? VK_IMAGE_ASPECT_DEPTH_BIT
+                    : VK_IMAGE_ASPECT_COLOR_BIT;
 
                 Util.GetMipDimensions(dstVkTexture, dstMipLevel, out uint mipWidth, out uint mipHeight, out uint mipDepth);
                 uint blockSize = FormatHelpers.IsCompressedFormat(srcVkTexture.Format) ? 4u : 1u;
@@ -1015,7 +1013,7 @@ namespace XenoAtom.Graphics.Vk
                     layers[layer] = region;
                 }
 
-                vkCmdCopyImageToBuffer(cb, srcImage, VkImageLayout.TransferSrcOptimal, dstBuffer, layerCount, layers);
+                vkCmdCopyImageToBuffer(cb, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstBuffer, layerCount, layers);
 
                 if ((srcVkTexture.Usage & TextureUsage.Sampled) != 0)
                 {
@@ -1025,16 +1023,16 @@ namespace XenoAtom.Graphics.Vk
                         1,
                         srcBaseArrayLayer,
                         layerCount,
-                        VkImageLayout.ShaderReadOnlyOptimal);
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
                 }
             }
             else
             {
                 Debug.Assert(sourceIsStaging && destIsStaging);
-                Vulkan.VkBuffer srcBuffer = srcVkTexture.StagingBuffer;
+                XenoAtom.Interop.vulkan.VkBuffer srcBuffer = srcVkTexture.StagingBuffer;
                 VkSubresourceLayout srcLayout = srcVkTexture.GetSubresourceLayout(
                     srcVkTexture.CalculateSubresource(srcMipLevel, srcBaseArrayLayer));
-                Vulkan.VkBuffer dstBuffer = dstVkTexture.StagingBuffer;
+                XenoAtom.Interop.vulkan.VkBuffer dstBuffer = dstVkTexture.StagingBuffer;
                 VkSubresourceLayout dstLayout = dstVkTexture.GetSubresourceLayout(
                     dstVkTexture.CalculateSubresource(dstMipLevel, dstBaseArrayLayer));
 
@@ -1059,7 +1057,7 @@ namespace XenoAtom.Graphics.Vk
                                 size = width * pixelSize,
                             };
 
-                            vkCmdCopyBuffer(cb, srcBuffer, dstBuffer, 1, ref region);
+                            vkCmdCopyBuffer(cb, srcBuffer, dstBuffer, 1, &region);
                         }
                     }
                 }
@@ -1090,7 +1088,7 @@ namespace XenoAtom.Graphics.Vk
                                 size = denseRowSize,
                             };
 
-                            vkCmdCopyBuffer(cb, srcBuffer, dstBuffer, 1, ref region);
+                            vkCmdCopyBuffer(cb, srcBuffer, dstBuffer, 1, &region);
                         }
                     }
 
@@ -1117,8 +1115,8 @@ namespace XenoAtom.Graphics.Vk
             uint depth = vkTex.Depth;
             for (uint level = 1; level < vkTex.MipLevels; level++)
             {
-                vkTex.TransitionImageLayoutNonmatching(_cb, level - 1, 1, 0, layerCount, VkImageLayout.TransferSrcOptimal);
-                vkTex.TransitionImageLayoutNonmatching(_cb, level, 1, 0, layerCount, VkImageLayout.TransferDstOptimal);
+                vkTex.TransitionImageLayoutNonmatching(_cb, level - 1, 1, 0, layerCount, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+                vkTex.TransitionImageLayoutNonmatching(_cb, level, 1, 0, layerCount, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
                 VkImage deviceImage = vkTex.OptimalDeviceImage;
                 uint mipWidth = Math.Max(width >> 1, 1);
@@ -1127,28 +1125,28 @@ namespace XenoAtom.Graphics.Vk
 
                 region.srcSubresource = new VkImageSubresourceLayers
                 {
-                    aspectMask = VkImageAspectFlags.Color,
+                    aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     baseArrayLayer = 0,
                     layerCount = layerCount,
                     mipLevel = level - 1
                 };
-                region.srcOffsets_0 = new VkOffset3D();
-                region.srcOffsets_1 = new VkOffset3D { x = (int)width, y = (int)height, z = (int)depth };
-                region.dstOffsets_0 = new VkOffset3D();
+                region.srcOffsets[0] = new VkOffset3D();
+                region.srcOffsets[1] = new VkOffset3D((int)width, (int)height, (int)depth);
+                region.dstOffsets[0] = new VkOffset3D();
 
                 region.dstSubresource = new VkImageSubresourceLayers
                 {
-                    aspectMask = VkImageAspectFlags.Color,
+                    aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     baseArrayLayer = 0,
                     layerCount = layerCount,
                     mipLevel = level
                 };
 
-                region.dstOffsets_1 = new VkOffset3D { x = (int)mipWidth, y = (int)mipHeight, z = (int)mipDepth };
+                region.dstOffsets[1] = new VkOffset3D { x = (int)mipWidth, y = (int)mipHeight, z = (int)mipDepth };
                 vkCmdBlitImage(
                     _cb,
-                    deviceImage, VkImageLayout.TransferSrcOptimal,
-                    deviceImage, VkImageLayout.TransferDstOptimal,
+                    deviceImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    deviceImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     1, &region,
                     _gd.GetFormatFilter(vkTex.VkFormat));
 
@@ -1159,14 +1157,14 @@ namespace XenoAtom.Graphics.Vk
 
             if ((vkTex.Usage & TextureUsage.Sampled) != 0)
             {
-                vkTex.TransitionImageLayoutNonmatching(_cb, 0, vkTex.MipLevels, 0, layerCount, VkImageLayout.ShaderReadOnlyOptimal);
+                vkTex.TransitionImageLayoutNonmatching(_cb, 0, vkTex.MipLevels, 0, layerCount, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             }
         }
 
         [Conditional("DEBUG")]
         private void DebugFullPipelineBarrier()
         {
-            VkMemoryBarrier memoryBarrier = VkMemoryBarrier.New();
+            VkMemoryBarrier memoryBarrier = new VkMemoryBarrier();
             memoryBarrier.srcAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
                    VK_ACCESS_INDEX_READ_BIT |
                    VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
@@ -1202,7 +1200,7 @@ namespace XenoAtom.Graphics.Vk
                 _cb,
                 VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, // srcStageMask
                 VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, // dstStageMask
-                VkDependencyFlags.None,
+                (VkDependencyFlagBits)0,
                 1,                                  // memoryBarrierCount
                 &memoryBarrier,                     // pMemoryBarriers
                 0, null,
@@ -1246,10 +1244,10 @@ namespace XenoAtom.Graphics.Vk
 
         private protected override void PushDebugGroupCore(string name)
         {
-            vkCmdDebugMarkerBeginEXT_t func = _gd.MarkerBegin;
+            var func = _gd.vkCmdDebugMarkerBeginExt;
             if (func == null) { return; }
 
-            VkDebugMarkerMarkerInfoEXT markerInfo = VkDebugMarkerMarkerInfoEXT.New();
+            VkDebugMarkerMarkerInfoEXT markerInfo = new VkDebugMarkerMarkerInfoEXT();
 
             int byteCount = Encoding.UTF8.GetByteCount(name);
             byte* utf8Ptr = stackalloc byte[byteCount + 1];
@@ -1261,23 +1259,23 @@ namespace XenoAtom.Graphics.Vk
 
             markerInfo.pMarkerName = utf8Ptr;
 
-            func(_cb, &markerInfo);
+            func.Invoke(_cb, &markerInfo);
         }
 
         private protected override void PopDebugGroupCore()
         {
-            vkCmdDebugMarkerEndEXT_t func = _gd.MarkerEnd;
+            var func = _gd.vkCmdDebugMarkerEndExt;
             if (func == null) { return; }
 
-            func(_cb);
+            func.Invoke(_cb);
         }
 
         private protected override void InsertDebugMarkerCore(string name)
         {
-            vkCmdDebugMarkerInsertEXT_t func = _gd.MarkerInsert;
+            var func = _gd.vkCmdDebugMarkerInsertExt;
             if (func == null) { return; }
 
-            VkDebugMarkerMarkerInfoEXT markerInfo = VkDebugMarkerMarkerInfoEXT.New();
+            VkDebugMarkerMarkerInfoEXT markerInfo = new VkDebugMarkerMarkerInfoEXT();
 
             int byteCount = Encoding.UTF8.GetByteCount(name);
             byte* utf8Ptr = stackalloc byte[byteCount + 1];
@@ -1289,7 +1287,7 @@ namespace XenoAtom.Graphics.Vk
 
             markerInfo.pMarkerName = utf8Ptr;
 
-            func(_cb, &markerInfo);
+            func.Invoke(_cb, &markerInfo);
         }
 
         public override void Dispose()

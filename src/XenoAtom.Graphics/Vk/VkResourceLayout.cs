@@ -1,5 +1,5 @@
-﻿using Vulkan;
-using static Vulkan.VulkanNative;
+﻿using static XenoAtom.Interop.vulkan;
+
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 
 namespace XenoAtom.Graphics.Vk
@@ -23,7 +23,7 @@ namespace XenoAtom.Graphics.Vk
             : base(ref description)
         {
             _gd = gd;
-            VkDescriptorSetLayoutCreateInfo dslCI = VkDescriptorSetLayoutCreateInfo.New();
+            VkDescriptorSetLayoutCreateInfo dslCI = new VkDescriptorSetLayoutCreateInfo();
             ResourceLayoutElementDescription[] elements = description.Elements;
             _descriptorTypes = new VkDescriptorType[elements.Length];
             VkDescriptorSetLayoutBinding* bindings = stackalloc VkDescriptorSetLayoutBinding[elements.Length];
@@ -52,25 +52,25 @@ namespace XenoAtom.Graphics.Vk
 
                 switch (descriptorType)
                 {
-                    case VkDescriptorType.Sampler:
+                    case VK_DESCRIPTOR_TYPE_SAMPLER:
                         samplerCount += 1;
                         break;
-                    case VkDescriptorType.SampledImage:
+                    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
                         sampledImageCount += 1;
                         break;
-                    case VkDescriptorType.StorageImage:
+                    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
                         storageImageCount += 1;
                         break;
-                    case VkDescriptorType.UniformBuffer:
+                    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
                         uniformBufferCount += 1;
                         break;
-                    case VkDescriptorType.UniformBufferDynamic:
+                    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
                         uniformBufferDynamicCount += 1;
                         break;
-                    case VkDescriptorType.StorageBuffer:
+                    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
                         storageBufferCount += 1;
                         break;
-                    case VkDescriptorType.StorageBufferDynamic:
+                    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
                         storageBufferDynamicCount += 1;
                         break;
                 }

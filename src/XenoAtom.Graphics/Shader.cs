@@ -1,4 +1,5 @@
 ﻿using System;
+using XenoAtom.Interop;
 
 namespace XenoAtom.Graphics
 {
@@ -8,7 +9,7 @@ namespace XenoAtom.Graphics
     /// </summary>
     public abstract class Shader : DeviceResource, IDisposable
     {
-        internal Shader(ShaderStages stage, string entryPoint)
+        internal Shader(ShaderStages stage, ReadOnlyMemoryUtf8 entryPoint)
         {
             Stage = stage;
             EntryPoint = entryPoint;
@@ -22,7 +23,7 @@ namespace XenoAtom.Graphics
         /// <summary>
         /// The name of the entry point function.
         /// </summary>
-        public string EntryPoint { get; }
+        public ReadOnlyMemoryUtf8 EntryPoint { get; }
 
         /// <summary>
         /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other

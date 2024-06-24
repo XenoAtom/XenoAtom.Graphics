@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Vulkan;
+using static XenoAtom.Interop.vulkan;
 
 namespace XenoAtom.Graphics.Vk
 {
@@ -30,7 +30,7 @@ namespace XenoAtom.Graphics.Vk
 
         protected abstract void DisposeCore();
 
-        public abstract Vulkan.VkFramebuffer CurrentFramebuffer { get; }
+        public abstract XenoAtom.Interop.vulkan.VkFramebuffer CurrentFramebuffer { get; }
         public abstract VkRenderPass RenderPassNoClear_Init { get; }
         public abstract VkRenderPass RenderPassNoClear_Load { get; }
         public abstract VkRenderPass RenderPassClear { get; }

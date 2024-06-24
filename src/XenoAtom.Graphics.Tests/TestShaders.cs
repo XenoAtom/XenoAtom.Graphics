@@ -8,8 +8,8 @@ namespace XenoAtom.Graphics.Tests
         public static Shader[] LoadVertexFragment(ResourceFactory factory, string setName)
         {
             return factory.CreateFromSpirv(
-                new ShaderDescription(ShaderStages.Vertex, File.ReadAllBytes(GetPath(setName, ShaderStages.Vertex)), "main"),
-                new ShaderDescription(ShaderStages.Fragment, File.ReadAllBytes(GetPath(setName, ShaderStages.Fragment)), "main"),
+                new ShaderDescription(ShaderStages.Vertex, File.ReadAllBytes(GetPath(setName, ShaderStages.Vertex)), "main"u8),
+                new ShaderDescription(ShaderStages.Fragment, File.ReadAllBytes(GetPath(setName, ShaderStages.Fragment)), "main"u8),
                 new CrossCompileOptions(false, false, new SpecializationConstant[]
                 {
                     new SpecializationConstant(100, false)
@@ -19,7 +19,7 @@ namespace XenoAtom.Graphics.Tests
         public static Shader LoadCompute(ResourceFactory factory, string setName)
         {
             return factory.CreateFromSpirv(
-                new ShaderDescription(ShaderStages.Compute, File.ReadAllBytes(GetPath(setName, ShaderStages.Compute)), "main"),
+                new ShaderDescription(ShaderStages.Compute, File.ReadAllBytes(GetPath(setName, ShaderStages.Compute)), "main"u8),
                 new CrossCompileOptions(false, false, new SpecializationConstant[]
                 {
                     new SpecializationConstant(100, false)
@@ -31,7 +31,7 @@ namespace XenoAtom.Graphics.Tests
             return Path.Combine(
                 AppContext.BaseDirectory,
                 "Shaders",
-                $"{setName}.{stage.ToString().ToLowerInvariant().Substring(0, 4)}");
+                $"{setName}.{stage.ToString().ToLowerInvariant().Substring(0, 4)}.spv");
         }
     }
 }

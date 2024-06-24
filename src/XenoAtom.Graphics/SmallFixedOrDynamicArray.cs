@@ -33,7 +33,7 @@ namespace XenoAtom.Graphics
             Count = count;
         }
 
-        public void Dispose()
+        public readonly void Dispose()
         {
             if (Data != null) { ArrayPool<uint>.Shared.Return(Data); }
         }

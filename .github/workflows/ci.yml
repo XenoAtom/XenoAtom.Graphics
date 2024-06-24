@@ -15,10 +15,7 @@ jobs:
     - name: Set up vulkan dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-            mesa-vulkan-drivers \
-            libvulkan1 \
-            vulkan-tools
+        sudo apt-get install -y mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
     - name: "Build, Test and Pack"
       uses: xoofx/.github/.github/actions/dotnet-releaser-action@main   
       with:

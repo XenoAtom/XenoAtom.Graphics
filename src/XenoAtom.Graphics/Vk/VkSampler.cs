@@ -1,16 +1,16 @@
-﻿using Vulkan;
-using static Vulkan.VulkanNative;
+﻿using static XenoAtom.Interop.vulkan;
+
 
 namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkSampler : Sampler
     {
         private readonly VkGraphicsDevice _gd;
-        private readonly Vulkan.VkSampler _sampler;
+        private readonly XenoAtom.Interop.vulkan.VkSampler _sampler;
         private bool _disposed;
         private string _name;
 
-        public Vulkan.VkSampler DeviceSampler => _sampler;
+        public XenoAtom.Interop.vulkan.VkSampler DeviceSampler => _sampler;
 
         public ResourceRefCount RefCount { get; }
 
@@ -23,7 +23,6 @@ namespace XenoAtom.Graphics.Vk
 
             VkSamplerCreateInfo samplerCI = new VkSamplerCreateInfo
             {
-                sType = VkStructureType.SamplerCreateInfo,
                 addressModeU = VkFormats.VdToVkSamplerAddressMode(description.AddressModeU),
                 addressModeV = VkFormats.VdToVkSamplerAddressMode(description.AddressModeV),
                 addressModeW = VkFormats.VdToVkSamplerAddressMode(description.AddressModeW),
@@ -33,7 +32,7 @@ namespace XenoAtom.Graphics.Vk
                 compareEnable = description.ComparisonKind != null,
                 compareOp = description.ComparisonKind != null
                     ? VkFormats.VdToVkCompareOp(description.ComparisonKind.Value)
-                    : VkCompareOp.Never,
+                    : VK_COMPARE_OP_NEVER,
                 anisotropyEnable = description.Filter == SamplerFilter.Anisotropic,
                 maxAnisotropy = description.MaximumAnisotropy,
                 minLod = description.MinimumLod,

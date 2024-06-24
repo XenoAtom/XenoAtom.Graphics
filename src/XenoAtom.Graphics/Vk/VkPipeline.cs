@@ -1,22 +1,26 @@
-﻿using Vulkan;
-using static Vulkan.VulkanNative;
+﻿using static XenoAtom.Interop.vulkan;
+
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using XenoAtom.Interop;
 
 namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkPipeline : Pipeline
     {
+        private const uint VK_SUBPASS_EXTERNAL = (~0U);
+
         private readonly VkGraphicsDevice _gd;
-        private readonly Vulkan.VkPipeline _devicePipeline;
+        private readonly XenoAtom.Interop.vulkan.VkPipeline _devicePipeline;
         private readonly VkPipelineLayout _pipelineLayout;
         private readonly VkRenderPass _renderPass;
         private bool _destroyed;
         private string _name;
 
-        public Vulkan.VkPipeline DevicePipeline => _devicePipeline;
+        public XenoAtom.Interop.vulkan.VkPipeline DevicePipeline => _devicePipeline;
 
         public VkPipelineLayout PipelineLayout => _pipelineLayout;
 
@@ -37,10 +41,10 @@ namespace XenoAtom.Graphics.Vk
             IsComputePipeline = false;
             RefCount = new ResourceRefCount(DisposeCore);
 
-            VkGraphicsPipelineCreateInfo pipelineCI = VkGraphicsPipelineCreateInfo.New();
+            VkGraphicsPipelineCreateInfo pipelineCI = new VkGraphicsPipelineCreateInfo();
 
             // Blend State
-            VkPipelineColorBlendStateCreateInfo blendStateCI = VkPipelineColorBlendStateCreateInfo.New();
+            VkPipelineColorBlendStateCreateInfo blendStateCI = new VkPipelineColorBlendStateCreateInfo();
             int attachmentsCount = description.BlendState.AttachmentStates.Length;
             VkPipelineColorBlendAttachmentState* attachmentsPtr
                 = stackalloc VkPipelineColorBlendAttachmentState[attachmentsCount];
@@ -62,20 +66,20 @@ namespace XenoAtom.Graphics.Vk
             blendStateCI.attachmentCount = (uint)attachmentsCount;
             blendStateCI.pAttachments = attachmentsPtr;
             RgbaFloat blendFactor = description.BlendState.BlendFactor;
-            blendStateCI.blendConstants_0 = blendFactor.R;
-            blendStateCI.blendConstants_1 = blendFactor.G;
-            blendStateCI.blendConstants_2 = blendFactor.B;
-            blendStateCI.blendConstants_3 = blendFactor.A;
+            blendStateCI.blendConstants[0] = blendFactor.R;
+            blendStateCI.blendConstants[1] = blendFactor.G;
+            blendStateCI.blendConstants[2] = blendFactor.B;
+            blendStateCI.blendConstants[3] = blendFactor.A;
 
             pipelineCI.pColorBlendState = &blendStateCI;
 
             // Rasterizer State
             RasterizerStateDescription rsDesc = description.RasterizerState;
-            VkPipelineRasterizationStateCreateInfo rsCI = VkPipelineRasterizationStateCreateInfo.New();
+            VkPipelineRasterizationStateCreateInfo rsCI = new VkPipelineRasterizationStateCreateInfo();
             rsCI.cullMode = VkFormats.VdToVkCullMode(rsDesc.CullMode);
             rsCI.polygonMode = VkFormats.VdToVkPolygonMode(rsDesc.FillMode);
             rsCI.depthClampEnable = !rsDesc.DepthClipEnabled;
-            rsCI.frontFace = rsDesc.FrontFace == FrontFace.Clockwise ? VkFrontFace.Clockwise : VkFrontFace.CounterClockwise;
+            rsCI.frontFace = rsDesc.FrontFace == FrontFace.Clockwise ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
             rsCI.lineWidth = 1f;
 
             pipelineCI.pRasterizationState = &rsCI;
@@ -83,10 +87,10 @@ namespace XenoAtom.Graphics.Vk
             ScissorTestEnabled = rsDesc.ScissorTestEnabled;
 
             // Dynamic State
-            VkPipelineDynamicStateCreateInfo dynamicStateCI = VkPipelineDynamicStateCreateInfo.New();
+            VkPipelineDynamicStateCreateInfo dynamicStateCI = new VkPipelineDynamicStateCreateInfo();
             VkDynamicState* dynamicStates = stackalloc VkDynamicState[2];
-            dynamicStates[0] = VkDynamicState.Viewport;
-            dynamicStates[1] = VkDynamicState.Scissor;
+            dynamicStates[0] = VK_DYNAMIC_STATE_VIEWPORT;
+            dynamicStates[1] = VK_DYNAMIC_STATE_SCISSOR;
             dynamicStateCI.dynamicStateCount = 2;
             dynamicStateCI.pDynamicStates = dynamicStates;
 
@@ -94,7 +98,7 @@ namespace XenoAtom.Graphics.Vk
 
             // Depth Stencil State
             DepthStencilStateDescription vdDssDesc = description.DepthStencilState;
-            VkPipelineDepthStencilStateCreateInfo dssCI = VkPipelineDepthStencilStateCreateInfo.New();
+            VkPipelineDepthStencilStateCreateInfo dssCI = new VkPipelineDepthStencilStateCreateInfo();
             dssCI.depthWriteEnable = vdDssDesc.DepthWriteEnabled;
             dssCI.depthTestEnable = vdDssDesc.DepthTestEnabled;
             dssCI.depthCompareOp = VkFormats.VdToVkCompareOp(vdDssDesc.DepthComparison);
@@ -119,7 +123,7 @@ namespace XenoAtom.Graphics.Vk
             pipelineCI.pDepthStencilState = &dssCI;
 
             // Multisample
-            VkPipelineMultisampleStateCreateInfo multisampleCI = VkPipelineMultisampleStateCreateInfo.New();
+            VkPipelineMultisampleStateCreateInfo multisampleCI = new VkPipelineMultisampleStateCreateInfo();
             VkSampleCountFlags vkSampleCount = VkFormats.VdToVkSampleCount(description.Outputs.SampleCount);
             multisampleCI.rasterizationSamples = vkSampleCount;
             multisampleCI.alphaToCoverageEnable = description.BlendState.AlphaToCoverageEnabled;
@@ -127,13 +131,13 @@ namespace XenoAtom.Graphics.Vk
             pipelineCI.pMultisampleState = &multisampleCI;
 
             // Input Assembly
-            VkPipelineInputAssemblyStateCreateInfo inputAssemblyCI = VkPipelineInputAssemblyStateCreateInfo.New();
+            VkPipelineInputAssemblyStateCreateInfo inputAssemblyCI = new VkPipelineInputAssemblyStateCreateInfo();
             inputAssemblyCI.topology = VkFormats.VdToVkPrimitiveTopology(description.PrimitiveTopology);
 
             pipelineCI.pInputAssemblyState = &inputAssemblyCI;
 
             // Vertex Input State
-            VkPipelineVertexInputStateCreateInfo vertexInputCI = VkPipelineVertexInputStateCreateInfo.New();
+            VkPipelineVertexInputStateCreateInfo vertexInputCI = new VkPipelineVertexInputStateCreateInfo();
 
             VertexLayoutDescription[] inputDescriptions = description.ShaderSet.VertexLayouts;
             uint bindingCount = (uint)inputDescriptions.Length;
@@ -153,7 +157,7 @@ namespace XenoAtom.Graphics.Vk
                 bindingDescs[binding] = new VkVertexInputBindingDescription()
                 {
                     binding = (uint)binding,
-                    inputRate = (inputDesc.InstanceStepRate != 0) ? VkVertexInputRate.Instance : VkVertexInputRate.Vertex,
+                    inputRate = (inputDesc.InstanceStepRate != 0) ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX,
                     stride = inputDesc.Stride
                 };
 
@@ -221,11 +225,10 @@ namespace XenoAtom.Graphics.Vk
             foreach (Shader shader in shaders)
             {
                 VkShader vkShader = Util.AssertSubtype<Shader, VkShader>(shader);
-                VkPipelineShaderStageCreateInfo stageCI = VkPipelineShaderStageCreateInfo.New();
+                VkPipelineShaderStageCreateInfo stageCI = new VkPipelineShaderStageCreateInfo();
                 stageCI.module = vkShader.ShaderModule;
                 stageCI.stage = VkFormats.VdToVkShaderStages(shader.Stage);
-                // stageCI.pName = CommonStrings.main; // Meh
-                stageCI.pName = new FixedUtf8String(shader.EntryPoint); // TODO: DONT ALLOCATE HERE
+                stageCI.pName = (byte*)shader.EntryPoint;
                 stageCI.pSpecializationInfo = &specializationInfo;
                 stages.Add(stageCI);
             }
@@ -234,7 +237,7 @@ namespace XenoAtom.Graphics.Vk
             pipelineCI.pStages = (VkPipelineShaderStageCreateInfo*)stages.Data;
 
             // ViewportState
-            VkPipelineViewportStateCreateInfo viewportStateCI = VkPipelineViewportStateCreateInfo.New();
+            VkPipelineViewportStateCreateInfo viewportStateCI = new VkPipelineViewportStateCreateInfo();
             viewportStateCI.viewportCount = 1;
             viewportStateCI.scissorCount = 1;
 
@@ -242,7 +245,7 @@ namespace XenoAtom.Graphics.Vk
 
             // Pipeline Layout
             ResourceLayout[] resourceLayouts = description.ResourceLayouts;
-            VkPipelineLayoutCreateInfo pipelineLayoutCI = VkPipelineLayoutCreateInfo.New();
+            VkPipelineLayoutCreateInfo pipelineLayoutCI = new VkPipelineLayoutCreateInfo();
             pipelineLayoutCI.setLayoutCount = (uint)resourceLayouts.Length;
             VkDescriptorSetLayout* dsls = stackalloc VkDescriptorSetLayout[resourceLayouts.Length];
             for (int i = 0; i < resourceLayouts.Length; i++)
@@ -251,12 +254,12 @@ namespace XenoAtom.Graphics.Vk
             }
             pipelineLayoutCI.pSetLayouts = dsls;
 
-            vkCreatePipelineLayout(_gd.Device, ref pipelineLayoutCI, null, out _pipelineLayout);
+            vkCreatePipelineLayout(_gd.Device, ref pipelineLayoutCI, null, out _pipelineLayout).VkCheck();
             pipelineCI.layout = _pipelineLayout;
 
             // Create fake RenderPass for compatibility.
 
-            VkRenderPassCreateInfo renderPassCI = VkRenderPassCreateInfo.New();
+            VkRenderPassCreateInfo renderPassCI = new VkRenderPassCreateInfo();
             OutputDescription outputDesc = description.Outputs;
             StackList<VkAttachmentDescription, Size512Bytes> attachments = new StackList<VkAttachmentDescription, Size512Bytes>();
 
@@ -268,16 +271,16 @@ namespace XenoAtom.Graphics.Vk
             {
                 colorAttachmentDescs[i].format = VkFormats.VdToVkPixelFormat(outputDesc.ColorAttachments[i].Format);
                 colorAttachmentDescs[i].samples = vkSampleCount;
-                colorAttachmentDescs[i].loadOp = VkAttachmentLoadOp.DontCare;
-                colorAttachmentDescs[i].storeOp = VkAttachmentStoreOp.Store;
-                colorAttachmentDescs[i].stencilLoadOp = VkAttachmentLoadOp.DontCare;
-                colorAttachmentDescs[i].stencilStoreOp = VkAttachmentStoreOp.DontCare;
-                colorAttachmentDescs[i].initialLayout = VkImageLayout.Undefined;
-                colorAttachmentDescs[i].finalLayout = VkImageLayout.ShaderReadOnlyOptimal;
+                colorAttachmentDescs[i].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                colorAttachmentDescs[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+                colorAttachmentDescs[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                colorAttachmentDescs[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                colorAttachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+                colorAttachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 attachments.Add(colorAttachmentDescs[i]);
 
                 colorAttachmentRefs[i].attachment = i;
-                colorAttachmentRefs[i].layout = VkImageLayout.ColorAttachmentOptimal;
+                colorAttachmentRefs[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             }
 
             VkAttachmentDescription depthAttachmentDesc = new VkAttachmentDescription();
@@ -288,19 +291,19 @@ namespace XenoAtom.Graphics.Vk
                 bool hasStencil = FormatHelpers.IsStencilFormat(depthFormat);
                 depthAttachmentDesc.format = VkFormats.VdToVkPixelFormat(outputDesc.DepthAttachment.Value.Format, toDepthFormat: true);
                 depthAttachmentDesc.samples = vkSampleCount;
-                depthAttachmentDesc.loadOp = VkAttachmentLoadOp.DontCare;
-                depthAttachmentDesc.storeOp = VkAttachmentStoreOp.Store;
-                depthAttachmentDesc.stencilLoadOp = VkAttachmentLoadOp.DontCare;
-                depthAttachmentDesc.stencilStoreOp = hasStencil ? VkAttachmentStoreOp.Store : VkAttachmentStoreOp.DontCare;
-                depthAttachmentDesc.initialLayout = VkImageLayout.Undefined;
-                depthAttachmentDesc.finalLayout = VkImageLayout.DepthStencilAttachmentOptimal;
+                depthAttachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                depthAttachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+                depthAttachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                depthAttachmentDesc.stencilStoreOp = hasStencil ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                depthAttachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+                depthAttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
                 depthAttachmentRef.attachment = (uint)outputDesc.ColorAttachments.Length;
-                depthAttachmentRef.layout = VkImageLayout.DepthStencilAttachmentOptimal;
+                depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             }
 
             VkSubpassDescription subpass = new VkSubpassDescription();
-            subpass.pipelineBindPoint = VkPipelineBindPoint.Graphics;
+            subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
             subpass.colorAttachmentCount = (uint)outputDesc.ColorAttachments.Length;
             subpass.pColorAttachments = (VkAttachmentReference*)colorAttachmentRefs.Data;
             for (int i = 0; i < colorAttachmentDescs.Count; i++)
@@ -315,10 +318,10 @@ namespace XenoAtom.Graphics.Vk
             }
 
             VkSubpassDependency subpassDependency = new VkSubpassDependency();
-            subpassDependency.srcSubpass = SubpassExternal;
-            subpassDependency.srcStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
-            subpassDependency.dstStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
-            subpassDependency.dstAccessMask = VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite;
+            subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+            subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
             renderPassCI.attachmentCount = attachments.Count;
             renderPassCI.pAttachments = (VkAttachmentDescription*)attachments.Data;
@@ -327,13 +330,15 @@ namespace XenoAtom.Graphics.Vk
             renderPassCI.dependencyCount = 1;
             renderPassCI.pDependencies = &subpassDependency;
 
-            VkResult creationResult = vkCreateRenderPass(_gd.Device, ref renderPassCI, null, out _renderPass);
+            VkResult creationResult = vkCreateRenderPass(_gd.Device, renderPassCI, null, out _renderPass);
             CheckResult(creationResult);
 
             pipelineCI.renderPass = _renderPass;
 
-            VkResult result = vkCreateGraphicsPipelines(_gd.Device, VkPipelineCache.Null, 1, ref pipelineCI, null, out _devicePipeline);
+            XenoAtom.Interop.vulkan.VkPipeline devicePipeline;
+            VkResult result = vkCreateGraphicsPipelines(_gd.Device, default, 1, &pipelineCI, null, &devicePipeline);
             CheckResult(result);
+            _devicePipeline = devicePipeline;
 
             ResourceSetCount = (uint)description.ResourceLayouts.Length;
             DynamicOffsetsCount = 0;
@@ -350,11 +355,11 @@ namespace XenoAtom.Graphics.Vk
             IsComputePipeline = true;
             RefCount = new ResourceRefCount(DisposeCore);
 
-            VkComputePipelineCreateInfo pipelineCI = VkComputePipelineCreateInfo.New();
+            VkComputePipelineCreateInfo pipelineCI = new VkComputePipelineCreateInfo();
 
             // Pipeline Layout
             ResourceLayout[] resourceLayouts = description.ResourceLayouts;
-            VkPipelineLayoutCreateInfo pipelineLayoutCI = VkPipelineLayoutCreateInfo.New();
+            VkPipelineLayoutCreateInfo pipelineLayoutCI = new VkPipelineLayoutCreateInfo();
             pipelineLayoutCI.setLayoutCount = (uint)resourceLayouts.Length;
             VkDescriptorSetLayout* dsls = stackalloc VkDescriptorSetLayout[resourceLayouts.Length];
             for (int i = 0; i < resourceLayouts.Length; i++)
@@ -400,21 +405,23 @@ namespace XenoAtom.Graphics.Vk
 
             Shader shader = description.ComputeShader;
             VkShader vkShader = Util.AssertSubtype<Shader, VkShader>(shader);
-            VkPipelineShaderStageCreateInfo stageCI = VkPipelineShaderStageCreateInfo.New();
+            VkPipelineShaderStageCreateInfo stageCI = new VkPipelineShaderStageCreateInfo();
             stageCI.module = vkShader.ShaderModule;
             stageCI.stage = VkFormats.VdToVkShaderStages(shader.Stage);
-            stageCI.pName = CommonStrings.main; // Meh
+            stageCI.pName = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference("main"u8)); // Meh
             stageCI.pSpecializationInfo = &specializationInfo;
             pipelineCI.stage = stageCI;
 
+            XenoAtom.Interop.vulkan.VkPipeline devicePipeline;
             VkResult result = vkCreateComputePipelines(
                 _gd.Device,
-                VkPipelineCache.Null,
+                default,
                 1,
-                ref pipelineCI,
+                &pipelineCI,
                 null,
-                out _devicePipeline);
+                &devicePipeline);
             CheckResult(result);
+            _devicePipeline = devicePipeline;
 
             ResourceSetCount = (uint)description.ResourceLayouts.Length;
             DynamicOffsetsCount = 0;

@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using static XenoAtom.Interop.vulkan;
+
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System;
 using System.Diagnostics;
@@ -10,7 +10,7 @@ namespace XenoAtom.Graphics.Vk
     internal unsafe class VkFramebuffer : VkFramebufferBase
     {
         private readonly VkGraphicsDevice _gd;
-        private readonly Vulkan.VkFramebuffer _deviceFramebuffer;
+        private readonly XenoAtom.Interop.vulkan.VkFramebuffer _deviceFramebuffer;
         private readonly VkRenderPass _renderPassNoClearLoad;
         private readonly VkRenderPass _renderPassNoClear;
         private readonly VkRenderPass _renderPassClear;
@@ -18,7 +18,7 @@ namespace XenoAtom.Graphics.Vk
         private bool _destroyed;
         private string _name;
 
-        public override Vulkan.VkFramebuffer CurrentFramebuffer => _deviceFramebuffer;
+        public override XenoAtom.Interop.vulkan.VkFramebuffer CurrentFramebuffer => _deviceFramebuffer;
         public override VkRenderPass RenderPassNoClear_Init => _renderPassNoClear;
         public override VkRenderPass RenderPassNoClear_Load => _renderPassNoClearLoad;
         public override VkRenderPass RenderPassClear => _renderPassClear;
@@ -35,7 +35,7 @@ namespace XenoAtom.Graphics.Vk
         {
             _gd = gd;
 
-            VkRenderPassCreateInfo renderPassCI = VkRenderPassCreateInfo.New();
+            VkRenderPassCreateInfo renderPassCI = new VkRenderPassCreateInfo();
 
             StackList<VkAttachmentDescription> attachments = new StackList<VkAttachmentDescription>();
 
@@ -47,21 +47,21 @@ namespace XenoAtom.Graphics.Vk
                 VkAttachmentDescription colorAttachmentDesc = new VkAttachmentDescription();
                 colorAttachmentDesc.format = vkColorTex.VkFormat;
                 colorAttachmentDesc.samples = vkColorTex.VkSampleCount;
-                colorAttachmentDesc.loadOp = VkAttachmentLoadOp.Load;
-                colorAttachmentDesc.storeOp = VkAttachmentStoreOp.Store;
-                colorAttachmentDesc.stencilLoadOp = VkAttachmentLoadOp.DontCare;
-                colorAttachmentDesc.stencilStoreOp = VkAttachmentStoreOp.DontCare;
+                colorAttachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                colorAttachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+                colorAttachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                colorAttachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
                 colorAttachmentDesc.initialLayout = isPresented
-                    ? VkImageLayout.PresentSrcKHR
+                    ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
                     : ((vkColorTex.Usage & TextureUsage.Sampled) != 0)
-                        ? VkImageLayout.ShaderReadOnlyOptimal
-                        : VkImageLayout.ColorAttachmentOptimal;
-                colorAttachmentDesc.finalLayout = VkImageLayout.ColorAttachmentOptimal;
+                        ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                        : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                colorAttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
                 attachments.Add(colorAttachmentDesc);
 
                 VkAttachmentReference colorAttachmentRef = new VkAttachmentReference();
                 colorAttachmentRef.attachment = (uint)i;
-                colorAttachmentRef.layout = VkImageLayout.ColorAttachmentOptimal;
+                colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
                 colorAttachmentRefs.Add(colorAttachmentRef);
             }
 
@@ -73,23 +73,23 @@ namespace XenoAtom.Graphics.Vk
                 bool hasStencil = FormatHelpers.IsStencilFormat(vkDepthTex.Format);
                 depthAttachmentDesc.format = vkDepthTex.VkFormat;
                 depthAttachmentDesc.samples = vkDepthTex.VkSampleCount;
-                depthAttachmentDesc.loadOp = VkAttachmentLoadOp.Load;
-                depthAttachmentDesc.storeOp = VkAttachmentStoreOp.Store;
-                depthAttachmentDesc.stencilLoadOp = VkAttachmentLoadOp.DontCare;
+                depthAttachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                depthAttachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+                depthAttachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 depthAttachmentDesc.stencilStoreOp = hasStencil
-                    ? VkAttachmentStoreOp.Store
-                    : VkAttachmentStoreOp.DontCare;
+                    ? VK_ATTACHMENT_STORE_OP_STORE
+                    : VK_ATTACHMENT_STORE_OP_DONT_CARE;
                 depthAttachmentDesc.initialLayout = ((vkDepthTex.Usage & TextureUsage.Sampled) != 0)
-                    ? VkImageLayout.ShaderReadOnlyOptimal
-                    : VkImageLayout.DepthStencilAttachmentOptimal;
-                depthAttachmentDesc.finalLayout = VkImageLayout.DepthStencilAttachmentOptimal;
+                    ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                    : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+                depthAttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
                 depthAttachmentRef.attachment = (uint)description.ColorTargets.Length;
-                depthAttachmentRef.layout = VkImageLayout.DepthStencilAttachmentOptimal;
+                depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             }
 
             VkSubpassDescription subpass = new VkSubpassDescription();
-            subpass.pipelineBindPoint = VkPipelineBindPoint.Graphics;
+            subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
             if (ColorTargets.Count > 0)
             {
                 subpass.colorAttachmentCount = colorAttachmentCount;
@@ -102,11 +102,12 @@ namespace XenoAtom.Graphics.Vk
                 attachments.Add(depthAttachmentDesc);
             }
 
+            const uint VK_SUBPASS_EXTERNAL = ~0U;
             VkSubpassDependency subpassDependency = new VkSubpassDependency();
-            subpassDependency.srcSubpass = SubpassExternal;
-            subpassDependency.srcStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
-            subpassDependency.dstStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
-            subpassDependency.dstAccessMask = VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite;
+            subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+            subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
             renderPassCI.attachmentCount = attachments.Count;
             renderPassCI.pAttachments = (VkAttachmentDescription*)attachments.Data;
@@ -115,22 +116,22 @@ namespace XenoAtom.Graphics.Vk
             renderPassCI.dependencyCount = 1;
             renderPassCI.pDependencies = &subpassDependency;
 
-            VkResult creationResult = vkCreateRenderPass(_gd.Device, ref renderPassCI, null, out _renderPassNoClear);
+            VkResult creationResult = vkCreateRenderPass(_gd.Device, renderPassCI, null, out _renderPassNoClear);
             CheckResult(creationResult);
 
             for (int i = 0; i < colorAttachmentCount; i++)
             {
-                attachments[i].loadOp = VkAttachmentLoadOp.Load;
-                attachments[i].initialLayout = VkImageLayout.ColorAttachmentOptimal;
+                attachments[i].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                attachments[i].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             }
             if (DepthTarget != null)
             {
-                attachments[attachments.Count - 1].loadOp = VkAttachmentLoadOp.Load;
-                attachments[attachments.Count - 1].initialLayout = VkImageLayout.DepthStencilAttachmentOptimal;
+                attachments[attachments.Count - 1].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                attachments[attachments.Count - 1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
                 bool hasStencil = FormatHelpers.IsStencilFormat(DepthTarget.Value.Target.Format);
                 if (hasStencil)
                 {
-                    attachments[attachments.Count - 1].stencilLoadOp = VkAttachmentLoadOp.Load;
+                    attachments[attachments.Count - 1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
                 }
 
             }
@@ -142,25 +143,25 @@ namespace XenoAtom.Graphics.Vk
 
             if (DepthTarget != null)
             {
-                attachments[attachments.Count - 1].loadOp = VkAttachmentLoadOp.Clear;
-                attachments[attachments.Count - 1].initialLayout = VkImageLayout.Undefined;
+                attachments[attachments.Count - 1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                attachments[attachments.Count - 1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
                 bool hasStencil = FormatHelpers.IsStencilFormat(DepthTarget.Value.Target.Format);
                 if (hasStencil)
                 {
-                    attachments[attachments.Count - 1].stencilLoadOp = VkAttachmentLoadOp.Clear;
+                    attachments[attachments.Count - 1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
                 }
             }
 
             for (int i = 0; i < colorAttachmentCount; i++)
             {
-                attachments[i].loadOp = VkAttachmentLoadOp.Clear;
-                attachments[i].initialLayout = VkImageLayout.Undefined;
+                attachments[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                attachments[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             }
 
             creationResult = vkCreateRenderPass(_gd.Device, ref renderPassCI, null, out _renderPassClear);
             CheckResult(creationResult);
 
-            VkFramebufferCreateInfo fbCI = VkFramebufferCreateInfo.New();
+            VkFramebufferCreateInfo fbCI = new VkFramebufferCreateInfo();
             uint fbAttachmentsCount = (uint)description.ColorTargets.Length;
             if (description.DepthTarget != null)
             {
@@ -171,18 +172,20 @@ namespace XenoAtom.Graphics.Vk
             for (int i = 0; i < colorAttachmentCount; i++)
             {
                 VkTexture vkColorTarget = Util.AssertSubtype<Texture, VkTexture>(description.ColorTargets[i].Target);
-                VkImageViewCreateInfo imageViewCI = VkImageViewCreateInfo.New();
+                VkImageViewCreateInfo imageViewCI = new VkImageViewCreateInfo();
                 imageViewCI.image = vkColorTarget.OptimalDeviceImage;
                 imageViewCI.format = vkColorTarget.VkFormat;
-                imageViewCI.viewType = VkImageViewType.Image2D;
-                imageViewCI.subresourceRange = new VkImageSubresourceRange(
-                    VkImageAspectFlags.Color,
-                    description.ColorTargets[i].MipLevel,
-                    1,
-                    description.ColorTargets[i].ArrayLayer,
-                    1);
+                imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+                imageViewCI.subresourceRange = new VkImageSubresourceRange()
+                {
+                    aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    baseMipLevel = description.ColorTargets[i].MipLevel,
+                    levelCount = 1,
+                    baseArrayLayer = description.ColorTargets[i].ArrayLayer,
+                    layerCount = 1
+                };
                 VkImageView* dest = (fbAttachments + i);
-                VkResult result = vkCreateImageView(_gd.Device, ref imageViewCI, null, dest);
+                VkResult result = vkCreateImageView(_gd.Device, &imageViewCI, null, dest);
                 CheckResult(result);
                 _attachmentViews.Add(*dest);
             }
@@ -192,20 +195,24 @@ namespace XenoAtom.Graphics.Vk
             {
                 VkTexture vkDepthTarget = Util.AssertSubtype<Texture, VkTexture>(description.DepthTarget.Value.Target);
                 bool hasStencil = FormatHelpers.IsStencilFormat(vkDepthTarget.Format);
-                VkImageViewCreateInfo depthViewCI = VkImageViewCreateInfo.New();
+                VkImageViewCreateInfo depthViewCI = new VkImageViewCreateInfo();
                 depthViewCI.image = vkDepthTarget.OptimalDeviceImage;
                 depthViewCI.format = vkDepthTarget.VkFormat;
                 depthViewCI.viewType = description.DepthTarget.Value.Target.ArrayLayers == 1
-                    ? VkImageViewType.Image2D
-                    : VkImageViewType.Image2DArray;
-                depthViewCI.subresourceRange = new VkImageSubresourceRange(
-                    hasStencil ? VkImageAspectFlags.Depth | VkImageAspectFlags.Stencil : VkImageAspectFlags.Depth,
-                    description.DepthTarget.Value.MipLevel,
-                    1,
-                    description.DepthTarget.Value.ArrayLayer,
-                    1);
+                    ? VK_IMAGE_VIEW_TYPE_2D
+                    : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+                depthViewCI.subresourceRange = new VkImageSubresourceRange()
+                {
+                    aspectMask = hasStencil
+                        ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
+                        : VK_IMAGE_ASPECT_DEPTH_BIT,
+                    baseMipLevel = description.DepthTarget.Value.MipLevel,
+                    levelCount = 1,
+                    baseArrayLayer = description.DepthTarget.Value.ArrayLayer,
+                    layerCount = 1
+                };
                 VkImageView* dest = (fbAttachments + (fbAttachmentsCount - 1));
-                VkResult result = vkCreateImageView(_gd.Device, ref depthViewCI, null, dest);
+                VkResult result = vkCreateImageView(_gd.Device, &depthViewCI, null, dest);
                 CheckResult(result);
                 _attachmentViews.Add(*dest);
             }
@@ -239,7 +246,7 @@ namespace XenoAtom.Graphics.Vk
             fbCI.layers = 1;
             fbCI.renderPass = _renderPassNoClear;
 
-            creationResult = vkCreateFramebuffer(_gd.Device, ref fbCI, null, out _deviceFramebuffer);
+            creationResult = vkCreateFramebuffer(_gd.Device, fbCI, null, out _deviceFramebuffer);
             CheckResult(creationResult);
 
             if (DepthTarget != null)
@@ -255,7 +262,7 @@ namespace XenoAtom.Graphics.Vk
             {
                 FramebufferAttachment ca = ColorTargets[i];
                 VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(ca.Target);
-                vkTex.SetImageLayout(ca.MipLevel, ca.ArrayLayer, VkImageLayout.ColorAttachmentOptimal);
+                vkTex.SetImageLayout(ca.MipLevel, ca.ArrayLayer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
             }
             if (DepthTarget != null)
             {
@@ -263,7 +270,7 @@ namespace XenoAtom.Graphics.Vk
                 vkTex.SetImageLayout(
                     DepthTarget.Value.MipLevel,
                     DepthTarget.Value.ArrayLayer,
-                    VkImageLayout.DepthStencilAttachmentOptimal);
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
             }
         }
 
@@ -279,7 +286,7 @@ namespace XenoAtom.Graphics.Vk
                         cb,
                         ca.MipLevel, 1,
                         ca.ArrayLayer, 1,
-                        VkImageLayout.ShaderReadOnlyOptimal);
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
                 }
             }
             if (DepthTarget != null)
@@ -291,7 +298,7 @@ namespace XenoAtom.Graphics.Vk
                         cb,
                         DepthTarget.Value.MipLevel, 1,
                         DepthTarget.Value.ArrayLayer, 1,
-                        VkImageLayout.ShaderReadOnlyOptimal);
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
                 }
             }
         }

@@ -1,6 +1,6 @@
-﻿using Vulkan;
+﻿using static XenoAtom.Interop.vulkan;
 using static XenoAtom.Graphics.Vk.VulkanUtil;
-using static Vulkan.VulkanNative;
+
 
 namespace XenoAtom.Graphics.Vk
 {
@@ -23,31 +23,33 @@ namespace XenoAtom.Graphics.Vk
             : base(ref description)
         {
             _gd = gd;
-            VkImageViewCreateInfo imageViewCI = VkImageViewCreateInfo.New();
+            VkImageViewCreateInfo imageViewCI = new VkImageViewCreateInfo();
             VkTexture tex = Util.AssertSubtype<Texture, VkTexture>(description.Target);
             imageViewCI.image = tex.OptimalDeviceImage;
             imageViewCI.format = VkFormats.VdToVkPixelFormat(Format, (Target.Usage & TextureUsage.DepthStencil) != 0);
 
-            VkImageAspectFlags aspectFlags;
+            VkImageAspectFlagBits aspectFlags;
             if ((description.Target.Usage & TextureUsage.DepthStencil) == TextureUsage.DepthStencil)
             {
-                aspectFlags = VkImageAspectFlags.Depth;
+                aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
             }
             else
             {
-                aspectFlags = VkImageAspectFlags.Color;
+                aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
             }
 
-            imageViewCI.subresourceRange = new VkImageSubresourceRange(
-                aspectFlags,
-                description.BaseMipLevel,
-                description.MipLevels,
-                description.BaseArrayLayer,
-                description.ArrayLayers);
+            imageViewCI.subresourceRange = new VkImageSubresourceRange()
+            {
+                aspectMask = aspectFlags,
+                baseMipLevel = description.BaseMipLevel,
+                levelCount = description.MipLevels,
+                baseArrayLayer = description.BaseArrayLayer,
+                layerCount = description.ArrayLayers
+            };
 
             if ((tex.Usage & TextureUsage.Cubemap) == TextureUsage.Cubemap)
             {
-                imageViewCI.viewType = description.ArrayLayers == 1 ? VkImageViewType.ImageCube : VkImageViewType.ImageCubeArray;
+                imageViewCI.viewType = description.ArrayLayers == 1 ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
                 imageViewCI.subresourceRange.layerCount *= 6;
             }
             else
@@ -56,16 +58,16 @@ namespace XenoAtom.Graphics.Vk
                 {
                     case TextureType.Texture1D:
                         imageViewCI.viewType = description.ArrayLayers == 1
-                            ? VkImageViewType.Image1D
-                            : VkImageViewType.Image1DArray;
+                            ? VK_IMAGE_VIEW_TYPE_1D
+                            : VK_IMAGE_VIEW_TYPE_1D_ARRAY;
                         break;
                     case TextureType.Texture2D:
                         imageViewCI.viewType = description.ArrayLayers == 1
-                            ? VkImageViewType.Image2D
-                            : VkImageViewType.Image2DArray;
+                            ? VK_IMAGE_VIEW_TYPE_2D
+                            : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
                         break;
                     case TextureType.Texture3D:
-                        imageViewCI.viewType = VkImageViewType.Image3D;
+                        imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_3D;
                         break;
                 }
             }

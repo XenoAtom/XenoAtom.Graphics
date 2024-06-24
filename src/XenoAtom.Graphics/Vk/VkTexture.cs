@@ -1,5 +1,5 @@
-﻿using Vulkan;
-using static Vulkan.VulkanNative;
+﻿using static XenoAtom.Interop.vulkan;
+
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System.Diagnostics;
 using System;
@@ -11,7 +11,7 @@ namespace XenoAtom.Graphics.Vk
         private readonly VkGraphicsDevice _gd;
         private readonly VkImage _optimalImage;
         private readonly VkMemoryBlock _memoryBlock;
-        private readonly Vulkan.VkBuffer _stagingBuffer;
+        private readonly XenoAtom.Interop.vulkan.VkBuffer _stagingBuffer;
         private PixelFormat _format; // Static for regular images -- may change for shared staging images
         private readonly uint _actualImageArrayLayers;
         private bool _destroyed;
@@ -43,7 +43,7 @@ namespace XenoAtom.Graphics.Vk
         public override bool IsDisposed => _destroyed;
 
         public VkImage OptimalDeviceImage => _optimalImage;
-        public Vulkan.VkBuffer StagingBuffer => _stagingBuffer;
+        public XenoAtom.Interop.vulkan.VkBuffer StagingBuffer => _stagingBuffer;
         public VkMemoryBlock Memory => _memoryBlock;
 
         public VkFormat VkFormat { get; }
@@ -79,23 +79,23 @@ namespace XenoAtom.Graphics.Vk
 
             if (!isStaging)
             {
-                VkImageCreateInfo imageCI = VkImageCreateInfo.New();
+                VkImageCreateInfo imageCI = new VkImageCreateInfo();
                 imageCI.mipLevels = MipLevels;
                 imageCI.arrayLayers = _actualImageArrayLayers;
                 imageCI.imageType = VkFormats.VdToVkTextureType(Type);
                 imageCI.extent.width = Width;
                 imageCI.extent.height = Height;
                 imageCI.extent.depth = Depth;
-                imageCI.initialLayout = VkImageLayout.Preinitialized;
+                imageCI.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
                 imageCI.usage = VkFormats.VdToVkTextureUsage(Usage);
-                imageCI.tiling = isStaging ? VkImageTiling.Linear : VkImageTiling.Optimal;
+                imageCI.tiling = isStaging ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
                 imageCI.format = VkFormat;
-                imageCI.flags = VkImageCreateFlags.MutableFormat;
+                imageCI.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 
                 imageCI.samples = VkSampleCount;
                 if (isCubemap)
                 {
-                    imageCI.flags |= VkImageCreateFlags.CubeCompatible;
+                    imageCI.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
                 }
 
                 uint subresourceCount = MipLevels * _actualImageArrayLayers * Depth;
@@ -104,33 +104,25 @@ namespace XenoAtom.Graphics.Vk
 
                 VkMemoryRequirements memoryRequirements;
                 bool prefersDedicatedAllocation;
-                if (_gd.GetImageMemoryRequirements2 != null)
-                {
-                    VkImageMemoryRequirementsInfo2KHR memReqsInfo2 = VkImageMemoryRequirementsInfo2KHR.New();
-                    memReqsInfo2.image = _optimalImage;
-                    VkMemoryRequirements2KHR memReqs2 = VkMemoryRequirements2KHR.New();
-                    VkMemoryDedicatedRequirementsKHR dedicatedReqs = VkMemoryDedicatedRequirementsKHR.New();
-                    memReqs2.pNext = &dedicatedReqs;
-                    _gd.GetImageMemoryRequirements2(_gd.Device, &memReqsInfo2, &memReqs2);
-                    memoryRequirements = memReqs2.memoryRequirements;
-                    prefersDedicatedAllocation = dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation;
-                }
-                else
-                {
-                    vkGetImageMemoryRequirements(gd.Device, _optimalImage, out memoryRequirements);
-                    prefersDedicatedAllocation = false;
-                }
+                VkImageMemoryRequirementsInfo2 memReqsInfo2 = new VkImageMemoryRequirementsInfo2();
+                memReqsInfo2.image = _optimalImage;
+                VkMemoryRequirements2 memReqs2 = new VkMemoryRequirements2();
+                VkMemoryDedicatedRequirements dedicatedReqs = new VkMemoryDedicatedRequirements();
+                memReqs2.pNext = &dedicatedReqs;
+                vkGetImageMemoryRequirements2(_gd.Device, &memReqsInfo2, &memReqs2);
+                memoryRequirements = memReqs2.memoryRequirements;
+                prefersDedicatedAllocation = dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation;
 
                 VkMemoryBlock memoryToken = gd.MemoryManager.Allocate(
                     gd.PhysicalDeviceMemProperties,
                     memoryRequirements.memoryTypeBits,
-                    VkMemoryPropertyFlags.DeviceLocal,
+                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                     false,
                     memoryRequirements.size,
                     memoryRequirements.alignment,
                     prefersDedicatedAllocation,
                     _optimalImage,
-                    Vulkan.VkBuffer.Null);
+                    default);
                 _memoryBlock = memoryToken;
                 result = vkBindImageMemory(gd.Device, _optimalImage, _memoryBlock.DeviceMemory, _memoryBlock.Offset);
                 CheckResult(result);
@@ -138,7 +130,7 @@ namespace XenoAtom.Graphics.Vk
                 _imageLayouts = new VkImageLayout[subresourceCount];
                 for (int i = 0; i < _imageLayouts.Length; i++)
                 {
-                    _imageLayouts[i] = VkImageLayout.Preinitialized;
+                    _imageLayouts[i] = VK_IMAGE_LAYOUT_PREINITIALIZED;
                 }
             }
             else // isStaging
@@ -161,36 +153,29 @@ namespace XenoAtom.Graphics.Vk
                 }
                 stagingSize *= ArrayLayers;
 
-                VkBufferCreateInfo bufferCI = VkBufferCreateInfo.New();
-                bufferCI.usage = VkBufferUsageFlags.TransferSrc | VkBufferUsageFlags.TransferDst;
+                VkBufferCreateInfo bufferCI = new VkBufferCreateInfo();
+                bufferCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
                 bufferCI.size = stagingSize;
                 VkResult result = vkCreateBuffer(_gd.Device, ref bufferCI, null, out _stagingBuffer);
                 CheckResult(result);
 
                 VkMemoryRequirements bufferMemReqs;
                 bool prefersDedicatedAllocation;
-                if (_gd.GetBufferMemoryRequirements2 != null)
-                {
-                    VkBufferMemoryRequirementsInfo2KHR memReqInfo2 = VkBufferMemoryRequirementsInfo2KHR.New();
-                    memReqInfo2.buffer = _stagingBuffer;
-                    VkMemoryRequirements2KHR memReqs2 = VkMemoryRequirements2KHR.New();
-                    VkMemoryDedicatedRequirementsKHR dedicatedReqs = VkMemoryDedicatedRequirementsKHR.New();
-                    memReqs2.pNext = &dedicatedReqs;
-                    _gd.GetBufferMemoryRequirements2(_gd.Device, &memReqInfo2, &memReqs2);
-                    bufferMemReqs = memReqs2.memoryRequirements;
-                    prefersDedicatedAllocation = dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation;
-                }
-                else
-                {
-                    vkGetBufferMemoryRequirements(gd.Device, _stagingBuffer, out bufferMemReqs);
-                    prefersDedicatedAllocation = false;
-                }
+
+                VkBufferMemoryRequirementsInfo2 memReqInfo2 = new VkBufferMemoryRequirementsInfo2();
+                memReqInfo2.buffer = _stagingBuffer;
+                VkMemoryRequirements2 memReqs2 = new VkMemoryRequirements2();
+                VkMemoryDedicatedRequirements dedicatedReqs = new VkMemoryDedicatedRequirements();
+                memReqs2.pNext = &dedicatedReqs;
+                vkGetBufferMemoryRequirements2(_gd.Device, &memReqInfo2, &memReqs2);
+                bufferMemReqs = memReqs2.memoryRequirements;
+                prefersDedicatedAllocation = dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation;
 
                 // Use "host cached" memory when available, for better performance of GPU -> CPU transfers
-                var propertyFlags = VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent | VkMemoryPropertyFlags.HostCached;
+                var propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
                 if (!TryFindMemoryType(_gd.PhysicalDeviceMemProperties, bufferMemReqs.memoryTypeBits, propertyFlags, out _))
                 {
-                    propertyFlags ^= VkMemoryPropertyFlags.HostCached;
+                    propertyFlags ^= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
                 }
                 _memoryBlock = _gd.MemoryManager.Allocate(
                     _gd.PhysicalDeviceMemProperties,
@@ -200,7 +185,7 @@ namespace XenoAtom.Graphics.Vk
                     bufferMemReqs.size,
                     bufferMemReqs.alignment,
                     prefersDedicatedAllocation,
-                    VkImage.Null,
+                    default,
                     _stagingBuffer);
 
                 result = vkBindBufferMemory(_gd.Device, _stagingBuffer, _memoryBlock.DeviceMemory, _memoryBlock.Offset);
@@ -238,7 +223,7 @@ namespace XenoAtom.Graphics.Vk
             SampleCount = sampleCount;
             VkSampleCount = VkFormats.VdToVkSampleCount(sampleCount);
             _optimalImage = existingImage;
-            _imageLayouts = new[] { VkImageLayout.Undefined };
+            _imageLayouts = new[] { VK_IMAGE_LAYOUT_UNDEFINED };
             _isSwapchainTexture = true;
 
             ClearIfRenderTarget();
@@ -262,19 +247,19 @@ namespace XenoAtom.Graphics.Vk
         {
             if ((Usage & TextureUsage.Sampled) != 0)
             {
-                _gd.TransitionImageLayout(this, VkImageLayout.ShaderReadOnlyOptimal);
+                _gd.TransitionImageLayout(this, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             }
         }
 
         internal VkSubresourceLayout GetSubresourceLayout(uint subresource)
         {
-            bool staging = _stagingBuffer.Handle != 0;
+            bool staging = _stagingBuffer.Value.Handle != 0;
             Util.GetMipLevelAndArrayLayer(this, subresource, out uint mipLevel, out uint arrayLayer);
             if (!staging)
             {
                 VkImageAspectFlags aspect = (Usage & TextureUsage.DepthStencil) == TextureUsage.DepthStencil
-                  ? (VkImageAspectFlags.Depth | VkImageAspectFlags.Stencil)
-                  : VkImageAspectFlags.Color;
+                  ? (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)
+                  : VK_IMAGE_ASPECT_COLOR_BIT;
                 VkImageSubresource imageSubresource = new VkImageSubresource
                 {
                     arrayLayer = arrayLayer,
@@ -313,7 +298,7 @@ namespace XenoAtom.Graphics.Vk
             uint layerCount,
             VkImageLayout newLayout)
         {
-            if (_stagingBuffer != Vulkan.VkBuffer.Null)
+            if (_stagingBuffer != default)
             {
                 return;
             }
@@ -337,12 +322,12 @@ namespace XenoAtom.Graphics.Vk
                 if ((Usage & TextureUsage.DepthStencil) != 0)
                 {
                     aspectMask = FormatHelpers.IsStencilFormat(Format)
-                        ? VkImageAspectFlags.Depth | VkImageAspectFlags.Stencil
-                        : VkImageAspectFlags.Depth;
+                        ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
+                        : VK_IMAGE_ASPECT_DEPTH_BIT;
                 }
                 else
                 {
-                    aspectMask = VkImageAspectFlags.Color;
+                    aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                 }
                 VulkanUtil.TransitionImageLayout(
                     cb,
@@ -373,7 +358,7 @@ namespace XenoAtom.Graphics.Vk
             uint layerCount,
             VkImageLayout newLayout)
         {
-            if (_stagingBuffer != Vulkan.VkBuffer.Null)
+            if (_stagingBuffer != default)
             {
                 return;
             }
@@ -391,12 +376,12 @@ namespace XenoAtom.Graphics.Vk
                         if ((Usage & TextureUsage.DepthStencil) != 0)
                         {
                             aspectMask = FormatHelpers.IsStencilFormat(Format)
-                                ? VkImageAspectFlags.Depth | VkImageAspectFlags.Stencil
-                                : VkImageAspectFlags.Depth;
+                                ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
+                                : VK_IMAGE_ASPECT_DEPTH_BIT;
                         }
                         else
                         {
-                            aspectMask = VkImageAspectFlags.Color;
+                            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                         }
                         VulkanUtil.TransitionImageLayout(
                             cb,
@@ -432,7 +417,7 @@ namespace XenoAtom.Graphics.Vk
 
         internal void SetStagingDimensions(uint width, uint height, uint depth, PixelFormat format)
         {
-            Debug.Assert(_stagingBuffer != Vulkan.VkBuffer.Null);
+            Debug.Assert(_stagingBuffer != default);
             Debug.Assert(Usage == TextureUsage.Staging);
             _width = width;
             _height = height;
@@ -463,7 +448,7 @@ namespace XenoAtom.Graphics.Vk
                     vkDestroyImage(_gd.Device, _optimalImage, null);
                 }
 
-                if (_memoryBlock.DeviceMemory.Handle != 0)
+                if (_memoryBlock.DeviceMemory.Value.Handle != 0)
                 {
                     _gd.MemoryManager.Free(_memoryBlock);
                 }

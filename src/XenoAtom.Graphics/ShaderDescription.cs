@@ -1,4 +1,5 @@
 ﻿using System;
+using XenoAtom.Interop;
 
 namespace XenoAtom.Graphics
 {
@@ -25,7 +26,7 @@ namespace XenoAtom.Graphics
         /// <summary>
         /// The name of the entry point function in the shader module to be used in this stage.
         /// </summary>
-        public string EntryPoint;
+        public ReadOnlyMemoryUtf8 EntryPoint;
 
         /// <summary>
         /// Indicates whether the shader should be debuggable. This flag only has an effect if <see cref="ShaderBytes"/> contains
@@ -39,7 +40,7 @@ namespace XenoAtom.Graphics
         /// <param name="stage">The shader stage to create.</param>
         /// <param name="shaderBytes">An array containing the raw shader bytes.</param>
         /// <param name="entryPoint">The name of the entry point function in the shader module to be used in this stage.</param>
-        public ShaderDescription(ShaderStages stage, byte[] shaderBytes, string entryPoint)
+        public ShaderDescription(ShaderStages stage, byte[] shaderBytes, ReadOnlyMemoryUtf8 entryPoint)
         {
             Stage = stage;
             ShaderBytes = shaderBytes;
@@ -55,7 +56,7 @@ namespace XenoAtom.Graphics
         /// <param name="entryPoint">The name of the entry point function in the shader module to be used in this stage.</param>
         /// <param name="debug">Indicates whether the shader should be debuggable. This flag only has an effect if
         /// <paramref name="shaderBytes"/> contains shader code that will be compiled.</param>
-        public ShaderDescription(ShaderStages stage, byte[] shaderBytes, string entryPoint, bool debug)
+        public ShaderDescription(ShaderStages stage, byte[] shaderBytes, ReadOnlyMemoryUtf8 entryPoint, bool debug)
         {
             Stage = stage;
             ShaderBytes = shaderBytes;

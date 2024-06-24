@@ -1,5 +1,5 @@
-﻿using Vulkan;
-using static Vulkan.VulkanNative;
+﻿using static XenoAtom.Interop.vulkan;
+
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -19,21 +19,14 @@ namespace XenoAtom.Graphics.Vk
         private readonly Dictionary<uint, ChunkAllocatorSet> _allocatorsByMemoryTypeUnmapped = new Dictionary<uint, ChunkAllocatorSet>();
         private readonly Dictionary<uint, ChunkAllocatorSet> _allocatorsByMemoryType = new Dictionary<uint, ChunkAllocatorSet>();
 
-        private readonly vkGetBufferMemoryRequirements2_t _getBufferMemoryRequirements2;
-        private readonly vkGetImageMemoryRequirements2_t _getImageMemoryRequirements2;
-
         public VkDeviceMemoryManager(
             VkDevice device,
             VkPhysicalDevice physicalDevice,
-            ulong bufferImageGranularity,
-            vkGetBufferMemoryRequirements2_t getBufferMemoryRequirements2,
-            vkGetImageMemoryRequirements2_t getImageMemoryRequirements2)
+            ulong bufferImageGranularity)
         {
             _device = device;
             _physicalDevice = physicalDevice;
             _bufferImageGranularity = bufferImageGranularity;
-            _getBufferMemoryRequirements2 = getBufferMemoryRequirements2;
-            _getImageMemoryRequirements2 = getImageMemoryRequirements2;
         }
 
         public VkMemoryBlock Allocate(
@@ -52,8 +45,8 @@ namespace XenoAtom.Graphics.Vk
                 size,
                 alignment,
                 false,
-                VkImage.Null,
-                Vulkan.VkBuffer.Null);
+                default,
+                default);
         }
 
         public VkMemoryBlock Allocate(
@@ -65,24 +58,22 @@ namespace XenoAtom.Graphics.Vk
             ulong alignment,
             bool dedicated,
             VkImage dedicatedImage,
-            Vulkan.VkBuffer dedicatedBuffer)
+            XenoAtom.Interop.vulkan.VkBuffer dedicatedBuffer)
         {
             if (dedicated)
             {
-                if (dedicatedImage != VkImage.Null && _getImageMemoryRequirements2 != null)
+                if (dedicatedImage != default)
                 {
-                    VkImageMemoryRequirementsInfo2KHR requirementsInfo = VkImageMemoryRequirementsInfo2KHR.New();
-                    requirementsInfo.image = dedicatedImage;
-                    VkMemoryRequirements2KHR requirements = VkMemoryRequirements2KHR.New();
-                    _getImageMemoryRequirements2(_device, &requirementsInfo, &requirements);
+                    VkImageMemoryRequirementsInfo2 requirementsInfo = new() { image = dedicatedImage };
+                    VkMemoryRequirements2 requirements = new();
+                    vkGetImageMemoryRequirements2(_device, requirementsInfo, out requirements);
                     size = requirements.memoryRequirements.size;
                 }
-                else if(dedicatedBuffer != Vulkan.VkBuffer.Null && _getBufferMemoryRequirements2 != null)
+                else if(dedicatedBuffer != default)
                 {
-                    VkBufferMemoryRequirementsInfo2KHR requirementsInfo = VkBufferMemoryRequirementsInfo2KHR.New();
-                    requirementsInfo.buffer = dedicatedBuffer;
-                    VkMemoryRequirements2KHR requirements = VkMemoryRequirements2KHR.New();
-                    _getBufferMemoryRequirements2(_device, &requirementsInfo, &requirements);
+                    VkBufferMemoryRequirementsInfo2 requirementsInfo = new() { buffer = dedicatedBuffer };
+                    VkMemoryRequirements2 requirements = new();
+                    vkGetBufferMemoryRequirements2(_device, requirementsInfo, out requirements);
                     size = requirements.memoryRequirements.size;
                 }
             }
@@ -106,21 +97,23 @@ namespace XenoAtom.Graphics.Vk
 
                 if (dedicated || size >= minDedicatedAllocationSize)
                 {
-                    VkMemoryAllocateInfo allocateInfo = VkMemoryAllocateInfo.New();
+                    VkMemoryAllocateInfo allocateInfo = new VkMemoryAllocateInfo();
                     allocateInfo.allocationSize = size;
                     allocateInfo.memoryTypeIndex = memoryTypeIndex;
 
-                    VkMemoryDedicatedAllocateInfoKHR dedicatedAI;
+                    VkMemoryDedicatedAllocateInfo dedicatedAI;
                     if (dedicated)
                     {
-                        dedicatedAI = VkMemoryDedicatedAllocateInfoKHR.New();
-                        dedicatedAI.buffer = dedicatedBuffer;
-                        dedicatedAI.image = dedicatedImage;
+                        dedicatedAI = new VkMemoryDedicatedAllocateInfo
+                        {
+                            buffer = dedicatedBuffer,
+                            image = dedicatedImage
+                        };
                         allocateInfo.pNext = &dedicatedAI;
                     }
 
-                    VkResult allocationResult = vkAllocateMemory(_device, ref allocateInfo, null, out VkDeviceMemory memory);
-                    if (allocationResult != VkResult.Success)
+                    VkResult allocationResult = vkAllocateMemory(_device, allocateInfo, null, out VkDeviceMemory memory);
+                    if (allocationResult != VK_SUCCESS)
                     {
                         throw new VeldridException("Unable to allocate sufficient Vulkan memory.");
                     }
@@ -128,8 +121,8 @@ namespace XenoAtom.Graphics.Vk
                     void* mappedPtr = null;
                     if (persistentMapped)
                     {
-                        VkResult mapResult = vkMapMemory(_device, memory, 0, size, 0, &mappedPtr);
-                        if (mapResult != VkResult.Success)
+                        VkResult mapResult = vkMapMemory(_device, memory, 0, size, default, &mappedPtr);
+                        if (mapResult != VK_SUCCESS)
                         {
                             throw new VeldridException("Unable to map newly-allocated Vulkan memory.");
                         }
@@ -262,7 +255,7 @@ namespace XenoAtom.Graphics.Vk
                 _persistentMapped = persistentMapped;
                 _totalMemorySize = persistentMapped ? PersistentMappedChunkSize : UnmappedChunkSize;
 
-                VkMemoryAllocateInfo memoryAI = VkMemoryAllocateInfo.New();
+                VkMemoryAllocateInfo memoryAI = new VkMemoryAllocateInfo();
                 memoryAI.allocationSize = _totalMemorySize;
                 memoryAI.memoryTypeIndex = _memoryTypeIndex;
                 VkResult result = vkAllocateMemory(_device, ref memoryAI, null, out _memory);
@@ -271,7 +264,7 @@ namespace XenoAtom.Graphics.Vk
                 void* mappedPtr = null;
                 if (persistentMapped)
                 {
-                    result = vkMapMemory(_device, _memory, 0, _totalMemorySize, 0, &mappedPtr);
+                    result = vkMapMemory(_device, _memory, 0, _totalMemorySize, default, &mappedPtr);
                     CheckResult(result);
                 }
                 _mappedPtr = mappedPtr;
@@ -448,7 +441,7 @@ namespace XenoAtom.Graphics.Vk
         internal IntPtr Map(VkMemoryBlock memoryBlock)
         {
             void* ret;
-            VkResult result = vkMapMemory(_device, memoryBlock.DeviceMemory, memoryBlock.Offset, memoryBlock.Size, 0, &ret);
+            VkResult result = vkMapMemory(_device, memoryBlock.DeviceMemory, memoryBlock.Offset, memoryBlock.Size, default, &ret);
             CheckResult(result);
             return (IntPtr)ret;
         }

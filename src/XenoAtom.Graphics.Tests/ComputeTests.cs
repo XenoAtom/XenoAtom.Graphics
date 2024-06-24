@@ -31,35 +31,10 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void ComputeShader3dTexture()
         {
-            // Just a dumb compute shader that fills a 3D texture with the same value from a uniform multiplied by the depth.
-            string shaderText = @"
-#version 450
-layout(set = 0, binding = 0, rgba32f) uniform image3D TextureToFill;
-layout(set = 0, binding = 1) uniform FillValueBuffer
-{
-    float FillValue;
-    float Padding1;
-    float Padding2;
-    float Padding3;
-};
-layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
-void main()
-{
-    ivec3 textureCoordinate = ivec3(gl_GlobalInvocationID.xyz);
-    float dataToStore = FillValue * (textureCoordinate.z + 1);
-
-    imageStore(TextureToFill, textureCoordinate, vec4(dataToStore));
-}
-";
-
             const float FillValue = 42.42f;
             const uint OutputTextureSize = 32;
 
-            using Shader computeShader = RF.CreateFromSpirv(new ShaderDescription(
-                ShaderStages.Compute,
-                Encoding.ASCII.GetBytes(shaderText),
-                "main"));
-
+            using Shader computeShader = TestShaders.LoadCompute(RF, "ComputeShader3dTexture");
             using ResourceLayout computeLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("TextureToFill", ResourceKind.TextureReadWrite, ShaderStages.Compute),
                 new ResourceLayoutElementDescription("FillValueBuffer", ResourceKind.UniformBuffer, ShaderStages.Compute)));

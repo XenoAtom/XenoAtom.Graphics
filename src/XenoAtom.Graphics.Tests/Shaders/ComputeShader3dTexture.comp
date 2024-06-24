@@ -1,0 +1,17 @@
+#version 450
+layout(set = 0, binding = 0, rgba32f) uniform image3D TextureToFill;
+layout(set = 0, binding = 1) uniform FillValueBuffer
+{
+    float FillValue;
+    float Padding1;
+    float Padding2;
+    float Padding3;
+};
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main()
+{
+    ivec3 textureCoordinate = ivec3(gl_GlobalInvocationID.xyz);
+    float dataToStore = FillValue * (textureCoordinate.z + 1);
+
+    imageStore(TextureToFill, textureCoordinate, vec4(dataToStore));
+}

@@ -1,5 +1,5 @@
-﻿using Vulkan;
-using static Vulkan.VulkanNative;
+﻿using static XenoAtom.Interop.vulkan;
+
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System;
 
@@ -21,12 +21,12 @@ namespace XenoAtom.Graphics.Vk
         {
             _gd = gd;
 
-            VkShaderModuleCreateInfo shaderModuleCI = VkShaderModuleCreateInfo.New();
+            VkShaderModuleCreateInfo shaderModuleCI = new VkShaderModuleCreateInfo();
             fixed (byte* codePtr = description.ShaderBytes)
             {
                 shaderModuleCI.codeSize = (UIntPtr)description.ShaderBytes.Length;
                 shaderModuleCI.pCode = (uint*)codePtr;
-                VkResult result = vkCreateShaderModule(gd.Device, ref shaderModuleCI, null, out _shaderModule);
+                VkResult result = vkCreateShaderModule(gd.Device, shaderModuleCI, null, out _shaderModule);
                 CheckResult(result);
             }
         }

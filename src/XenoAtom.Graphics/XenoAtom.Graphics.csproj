@@ -3,10 +3,12 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
     <NoWarn Condition="'$(Configuration)' == 'Debug'">1591</NoWarn>
     <ExcludeD3D11>true</ExcludeD3D11>
     <ExcludeMetal>true</ExcludeMetal>
     <ExcludeOpenGL>true</ExcludeOpenGL>
+    <IsAotCompatible>true</IsAotCompatible>
     <DefineConstants>$(DefineConstants);VALIDATE_USAGE</DefineConstants>
     <DefineConstants Condition="'$(ExcludeD3D11)' == 'true'">$(DefineConstants);EXCLUDE_D3D11_BACKEND</DefineConstants>
     <DefineConstants Condition="'$(ExcludeVulkan)' == 'true'">$(DefineConstants);EXCLUDE_VULKAN_BACKEND</DefineConstants>
@@ -19,11 +21,12 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="XenoAtom.Interop" Version="1.5.0" />
+    <PackageReference Include="XenoAtom.Interop.vulkan" Version="1.0.0-alpha.8" PrivateAssets="contentfiles;analyzers;build;compile" />
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Vk" Version="1.0.25" Condition="'$(ExcludeVulkan)' != 'true'" />
   </ItemGroup>
 
   <PropertyGroup>

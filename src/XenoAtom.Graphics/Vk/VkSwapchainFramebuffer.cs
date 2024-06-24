@@ -1,5 +1,5 @@
-﻿using Vulkan;
-using static Vulkan.VulkanNative;
+﻿using static XenoAtom.Interop.vulkan;
+
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System;
 using System.Linq;
@@ -28,7 +28,7 @@ namespace XenoAtom.Graphics.Vk
         private string _name;
         private OutputDescription _outputDescription;
 
-        public override Vulkan.VkFramebuffer CurrentFramebuffer => _scFramebuffers[(int)_currentImageIndex].CurrentFramebuffer;
+        public override XenoAtom.Interop.vulkan.VkFramebuffer CurrentFramebuffer => _scFramebuffers[(int)_currentImageIndex].CurrentFramebuffer;
 
         public override VkRenderPass RenderPassNoClear_Init => _scFramebuffers[0].RenderPassNoClear_Init;
         public override VkRenderPass RenderPassNoClear_Load => _scFramebuffers[0].RenderPassNoClear_Load;
@@ -88,13 +88,13 @@ namespace XenoAtom.Graphics.Vk
 
             // Get the images
             uint scImageCount = 0;
-            VkResult result = vkGetSwapchainImagesKHR(_gd.Device, deviceSwapchain, ref scImageCount, null);
+            VkResult result = _gd.vkGetSwapchainImagesKHR.Invoke(_gd.Device, deviceSwapchain, out scImageCount);
             CheckResult(result);
             if (_scImages.Length < scImageCount)
             {
                 _scImages = new VkImage[(int)scImageCount];
             }
-            result = vkGetSwapchainImagesKHR(_gd.Device, deviceSwapchain, ref scImageCount, out _scImages[0]);
+            result = _gd.vkGetSwapchainImagesKHR.Invoke(_gd.Device, deviceSwapchain, _scImages);
             CheckResult(result);
 
             _scImageFormat = surfaceFormat.format;
@@ -174,7 +174,7 @@ namespace XenoAtom.Graphics.Vk
             {
                 FramebufferAttachment ca = ColorTargets[i];
                 VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(ca.Target);
-                vkTex.SetImageLayout(0, ca.ArrayLayer, VkImageLayout.ColorAttachmentOptimal);
+                vkTex.SetImageLayout(0, ca.ArrayLayer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
             }
         }
 
@@ -184,7 +184,7 @@ namespace XenoAtom.Graphics.Vk
             {
                 FramebufferAttachment ca = ColorTargets[i];
                 VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(ca.Target);
-                vkTex.TransitionImageLayout(cb, 0, 1, ca.ArrayLayer, 1, VkImageLayout.PresentSrcKHR);
+                vkTex.TransitionImageLayout(cb, 0, 1, ca.ArrayLayer, 1, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
             }
         }
 

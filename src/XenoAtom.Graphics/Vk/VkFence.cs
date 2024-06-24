@@ -1,23 +1,22 @@
-﻿using Vulkan;
-using static Vulkan.VulkanNative;
+﻿using static XenoAtom.Interop.vulkan;
+
 
 namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkFence : Fence
     {
         private readonly VkGraphicsDevice _gd;
-        private Vulkan.VkFence _fence;
+        private XenoAtom.Interop.vulkan.VkFence _fence;
         private string _name;
         private bool _destroyed;
 
-        public Vulkan.VkFence DeviceFence => _fence;
+        public XenoAtom.Interop.vulkan.VkFence DeviceFence => _fence;
 
         public VkFence(VkGraphicsDevice gd, bool signaled)
         {
             _gd = gd;
-            VkFenceCreateInfo fenceCI = VkFenceCreateInfo.New();
-            fenceCI.flags = signaled ? VkFenceCreateFlags.Signaled : VkFenceCreateFlags.None;
-            VkResult result = vkCreateFence(_gd.Device, ref fenceCI, null, out _fence);
+            VkFenceCreateInfo fenceCI = new() { flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0 };
+            VkResult result = vkCreateFence(_gd.Device, fenceCI, null, out _fence);
             VulkanUtil.CheckResult(result);
         }
 
@@ -26,7 +25,7 @@ namespace XenoAtom.Graphics.Vk
             _gd.ResetFence(this);
         }
 
-        public override bool Signaled => vkGetFenceStatus(_gd.Device, _fence) == VkResult.Success;
+        public override bool Signaled => vkGetFenceStatus(_gd.Device, _fence) == VkResult.VK_SUCCESS;
         public override bool IsDisposed => _destroyed;
 
         public override string Name
