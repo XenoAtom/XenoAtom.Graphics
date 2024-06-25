@@ -68,7 +68,7 @@ namespace XenoAtom.Graphics.Vk
             var memReqs2 = new VkMemoryRequirements2();
             var dedicatedReqs = new VkMemoryDedicatedRequirements();
             memReqs2.pNext = &dedicatedReqs;
-            vkGetBufferMemoryRequirements2(_gd.Device, memReqInfo2, out memReqs2);
+            vkGetBufferMemoryRequirements2(_gd.Device, memReqInfo2, ref memReqs2);
             _bufferMemoryRequirements = memReqs2.memoryRequirements;
             prefersDedicatedAllocation = dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation;
 

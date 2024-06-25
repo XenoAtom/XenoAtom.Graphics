@@ -44,7 +44,7 @@ namespace XenoAtom.Graphics.Vk
             VkWin32SurfaceCreateInfoKHR surfaceCI = new VkWin32SurfaceCreateInfoKHR();
             surfaceCI.hwnd = win32Source.Hwnd;
             surfaceCI.hinstance = win32Source.Hinstance;
-            var vkCreateWin32SurfaceKHR = vkGetInstanceProcAddr(instance, vkCreateWin32SurfaceKHR_);
+            var vkCreateWin32SurfaceKHR = vkGetInstanceProcAddr<PFN_vkCreateWin32SurfaceKHR>(instance);
             VkResult result = vkCreateWin32SurfaceKHR.Invoke(instance, surfaceCI, null, out VkSurfaceKHR surface);
             CheckResult(result);
             return surface;
@@ -55,7 +55,7 @@ namespace XenoAtom.Graphics.Vk
             VkXlibSurfaceCreateInfoKHR xsci = new VkXlibSurfaceCreateInfoKHR();
             xsci.dpy = (void*)xlibSource.Display;
             xsci.window = (nuint)xlibSource.Window;
-            var vkCreateXlibSurfaceKHR = vkGetInstanceProcAddr(instance, vkCreateXlibSurfaceKHR_);
+            var vkCreateXlibSurfaceKHR = vkGetInstanceProcAddr<PFN_vkCreateXlibSurfaceKHR>(instance);
             VkResult result = vkCreateXlibSurfaceKHR.Invoke(instance, xsci, null, out VkSurfaceKHR surface);
             CheckResult(result);
             return surface;
@@ -68,7 +68,7 @@ namespace XenoAtom.Graphics.Vk
                 display = new(waylandSource.Display),
                 surface = new(waylandSource.Surface)
             };
-            var vkCreateWaylandSurfaceKHR = vkGetInstanceProcAddr(instance, vkCreateWaylandSurfaceKHR_);
+            var vkCreateWaylandSurfaceKHR = vkGetInstanceProcAddr<PFN_vkCreateWaylandSurfaceKHR>(instance);
             VkResult result = vkCreateWaylandSurfaceKHR.Invoke(instance, wsci, null, out VkSurfaceKHR surface);
             CheckResult(result);
             return surface;

@@ -66,14 +66,14 @@ namespace XenoAtom.Graphics.Vk
                 {
                     VkImageMemoryRequirementsInfo2 requirementsInfo = new() { image = dedicatedImage };
                     VkMemoryRequirements2 requirements = new();
-                    vkGetImageMemoryRequirements2(_device, requirementsInfo, out requirements);
+                    vkGetImageMemoryRequirements2(_device, requirementsInfo, ref requirements);
                     size = requirements.memoryRequirements.size;
                 }
                 else if(dedicatedBuffer != default)
                 {
                     VkBufferMemoryRequirementsInfo2 requirementsInfo = new() { buffer = dedicatedBuffer };
                     VkMemoryRequirements2 requirements = new();
-                    vkGetBufferMemoryRequirements2(_device, requirementsInfo, out requirements);
+                    vkGetBufferMemoryRequirements2(_device, requirementsInfo, ref requirements);
                     size = requirements.memoryRequirements.size;
                 }
             }

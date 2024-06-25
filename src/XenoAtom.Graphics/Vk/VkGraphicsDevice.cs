@@ -144,15 +144,15 @@ namespace XenoAtom.Graphics.Vk
             CreateLogicalDevice(surface, options.PreferStandardClipSpaceYDirection, vkOptions);
 
             // Used by VkSwapChain
-            vkAcquireNextImageKHR = vkGetInstanceProcAddr(Instance, vkAcquireNextImageKHR_);
-            vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vkGetDeviceProcAddr(Device, vkGetPhysicalDeviceSurfaceCapabilitiesKHR_);
-            vkGetPhysicalDeviceSurfaceFormatsKHR = vkGetDeviceProcAddr(Device, vkGetPhysicalDeviceSurfaceFormatsKHR_);
-            vkGetPhysicalDeviceSurfacePresentModesKHR = vkGetDeviceProcAddr(Device, vkGetPhysicalDeviceSurfacePresentModesKHR_);
-            vkCreateSwapchainKHR = vkGetDeviceProcAddr(Device, vkCreateSwapchainKHR_);
-            vkDestroySwapchainKHR = vkGetDeviceProcAddr(Device, vkDestroySwapchainKHR_);
-            vkGetPhysicalDeviceSurfaceSupportKHR = vkGetDeviceProcAddr(Device, vkGetPhysicalDeviceSurfaceSupportKHR_);
-            vkDestroySurfaceKHR = vkGetDeviceProcAddr(Device, vkDestroySurfaceKHR_);
-            vkGetSwapchainImagesKHR = vkGetDeviceProcAddr(Device, vkGetSwapchainImagesKHR_);
+            vkAcquireNextImageKHR = vkGetInstanceProcAddr<PFN_vkAcquireNextImageKHR>(Instance);
+            vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vkGetDeviceProcAddr<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(Device);
+            vkGetPhysicalDeviceSurfaceFormatsKHR = vkGetDeviceProcAddr<PFN_vkGetPhysicalDeviceSurfaceFormatsKHR>(Device);
+            vkGetPhysicalDeviceSurfacePresentModesKHR = vkGetDeviceProcAddr<PFN_vkGetPhysicalDeviceSurfacePresentModesKHR>(Device);
+            vkCreateSwapchainKHR = vkGetDeviceProcAddr<PFN_vkCreateSwapchainKHR>(Device);
+            vkDestroySwapchainKHR = vkGetDeviceProcAddr<PFN_vkDestroySwapchainKHR>(Device);
+            vkGetPhysicalDeviceSurfaceSupportKHR = vkGetDeviceProcAddr<PFN_vkGetPhysicalDeviceSurfaceSupportKHR>(Device);
+            vkDestroySurfaceKHR = vkGetDeviceProcAddr<PFN_vkDestroySurfaceKHR>(Device);
+            vkGetSwapchainImagesKHR = vkGetDeviceProcAddr<PFN_vkGetSwapchainImagesKHR>(Device);
 
             _memoryManager = new VkDeviceMemoryManager(
                 _device,
@@ -579,7 +579,7 @@ namespace XenoAtom.Graphics.Vk
 
             if (HasSurfaceExtension(VK_EXT_METAL_SURFACE_EXTENSION_NAME))
             {
-                _createMetalSurfaceEXT = vkGetInstanceProcAddr(_instance, vkCreateMetalSurfaceEXT_);
+                _createMetalSurfaceEXT = vkGetInstanceProcAddr<PFN_vkCreateMetalSurfaceEXT>(_instance);
             }
 
             if (debug && debugReportExtensionAvailable)
@@ -601,7 +601,7 @@ namespace XenoAtom.Graphics.Vk
             debugCallbackCI.flags = flags;
             debugCallbackCI.pfnCallback = _debugCallbackFunc;
             PFN_vkCreateDebugReportCallbackEXT createFnPtr;
-            createFnPtr = vkGetInstanceProcAddr(_instance, vkCreateDebugReportCallbackEXT_);
+            createFnPtr = vkGetInstanceProcAddr<PFN_vkCreateDebugReportCallbackEXT>(_instance);
             if (createFnPtr.IsNull)
             {
                 return;
@@ -805,10 +805,10 @@ namespace XenoAtom.Graphics.Vk
 
             if (_debugMarkerEnabled)
             {
-                _vkDebugMarkerSetObjectNameEX = vkGetInstanceProcAddr(_instance, vkDebugMarkerSetObjectNameEXT_);
-                _vkCmdDebugMarkerBeginEXT = vkGetInstanceProcAddr(_instance, vkCmdDebugMarkerBeginEXT_);
-                _vkCmdDebugMarkerEndEXT = vkGetInstanceProcAddr(_instance, vkCmdDebugMarkerEndEXT_);
-                _vkCmdDebugMarkerInsertEXT = vkGetInstanceProcAddr(_instance, vkCmdDebugMarkerInsertEXT_);
+                _vkDebugMarkerSetObjectNameEX = vkGetInstanceProcAddr<PFN_vkDebugMarkerSetObjectNameEXT>(_instance);
+                _vkCmdDebugMarkerBeginEXT = vkGetInstanceProcAddr<PFN_vkCmdDebugMarkerBeginEXT>(_instance);
+                _vkCmdDebugMarkerEndEXT = vkGetInstanceProcAddr<PFN_vkCmdDebugMarkerEndEXT>(_instance);
+                _vkCmdDebugMarkerInsertEXT = vkGetInstanceProcAddr<PFN_vkCmdDebugMarkerInsertEXT>(_instance);
             }
             if (hasDriverProperties)
             {
@@ -961,7 +961,7 @@ namespace XenoAtom.Graphics.Vk
             {
                 _debugCallbackFunc = null;
 
-                PFN_vkDestroyDebugReportCallbackEXT destroyFuncPtr = vkGetInstanceProcAddr(_instance, vkDestroyDebugReportCallbackEXT_);
+                PFN_vkDestroyDebugReportCallbackEXT destroyFuncPtr = vkGetInstanceProcAddr<PFN_vkDestroyDebugReportCallbackEXT>(_instance);
                 destroyFuncPtr.Invoke(_instance, _debugCallbackHandle, null);
             }
 
