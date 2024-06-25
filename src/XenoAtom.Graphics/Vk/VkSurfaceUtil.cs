@@ -12,30 +12,30 @@ namespace XenoAtom.Graphics.Vk
             var doCheck = gd != null;
 
             if (doCheck && !gd.HasSurfaceExtension(VK_KHR_SURFACE_EXTENSION_NAME))
-                throw new VeldridException($"The required instance extension was not available: {VK_KHR_SURFACE_EXTENSION_NAME}");
+                throw new GraphicsException($"The required instance extension was not available: {VK_KHR_SURFACE_EXTENSION_NAME}");
 
             switch (swapchainSource)
             {
                 case XlibSwapchainSource xlibSource:
                     if (doCheck && !gd.HasSurfaceExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
                     {
-                        throw new VeldridException($"The required instance extension was not available: {VK_KHR_XLIB_SURFACE_EXTENSION_NAME}");
+                        throw new GraphicsException($"The required instance extension was not available: {VK_KHR_XLIB_SURFACE_EXTENSION_NAME}");
                     }
                     return CreateXlib(instance, xlibSource);
                 case WaylandSwapchainSource waylandSource:
                     if (doCheck && !gd.HasSurfaceExtension(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
                     {
-                        throw new VeldridException($"The required instance extension was not available: {VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME}");
+                        throw new GraphicsException($"The required instance extension was not available: {VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME}");
                     }
                     return CreateWayland(instance, waylandSource);
                 case Win32SwapchainSource win32Source:
                     if (doCheck && !gd.HasSurfaceExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME))
                     {
-                        throw new VeldridException($"The required instance extension was not available: {VK_KHR_WIN32_SURFACE_EXTENSION_NAME}");
+                        throw new GraphicsException($"The required instance extension was not available: {VK_KHR_WIN32_SURFACE_EXTENSION_NAME}");
                     }
                     return CreateWin32(instance, win32Source);
                 default:
-                    throw new VeldridException($"The provided SwapchainSource cannot be used to create a Vulkan surface.");
+                    throw new GraphicsException($"The provided SwapchainSource cannot be used to create a Vulkan surface.");
             }
         }
 

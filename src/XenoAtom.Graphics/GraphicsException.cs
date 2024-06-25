@@ -5,12 +5,12 @@ namespace XenoAtom.Graphics
     /// <summary>
     /// Represents errors that occur in the XenoAtom.Graphics library.
     /// </summary>
-    public class VeldridException : Exception
+    public class GraphicsException : Exception
     {
         /// <summary>
         /// Constructs a new VeldridException.
         /// </summary>
-        public VeldridException()
+        public GraphicsException()
         {
         }
 
@@ -18,7 +18,7 @@ namespace XenoAtom.Graphics
         /// Constructs a new Veldridexception with the given message.
         /// </summary>
         /// <param name="message">The exception message.</param>
-        public VeldridException(string message) : base(message)
+        public GraphicsException(string message) : base(message)
         {
         }
 
@@ -27,7 +27,7 @@ namespace XenoAtom.Graphics
         /// </summary>
         /// <param name="message">The exception message.</param>
         /// <param name="innerException">The inner exception.</param>
-        public VeldridException(string message, Exception innerException) : base(message, innerException)
+        public GraphicsException(string message, Exception innerException) : base(message, innerException)
         {
         }
     }

@@ -16,7 +16,7 @@ namespace XenoAtom.Graphics.Vk
         {
             if (result != VK_SUCCESS)
             {
-                throw new VeldridException("Unsuccessful VkResult: " + result);
+                throw new GraphicsException("Unsuccessful VkResult: " + result);
             }
         }
 

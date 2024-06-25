@@ -57,12 +57,12 @@ namespace XenoAtom.Graphics
 
             if (arrayLayer >= effectiveArrayLayers)
             {
-                throw new VeldridException(
+                throw new GraphicsException(
                     $"{nameof(arrayLayer)} must be less than {nameof(target)}.{nameof(Texture.ArrayLayers)}.");
             }
             if (mipLevel >= target.MipLevels)
             {
-                throw new VeldridException(
+                throw new GraphicsException(
                     $"{nameof(mipLevel)} must be less than {nameof(target)}.{nameof(Texture.MipLevels)}.");
             }
 #endif

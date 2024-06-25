@@ -14,12 +14,12 @@ namespace XenoAtom.Graphics
 #if DEBUG
             if (value == null)
             {
-                throw new VeldridException($"Expected object of type {typeof(TDerived).FullName} but received null instead.");
+                throw new GraphicsException($"Expected object of type {typeof(TDerived).FullName} but received null instead.");
             }
 
             if (!(value is TDerived derived))
             {
-                throw new VeldridException($"object {value} must be derived type {typeof(TDerived).FullName} to be used in this context.");
+                throw new GraphicsException($"object {value} must be derived type {typeof(TDerived).FullName} to be used in this context.");
             }
 
             return derived;
@@ -301,7 +301,7 @@ namespace XenoAtom.Graphics
             }
             else
             {
-                throw new VeldridException(
+                throw new GraphicsException(
                     $"Unexpected resource type. Expected Texture or TextureView but found {resource.GetType().Name}");
             }
         }

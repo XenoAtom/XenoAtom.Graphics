@@ -13,7 +13,7 @@ namespace XenoAtom.Graphics.Tests
 
             DeviceBuffer ub = RF.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
 
-            Assert.Throws<VeldridException>(() =>
+            Assert.Throws<GraphicsException>(() =>
             {
                 ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout,
                     ub));
@@ -29,7 +29,7 @@ namespace XenoAtom.Graphics.Tests
             Texture t = RF.CreateTexture(TextureDescription.Texture2D(64, 64, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
             TextureView tv = RF.CreateTextureView(t);
 
-            Assert.Throws<VeldridException>(() =>
+            Assert.Throws<GraphicsException>(() =>
             {
                 ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout, tv));
             });
@@ -43,7 +43,7 @@ namespace XenoAtom.Graphics.Tests
 
             DeviceBuffer readOnlyBuffer = RF.CreateBuffer(new BufferDescription(1024, BufferUsage.UniformBuffer));
 
-            Assert.Throws<VeldridException>(() =>
+            Assert.Throws<GraphicsException>(() =>
             {
                 ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout, readOnlyBuffer));
             });
@@ -59,22 +59,22 @@ namespace XenoAtom.Graphics.Tests
 
             DeviceBuffer ub = RF.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
 
-            Assert.Throws<VeldridException>(() =>
+            Assert.Throws<GraphicsException>(() =>
             {
                 RF.CreateResourceSet(new ResourceSetDescription(layout, ub));
             });
 
-            Assert.Throws<VeldridException>(() =>
+            Assert.Throws<GraphicsException>(() =>
             {
                 RF.CreateResourceSet(new ResourceSetDescription(layout, ub, ub));
             });
 
-            Assert.Throws<VeldridException>(() =>
+            Assert.Throws<GraphicsException>(() =>
             {
                 RF.CreateResourceSet(new ResourceSetDescription(layout, ub, ub, ub, ub));
             });
 
-            Assert.Throws<VeldridException>(() =>
+            Assert.Throws<GraphicsException>(() =>
             {
                 RF.CreateResourceSet(new ResourceSetDescription(layout, ub, ub, ub, ub, ub));
             });
@@ -88,13 +88,13 @@ namespace XenoAtom.Graphics.Tests
 
             DeviceBuffer buffer = RF.CreateBuffer(new BufferDescription(1024, BufferUsage.UniformBuffer));
 
-            Assert.Throws<VeldridException>(() =>
+            Assert.Throws<GraphicsException>(() =>
             {
                 RF.CreateResourceSet(new ResourceSetDescription(layout,
                     new DeviceBufferRange(buffer, GD.UniformBufferMinOffsetAlignment - 1, 256)));
             });
 
-            Assert.Throws<VeldridException>(() =>
+            Assert.Throws<GraphicsException>(() =>
             {
                 RF.CreateResourceSet(new ResourceSetDescription(layout,
                     new DeviceBufferRange(buffer, GD.UniformBufferMinOffsetAlignment + 1, 256)));
@@ -113,7 +113,7 @@ namespace XenoAtom.Graphics.Tests
 
             CommandList cl = RF.CreateCommandList();
             cl.Begin();
-            Assert.Throws<VeldridException>(() => cl.SetGraphicsResourceSet(0, rs));
+            Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(0, rs));
             cl.End();
         }
 
@@ -152,9 +152,9 @@ namespace XenoAtom.Graphics.Tests
             CommandList cl = RF.CreateCommandList();
             cl.Begin();
             cl.SetPipeline(pipeline);
-            Assert.Throws<VeldridException>(() => cl.SetGraphicsResourceSet(1, set));
-            Assert.Throws<VeldridException>(() => cl.SetGraphicsResourceSet(2, set));
-            Assert.Throws<VeldridException>(() => cl.SetGraphicsResourceSet(3, set));
+            Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(1, set));
+            Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(2, set));
+            Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(3, set));
             cl.End();
         }
 
@@ -206,8 +206,8 @@ namespace XenoAtom.Graphics.Tests
             cl.Begin();
             cl.SetPipeline(pipeline);
             cl.SetGraphicsResourceSet(0, set);
-            Assert.Throws<VeldridException>(() => cl.SetGraphicsResourceSet(0, set2)); // Wrong type
-            Assert.Throws<VeldridException>(() => cl.SetGraphicsResourceSet(0, set3)); // Wrong count
+            Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(0, set2)); // Wrong type
+            Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(0, set3)); // Wrong count
             cl.End();
         }
     }

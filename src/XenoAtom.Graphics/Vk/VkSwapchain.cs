@@ -69,7 +69,7 @@ namespace XenoAtom.Graphics.Vk
 
             if (!GetPresentQueueIndex(out _presentQueueIndex))
             {
-                throw new VeldridException($"The system does not support presenting the given Vulkan surface.");
+                throw new GraphicsException($"The system does not support presenting the given Vulkan surface.");
             }
             vkGetDeviceQueue(_gd.Device, _presentQueueIndex, 0, out _presentQueue);
 
@@ -121,7 +121,7 @@ namespace XenoAtom.Graphics.Vk
             }
             else if (result != VK_SUCCESS)
             {
-                throw new VeldridException("Could not acquire next image from the Vulkan swapchain.");
+                throw new GraphicsException("Could not acquire next image from the Vulkan swapchain.");
             }
 
             return true;
@@ -147,7 +147,7 @@ namespace XenoAtom.Graphics.Vk
             VkResult result = _gd.vkGetPhysicalDeviceSurfaceCapabilitiesKHR.Invoke(_gd.PhysicalDevice, _surface, out VkSurfaceCapabilitiesKHR surfaceCapabilities);
             if (result == VK_ERROR_SURFACE_LOST_KHR)
             {
-                throw new VeldridException($"The Swapchain's underlying surface has been lost.");
+                throw new GraphicsException($"The Swapchain's underlying surface has been lost.");
             }
 
             if (surfaceCapabilities.minImageExtent.width == 0 && surfaceCapabilities.minImageExtent.height == 0
@@ -192,7 +192,7 @@ namespace XenoAtom.Graphics.Vk
                 {
                     if (_colorSrgb && surfaceFormat.format != VK_FORMAT_R8G8B8A8_SRGB)
                     {
-                        throw new VeldridException($"Unable to create an sRGB Swapchain for this surface.");
+                        throw new GraphicsException($"Unable to create an sRGB Swapchain for this surface.");
                     }
 
                     surfaceFormat = formats[0];

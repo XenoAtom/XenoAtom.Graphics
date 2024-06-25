@@ -88,7 +88,7 @@ namespace XenoAtom.Graphics.Vk
             {
                 if (!TryFindMemoryType(memProperties, memoryTypeBits, flags, out var memoryTypeIndex))
                 {
-                    throw new VeldridException("No suitable memory type.");
+                    throw new GraphicsException("No suitable memory type.");
                 }
 
                 ulong minDedicatedAllocationSize = persistentMapped
@@ -115,7 +115,7 @@ namespace XenoAtom.Graphics.Vk
                     VkResult allocationResult = vkAllocateMemory(_device, allocateInfo, null, out VkDeviceMemory memory);
                     if (allocationResult != VK_SUCCESS)
                     {
-                        throw new VeldridException("Unable to allocate sufficient Vulkan memory.");
+                        throw new GraphicsException("Unable to allocate sufficient Vulkan memory.");
                     }
 
                     void* mappedPtr = null;
@@ -124,7 +124,7 @@ namespace XenoAtom.Graphics.Vk
                         VkResult mapResult = vkMapMemory(_device, memory, 0, size, default, &mappedPtr);
                         if (mapResult != VK_SUCCESS)
                         {
-                            throw new VeldridException("Unable to map newly-allocated Vulkan memory.");
+                            throw new GraphicsException("Unable to map newly-allocated Vulkan memory.");
                         }
                     }
 
@@ -136,7 +136,7 @@ namespace XenoAtom.Graphics.Vk
                     bool result = allocator.Allocate(size, alignment, out VkMemoryBlock ret);
                     if (!result)
                     {
-                        throw new VeldridException("Unable to allocate sufficient Vulkan memory.");
+                        throw new GraphicsException("Unable to allocate sufficient Vulkan memory.");
                     }
 
                     return ret;

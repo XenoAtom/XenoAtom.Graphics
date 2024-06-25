@@ -108,9 +108,9 @@ namespace XenoAtom.Graphics.Tests
         public void Map_WrongFlags_Throws()
         {
             DeviceBuffer buffer = CreateBuffer(1024, BufferUsage.VertexBuffer);
-            Assert.Throws<VeldridException>(() => GD.Map(buffer, MapMode.Read));
-            Assert.Throws<VeldridException>(() => GD.Map(buffer, MapMode.Write));
-            Assert.Throws<VeldridException>(() => GD.Map(buffer, MapMode.ReadWrite));
+            Assert.Throws<GraphicsException>(() => GD.Map(buffer, MapMode.Read));
+            Assert.Throws<GraphicsException>(() => GD.Map(buffer, MapMode.Write));
+            Assert.Throws<GraphicsException>(() => GD.Map(buffer, MapMode.ReadWrite));
         }
 
         [Fact]
@@ -191,7 +191,7 @@ namespace XenoAtom.Graphics.Tests
             DeviceBuffer buffer = RF.CreateBuffer(new BufferDescription(1024, BufferUsage.Staging));
             MappedResourceView<int> view = GD.Map<int>(buffer, MapMode.ReadWrite);
             int[] data = Enumerable.Range(0, 256).Select(i => 2 * i).ToArray();
-            Assert.Throws<VeldridException>(() => GD.UpdateBuffer(buffer, 0, data));
+            Assert.Throws<GraphicsException>(() => GD.UpdateBuffer(buffer, 0, data));
         }
 
         [Fact]
@@ -224,7 +224,7 @@ namespace XenoAtom.Graphics.Tests
 
             DeviceBuffer buffer = RF.CreateBuffer(new BufferDescription(1024, BufferUsage.Staging));
             MappedResource map = GD.Map(buffer, MapMode.Read);
-            Assert.Throws<VeldridException>(() => GD.Map(buffer, MapMode.Write));
+            Assert.Throws<GraphicsException>(() => GD.Map(buffer, MapMode.Write));
         }
 
         [Fact]
@@ -294,8 +294,8 @@ namespace XenoAtom.Graphics.Tests
         {
             DeviceBuffer dynamic = RF.CreateBuffer(
                 new BufferDescription(1024, BufferUsage.Dynamic | BufferUsage.UniformBuffer));
-            Assert.Throws<VeldridException>(() => GD.Map(dynamic, MapMode.Read));
-            Assert.Throws<VeldridException>(() => GD.Map(dynamic, MapMode.ReadWrite));
+            Assert.Throws<GraphicsException>(() => GD.Map(dynamic, MapMode.Read));
+            Assert.Throws<GraphicsException>(() => GD.Map(dynamic, MapMode.ReadWrite));
         }
 
         [Fact]

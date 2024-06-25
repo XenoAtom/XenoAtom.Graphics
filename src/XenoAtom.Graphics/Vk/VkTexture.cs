@@ -311,7 +311,7 @@ namespace XenoAtom.Graphics.Vk
                 {
                     if (_imageLayouts[CalculateSubresource(baseMipLevel + level, baseArrayLayer + layer)] != oldLayout)
                     {
-                        throw new VeldridException("Unexpected image layout.");
+                        throw new GraphicsException("Unexpected image layout.");
                     }
                 }
             }

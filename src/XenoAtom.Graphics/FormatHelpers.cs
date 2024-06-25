@@ -240,7 +240,7 @@ namespace XenoAtom.Graphics
                 case 8: return TextureSampleCount.Count8;
                 case 16: return TextureSampleCount.Count16;
                 case 32: return TextureSampleCount.Count32;
-                default: throw new VeldridException("Unsupported multisample count: " + samples);
+                default: throw new GraphicsException("Unsupported multisample count: " + samples);
             }
         }
 

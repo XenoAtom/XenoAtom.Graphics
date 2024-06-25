@@ -10,10 +10,6 @@ It is a fork of the excellent [Veldrid](https://github.com/veldrid/veldrid) libr
 
 - TBD
 
-## 🧪 Example
-
-TBD
-
 ## 📃 User Guide
 
 For more details on how to use XenoAtom.Graphics, please visit the [user guide](https://github.com/XenoAtom/XenoAtom.Graphics/blob/main/doc/readme.md).

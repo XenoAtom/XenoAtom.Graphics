@@ -85,7 +85,7 @@ namespace XenoAtom.Graphics
             {
                 if (MainSwapchain == null)
                 {
-                    throw new VeldridException($"This GraphicsDevice was created without a main Swapchain. This property cannot be set.");
+                    throw new GraphicsException($"This GraphicsDevice was created without a main Swapchain. This property cannot be set.");
                 }
 
                 MainSwapchain.SyncToVerticalBlank = value;
@@ -143,7 +143,7 @@ namespace XenoAtom.Graphics
         {
             if (!WaitForFence(fence, ulong.MaxValue))
             {
-                throw new VeldridException("The operation timed out before the Fence was signaled.");
+                throw new GraphicsException("The operation timed out before the Fence was signaled.");
             }
         }
 
@@ -175,7 +175,7 @@ namespace XenoAtom.Graphics
         {
             if (!WaitForFences(fences, waitAll, ulong.MaxValue))
             {
-                throw new VeldridException("The operation timed out before the Fence(s) were signaled.");
+                throw new GraphicsException("The operation timed out before the Fence(s) were signaled.");
             }
         }
 
@@ -217,7 +217,7 @@ namespace XenoAtom.Graphics
         {
             if (MainSwapchain == null)
             {
-                throw new VeldridException("This GraphicsDevice was created without a main Swapchain, so the requested operation cannot be performed.");
+                throw new GraphicsException("This GraphicsDevice was created without a main Swapchain, so the requested operation cannot be performed.");
             }
 
             SwapBuffers(MainSwapchain);
@@ -250,7 +250,7 @@ namespace XenoAtom.Graphics
         {
             if (MainSwapchain == null)
             {
-                throw new VeldridException("This GraphicsDevice was created without a main Swapchain, so the requested operation cannot be performed.");
+                throw new GraphicsException("This GraphicsDevice was created without a main Swapchain, so the requested operation cannot be performed.");
             }
 
             MainSwapchain.Resize(width, height);
@@ -300,15 +300,15 @@ namespace XenoAtom.Graphics
                 if ((buffer.Usage & BufferUsage.Dynamic) != BufferUsage.Dynamic
                     && (buffer.Usage & BufferUsage.Staging) != BufferUsage.Staging)
                 {
-                    throw new VeldridException("Buffers must have the Staging or Dynamic usage flag to be mapped.");
+                    throw new GraphicsException("Buffers must have the Staging or Dynamic usage flag to be mapped.");
                 }
                 if (subresource != 0)
                 {
-                    throw new VeldridException("Subresource must be 0 for Buffer resources.");
+                    throw new GraphicsException("Subresource must be 0 for Buffer resources.");
                 }
                 if ((mode == MapMode.Read || mode == MapMode.ReadWrite) && (buffer.Usage & BufferUsage.Staging) == 0)
                 {
-                    throw new VeldridException(
+                    throw new GraphicsException(
                         $"{nameof(MapMode)}.{nameof(MapMode.Read)} and {nameof(MapMode)}.{nameof(MapMode.ReadWrite)} can only be used on buffers created with {nameof(BufferUsage)}.{nameof(BufferUsage.Staging)}.");
                 }
             }
@@ -316,11 +316,11 @@ namespace XenoAtom.Graphics
             {
                 if ((tex.Usage & TextureUsage.Staging) == 0)
                 {
-                    throw new VeldridException("Texture must have the Staging usage flag to be mapped.");
+                    throw new GraphicsException("Texture must have the Staging usage flag to be mapped.");
                 }
                 if (subresource >= tex.ArrayLayers * tex.MipLevels)
                 {
-                    throw new VeldridException(
+                    throw new GraphicsException(
                         "Subresource must be less than the number of subresources in the Texture being mapped.");
                 }
             }
@@ -532,14 +532,14 @@ namespace XenoAtom.Graphics
                     Util.GetMipDimensions(texture, mipLevel, out uint mipWidth, out uint mipHeight, out _);
                     if (width != mipWidth && height != mipHeight)
                     {
-                        throw new VeldridException($"Updates to block-compressed textures must use a region that is block-size aligned and sized.");
+                        throw new GraphicsException($"Updates to block-compressed textures must use a region that is block-size aligned and sized.");
                     }
                 }
             }
             uint expectedSize = FormatHelpers.GetRegionSize(width, height, depth, texture.Format);
             if (sizeInBytes < expectedSize)
             {
-                throw new VeldridException(
+                throw new GraphicsException(
                     $"The data size is less than expected for the given update region. At least {expectedSize} bytes must be provided, but only {sizeInBytes} were.");
             }
 
@@ -559,12 +559,12 @@ namespace XenoAtom.Graphics
 
             if (x + width > roundedTextureWidth || y + height > roundedTextureHeight || z + depth > texture.Depth)
             {
-                throw new VeldridException($"The given region does not fit into the Texture.");
+                throw new GraphicsException($"The given region does not fit into the Texture.");
             }
 
             if (mipLevel >= texture.MipLevels)
             {
-                throw new VeldridException(
+                throw new GraphicsException(
                     $"{nameof(mipLevel)} ({mipLevel}) must be less than the Texture's mip level count ({texture.MipLevels}).");
             }
 
@@ -575,7 +575,7 @@ namespace XenoAtom.Graphics
             }
             if (arrayLayer >= effectiveArrayLayers)
             {
-                throw new VeldridException(
+                throw new GraphicsException(
                     $"{nameof(arrayLayer)} ({arrayLayer}) must be less than the Texture's effective array layer count ({effectiveArrayLayers}).");
             }
         }
@@ -715,7 +715,7 @@ namespace XenoAtom.Graphics
         {
             if (bufferOffsetInBytes + sizeInBytes > buffer.SizeInBytes)
             {
-                throw new VeldridException(
+                throw new GraphicsException(
                     $"The data size given to UpdateBuffer is too large. The given buffer can only hold {buffer.SizeInBytes} total bytes. The requested update would require {bufferOffsetInBytes + sizeInBytes} bytes.");
             }
             if (sizeInBytes == 0)
@@ -836,7 +836,7 @@ namespace XenoAtom.Graphics
             {
                 if (!Features.SamplerAnisotropy)
                 {
-                    throw new VeldridException(
+                    throw new GraphicsException(
                         "GraphicsDevice.Aniso4xSampler cannot be used unless GraphicsDeviceFeatures.SamplerAnisotropy is supported.");
                 }
 
@@ -901,7 +901,7 @@ namespace XenoAtom.Graphics
         {
             if (!GetVulkanInfo(out BackendInfoVulkan info))
             {
-                throw new VeldridException($"{nameof(GetVulkanInfo)} can only be used on a Vulkan GraphicsDevice.");
+                throw new GraphicsException($"{nameof(GetVulkanInfo)} can only be used on a Vulkan GraphicsDevice.");
             }
 
             return info;

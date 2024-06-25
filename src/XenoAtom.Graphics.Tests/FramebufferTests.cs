@@ -50,7 +50,7 @@ namespace XenoAtom.Graphics.Tests
             CommandList cl = RF.CreateCommandList();
             cl.Begin();
             cl.SetFramebuffer(fb);
-            Assert.Throws<VeldridException>(() => cl.ClearDepthStencil(1f));
+            Assert.Throws<GraphicsException>(() => cl.ClearDepthStencil(1f));
         }
 
         [Fact]
@@ -63,7 +63,7 @@ namespace XenoAtom.Graphics.Tests
             CommandList cl = RF.CreateCommandList();
             cl.Begin();
             cl.SetFramebuffer(fb);
-            Assert.Throws<VeldridException>(() => cl.ClearColorTarget(0, RgbaFloat.Red));
+            Assert.Throws<GraphicsException>(() => cl.ClearColorTarget(0, RgbaFloat.Red));
         }
 
         [Fact]
@@ -80,8 +80,8 @@ namespace XenoAtom.Graphics.Tests
             cl.SetFramebuffer(fb);
             cl.ClearColorTarget(0, RgbaFloat.Red);
             cl.ClearColorTarget(1, RgbaFloat.Red);
-            Assert.Throws<VeldridException>(() => cl.ClearColorTarget(2, RgbaFloat.Red));
-            Assert.Throws<VeldridException>(() => cl.ClearColorTarget(3, RgbaFloat.Red));
+            Assert.Throws<GraphicsException>(() => cl.ClearColorTarget(2, RgbaFloat.Red));
+            Assert.Throws<GraphicsException>(() => cl.ClearColorTarget(3, RgbaFloat.Red));
         }
 
         [Fact]

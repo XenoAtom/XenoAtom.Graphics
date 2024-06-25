@@ -9,7 +9,7 @@ namespace XenoAtom.Graphics
             return new IllegalValueException<T>();
         }
 
-        internal class IllegalValueException<T> : VeldridException
+        internal class IllegalValueException<T> : GraphicsException
         {
         }
     }

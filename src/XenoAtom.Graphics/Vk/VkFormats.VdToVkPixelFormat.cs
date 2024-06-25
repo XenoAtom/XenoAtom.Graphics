@@ -147,7 +147,7 @@ namespace XenoAtom.Graphics.Vk
                     return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
 
                 default:
-                    throw new VeldridException($"Invalid {nameof(PixelFormat)}: {format}");
+                    throw new GraphicsException($"Invalid {nameof(PixelFormat)}: {format}");
             }
         }
     }

@@ -102,7 +102,7 @@ namespace XenoAtom.Graphics.Utilities
             OctreeItem<T> octreeItem;
             if (!_currentRoot.TryGetContainedOctreeItem(item, out octreeItem))
             {
-                throw new VeldridException(item + " is not contained in the octree. It cannot be moved.");
+                throw new GraphicsException(item + " is not contained in the octree. It cannot be moved.");
             }
             else
             {
@@ -114,7 +114,7 @@ namespace XenoAtom.Graphics.Utilities
         {
             if (newBounds.ContainsNaN())
             {
-                throw new VeldridException("Invalid bounds: " + newBounds);
+                throw new GraphicsException("Invalid bounds: " + newBounds);
             }
             OctreeNode<T> newRoot = octreeItem.Container.MoveContainedItem(octreeItem, newBounds);
             if (newRoot != null)
@@ -183,7 +183,7 @@ namespace XenoAtom.Graphics.Utilities
         {
             if (Parent != null)
             {
-                throw new VeldridException("Can only add items to the root Octree node.");
+                throw new GraphicsException("Can only add items to the root Octree node.");
             }
 
             octreeItem = _nodeCache.GetOctreeItem(ref itemBounds, item);
@@ -212,7 +212,7 @@ namespace XenoAtom.Graphics.Utilities
             OctreeNode<T> container = item.Container;
             if (!container._items.Contains(item))
             {
-                throw new VeldridException("Can't move item " + item + ", its container does not contain it.");
+                throw new GraphicsException("Can't move item " + item + ", its container does not contain it.");
             }
 
             item.Bounds = newBounds;
@@ -263,11 +263,11 @@ namespace XenoAtom.Graphics.Utilities
         {
             if (!_items.Contains(octreeItem))
             {
-                throw new VeldridException("Cannot mark item as moved which doesn't belong to this OctreeNode.");
+                throw new GraphicsException("Cannot mark item as moved which doesn't belong to this OctreeNode.");
             }
             if (newBounds.ContainsNaN())
             {
-                throw new VeldridException("Invalid bounds: " + newBounds);
+                throw new GraphicsException("Invalid bounds: " + newBounds);
             }
 
             octreeItem.HasPendingMove = true;
@@ -295,7 +295,7 @@ namespace XenoAtom.Graphics.Utilities
             OctreeNode<T> container = octreeItem.Container;
             if (!container._items.Remove(octreeItem))
             {
-                throw new VeldridException("Item isn't contained in its container.");
+                throw new GraphicsException("Item isn't contained in its container.");
             }
 
             if (container.Parent != null)
@@ -487,7 +487,7 @@ namespace XenoAtom.Graphics.Utilities
         {
             if (Parent != null)
             {
-                throw new VeldridException("Can only clear the root OctreeNode.");
+                throw new GraphicsException("Can only clear the root OctreeNode.");
             }
 
             RecycleNode();

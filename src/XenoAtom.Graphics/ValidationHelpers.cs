@@ -13,7 +13,7 @@ namespace XenoAtom.Graphics
 
             if (elements.Length != resources.Length)
             {
-                throw new VeldridException(
+                throw new GraphicsException(
                     $"The number of resources specified ({resources.Length}) must be equal to the number of resources in the {nameof(ResourceLayout)} ({elements.Length}).");
             }
 
@@ -33,7 +33,7 @@ namespace XenoAtom.Graphics
 
                     if (!gd.Features.BufferRangeBinding && (range.Offset != 0 || range.SizeInBytes != range.Buffer.SizeInBytes))
                     {
-                        throw new VeldridException($"The {nameof(DeviceBufferRange)} in slot {i} uses a non-zero offset or less-than-full size, " +
+                        throw new GraphicsException($"The {nameof(DeviceBufferRange)} in slot {i} uses a non-zero offset or less-than-full size, " +
                             $"which requires {nameof(GraphicsDeviceFeatures)}.{nameof(GraphicsDeviceFeatures.BufferRangeBinding)}.");
                     }
 
@@ -43,7 +43,7 @@ namespace XenoAtom.Graphics
 
                     if ((range.Offset % alignment) != 0)
                     {
-                       throw new VeldridException($"The {nameof(DeviceBufferRange)} in slot {i} has an invalid offset: {range.Offset}. " +
+                       throw new GraphicsException($"The {nameof(DeviceBufferRange)} in slot {i} has an invalid offset: {range.Offset}. " +
                            $"The offset for this buffer must be a multiple of {alignment}.");
                     }
                 }
@@ -61,7 +61,7 @@ namespace XenoAtom.Graphics
                     if (!Util.GetDeviceBuffer(resource, out DeviceBuffer b)
                         || (b.Usage & BufferUsage.UniformBuffer) == 0)
                     {
-                        throw new VeldridException(
+                        throw new GraphicsException(
                             $"Resource in slot {slot} does not match {nameof(ResourceKind)}.{kind} specified in the {nameof(ResourceLayout)}. " +
                             $"It must be a {nameof(DeviceBuffer)} or {nameof(DeviceBufferRange)} with {nameof(BufferUsage)}.{nameof(BufferUsage.UniformBuffer)}.");
                     }
@@ -72,7 +72,7 @@ namespace XenoAtom.Graphics
                     if (!Util.GetDeviceBuffer(resource, out DeviceBuffer b)
                         || (b.Usage & (BufferUsage.StructuredBufferReadOnly | BufferUsage.StructuredBufferReadWrite)) == 0)
                     {
-                        throw new VeldridException(
+                        throw new GraphicsException(
                             $"Resource in slot {slot} does not match {nameof(ResourceKind)}.{kind} specified in the {nameof(ResourceLayout)}. It must be a {nameof(DeviceBuffer)} with {nameof(BufferUsage)}.{nameof(BufferUsage.StructuredBufferReadOnly)}.");
                     }
                     break;
@@ -82,7 +82,7 @@ namespace XenoAtom.Graphics
                     if (!Util.GetDeviceBuffer(resource, out DeviceBuffer b)
                         || (b.Usage & BufferUsage.StructuredBufferReadWrite) == 0)
                     {
-                        throw new VeldridException(
+                        throw new GraphicsException(
                             $"Resource in slot {slot} does not match {nameof(ResourceKind)} specified in the {nameof(ResourceLayout)}. It must be a {nameof(DeviceBuffer)} with {nameof(BufferUsage)}.{nameof(BufferUsage.StructuredBufferReadWrite)}.");
                     }
                     break;
@@ -92,7 +92,7 @@ namespace XenoAtom.Graphics
                     if (!(resource is TextureView tv && (tv.Target.Usage & TextureUsage.Sampled) != 0)
                         && !(resource is Texture t && (t.Usage & TextureUsage.Sampled) != 0))
                     {
-                        throw new VeldridException(
+                        throw new GraphicsException(
                             $"Resource in slot {slot} does not match {nameof(ResourceKind)}.{kind} specified in the " +
                             $"{nameof(ResourceLayout)}. It must be a {nameof(Texture)} or {nameof(TextureView)} whose target " +
                             $"has {nameof(TextureUsage)}.{nameof(TextureUsage.Sampled)}.");
@@ -104,7 +104,7 @@ namespace XenoAtom.Graphics
                     if (!(resource is TextureView tv && (tv.Target.Usage & TextureUsage.Storage) != 0)
                         && !(resource is Texture t && (t.Usage & TextureUsage.Storage) != 0))
                     {
-                        throw new VeldridException(
+                        throw new GraphicsException(
                             $"Resource in slot {slot} does not match {nameof(ResourceKind)}.{kind} specified in the " +
                             $"{nameof(ResourceLayout)}. It must be a {nameof(Texture)} or {nameof(TextureView)} whose target " +
                             $"has {nameof(TextureUsage)}.{nameof(TextureUsage.Storage)}.");
@@ -115,7 +115,7 @@ namespace XenoAtom.Graphics
                 {
                     if (!(resource is Sampler s))
                     {
-                        throw new VeldridException(
+                        throw new GraphicsException(
                             $"Resource in slot {slot} does not match {nameof(ResourceKind)}.{kind} specified in the {nameof(ResourceLayout)}. It must be a {nameof(Sampler)}.");
                     }
                     break;

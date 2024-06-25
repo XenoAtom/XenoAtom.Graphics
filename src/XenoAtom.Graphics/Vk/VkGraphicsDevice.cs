@@ -636,7 +636,7 @@ namespace XenoAtom.Graphics.Vk
 
             if (debugReportFlags == VkDebugReportFlagBitsEXT.VK_DEBUG_REPORT_ERROR_BIT_EXT)
             {
-                throw new VeldridException("A Vulkan validation error was encountered: " + fullMessage);
+                throw new GraphicsException("A Vulkan validation error was encountered: " + fullMessage);
             }
 
             Console.WriteLine(fullMessage);
@@ -773,7 +773,7 @@ namespace XenoAtom.Graphics.Vk
             if (requiredInstanceExtensions.Count != 0)
             {
                 string missingList = string.Join(", ", requiredInstanceExtensions);
-                throw new VeldridException(
+                throw new GraphicsException(
                     $"The following Vulkan device extensions were not available: {missingList}");
             }
 
@@ -784,6 +784,7 @@ namespace XenoAtom.Graphics.Vk
             deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
             StackList<nint> layerNames = new StackList<IntPtr>();
+            _khronosValidationSupported = true;
             if (_khronosValidationSupported)
             {
                 layerNames.Add((nint)(byte*)VK_LAYER_KHRONOS_VALIDATION_EXTENSION_NAME);
