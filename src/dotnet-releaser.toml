@@ -6,5 +6,4 @@ project = "XenoAtom.Graphics.sln"
 user = "XenoAtom"
 repo = "XenoAtom.Graphics"
 [changelog]
-publish = false
 owners = ["xoofx"] # To avoid to be mentioned in the changelog
