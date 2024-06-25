@@ -1,10 +1,36 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <!-- Enable AOT analyzers -->
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Nullable>enable</Nullable>
-    <NoWarn Condition="'$(Configuration)' == 'Debug'">1591</NoWarn>
+    <Description>This package provides a low-level graphics library for .NET powered by Vulkan.</Description>
+    <Copyright>Alexandre Mutel</Copyright>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <Authors>Alexandre Mutel;Eric Mellino</Authors>
+    <PackageTags>vulkan;graphics;glsl;spirv;3d;gpu</PackageTags>
+    <PackageReadmeFile>readme.md</PackageReadmeFile>
+    <PackageIcon>XenoAtom.Graphics.png</PackageIcon>
+    <PackageProjectUrl>https://github.com/XenoAtom/XenoAtom.Graphics</PackageProjectUrl>
+    <PackageLicenseExpression>BSD-2-Clause</PackageLicenseExpression>
+    <!--Add support for sourcelink-->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)../../img/XenoAtom.Graphics.png" Pack="true" PackagePath="/" />
+    <None Include="$(MSBuildThisFileDirectory)../../readme.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+  <PropertyGroup>
     <ExcludeD3D11>true</ExcludeD3D11>
     <ExcludeMetal>true</ExcludeMetal>
     <ExcludeOpenGL>true</ExcludeOpenGL>
@@ -28,10 +54,5 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
   </ItemGroup>
-
-  <PropertyGroup>
-    <Description>A low-level, hardware-accelerated graphics and compute library for .NET, with backends for Vulkan, Metal, Direct3D 11, OpenGL, and OpenGL ES. Veldrid can be used to create high-performance 2D and 3D games, simulations, tools, and other graphical applications.</Description>
-    <PackageTags>3D Graphics Direct3D DirectX Vulkan OpenGL Metal Core Standard Game</PackageTags>
-  </PropertyGroup>
 
 </Project>

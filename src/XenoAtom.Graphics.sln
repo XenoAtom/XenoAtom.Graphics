@@ -15,11 +15,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "00-General", "00-General", 
 		..\.gitattributes = ..\.gitattributes
 		..\.gitignore = ..\.gitignore
 		..\.github\workflows\ci.yml = ..\.github\workflows\ci.yml
-		Directory.Build.props = Directory.Build.props
 		dotnet-releaser.toml = dotnet-releaser.toml
 		global.json = global.json
 		..\LICENSE = ..\LICENSE
-		..\readme2.md = ..\readme2.md
+		..\readme.md = ..\readme.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "10-Documentation", "10-Documentation", "{DA4D924F-A336-4881-8162-2F8620E96CDF}"

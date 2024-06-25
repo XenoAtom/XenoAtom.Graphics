@@ -4,6 +4,7 @@
     <PackageVersion>$(AssemblyVersion)</PackageVersion>
     <TargetFrameworks>net8.0</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
