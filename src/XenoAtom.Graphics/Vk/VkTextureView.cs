@@ -1,4 +1,4 @@
-﻿using static XenoAtom.Interop.vulkan;
+using static XenoAtom.Interop.vulkan;
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 
 
@@ -9,7 +9,7 @@ namespace XenoAtom.Graphics.Vk
         private readonly VkGraphicsDevice _gd;
         private readonly VkImageView _imageView;
         private bool _destroyed;
-        private string _name;
+        private string? _name;
 
         public VkImageView ImageView => _imageView;
 
@@ -72,11 +72,11 @@ namespace XenoAtom.Graphics.Vk
                 }
             }
 
-            vkCreateImageView(_gd.Device, ref imageViewCI, null, out _imageView);
+            vkCreateImageView(_gd.Device, imageViewCI, null, out _imageView);
             RefCount = new ResourceRefCount(DisposeCore);
         }
 
-        public override string Name
+        public override string? Name
         {
             get => _name;
             set

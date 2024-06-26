@@ -1,4 +1,4 @@
-﻿using static XenoAtom.Interop.vulkan;
+using static XenoAtom.Interop.vulkan;
 
 
 namespace XenoAtom.Graphics.Vk
@@ -8,7 +8,7 @@ namespace XenoAtom.Graphics.Vk
         private readonly VkGraphicsDevice _gd;
         private readonly XenoAtom.Interop.vulkan.VkSampler _sampler;
         private bool _disposed;
-        private string _name;
+        private string? _name;
 
         public XenoAtom.Interop.vulkan.VkSampler DeviceSampler => _sampler;
 
@@ -41,11 +41,11 @@ namespace XenoAtom.Graphics.Vk
                 borderColor = VkFormats.VdToVkSamplerBorderColor(description.BorderColor)
             };
 
-            vkCreateSampler(_gd.Device, ref samplerCI, null, out _sampler);
+            vkCreateSampler(_gd.Device, samplerCI, null, out _sampler);
             RefCount = new ResourceRefCount(DisposeCore);
         }
 
-        public override string Name
+        public override string? Name
         {
             get => _name;
             set

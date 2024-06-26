@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
@@ -6,7 +6,7 @@ namespace XenoAtom.Graphics
     /// A bindable device resource which provides a shader with access to a sampled <see cref="Texture"/> object.
     /// See <see cref="TextureViewDescription"/>.
     /// </summary>
-    public abstract class TextureView : BindableResource, DeviceResource, IDisposable
+    public abstract class TextureView : BindableResource, IDeviceResource, IDisposable
     {
         /// <summary>
         /// The target <see cref="Texture"/> object to be sampled via this instance.
@@ -48,7 +48,7 @@ namespace XenoAtom.Graphics
         /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
         /// tools.
         /// </summary>
-        public abstract string Name { get; set; }
+        public abstract string? Name { get; set; }
 
         /// <summary>
         /// A bool indicating whether this instance has been disposed.

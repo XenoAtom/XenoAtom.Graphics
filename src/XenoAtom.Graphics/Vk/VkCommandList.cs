@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using static XenoAtom.Interop.vulkan;
 
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Text;
 
 namespace XenoAtom.Graphics.Vk
@@ -12,46 +13,48 @@ namespace XenoAtom.Graphics.Vk
     internal unsafe class VkCommandList : CommandList
     {
         private readonly VkGraphicsDevice _gd;
-        private VkCommandPool _pool;
+        private readonly VkCommandPool _pool;
         private VkCommandBuffer _cb;
         private bool _destroyed;
 
         private bool _commandBufferBegun;
         private bool _commandBufferEnded;
-        private VkRect2D[] _scissorRects = Array.Empty<VkRect2D>();
+        private VkRect2D[] _scissorRects = [];
 
-        private VkClearValue[] _clearValues = Array.Empty<VkClearValue>();
-        private bool[] _validColorClearValues = Array.Empty<bool>();
+        private VkClearValue[] _clearValues = [];
+        private bool[] _validColorClearValues = [];
         private VkClearValue? _depthClearValue;
-        private readonly List<VkTexture> _preDrawSampledImages = new List<VkTexture>();
+        private readonly List<VkTexture> _preDrawSampledImages = new();
 
         // Graphics State
-        private VkFramebufferBase _currentFramebuffer;
+        private VkFramebufferBase? _currentFramebuffer;
         private bool _currentFramebufferEverActive;
         private VkRenderPass _activeRenderPass;
-        private VkPipeline _currentGraphicsPipeline;
-        private BoundResourceSetInfo[] _currentGraphicsResourceSets = Array.Empty<BoundResourceSetInfo>();
-        private bool[] _graphicsResourceSetsChanged;
+        private VkPipeline? _currentGraphicsPipeline;
+        private BoundResourceSetInfo[] _currentGraphicsResourceSets = [];
+        private bool[] _graphicsResourceSetsChanged = [];
 
         private bool _newFramebuffer; // Render pass cycle state
 
         // Compute State
-        private VkPipeline _currentComputePipeline;
-        private BoundResourceSetInfo[] _currentComputeResourceSets = Array.Empty<BoundResourceSetInfo>();
-        private bool[] _computeResourceSetsChanged;
-        private string _name;
+        private VkPipeline? _currentComputePipeline;
+        private BoundResourceSetInfo[] _currentComputeResourceSets = [];
+        private bool[] _computeResourceSetsChanged = [];
 
-        private readonly object _commandBufferListLock = new object();
-        private readonly Queue<VkCommandBuffer> _availableCommandBuffers = new Queue<VkCommandBuffer>();
-        private readonly List<VkCommandBuffer> _submittedCommandBuffers = new List<VkCommandBuffer>();
+        private string? _name;
 
-        private StagingResourceInfo _currentStagingInfo;
-        private readonly object _stagingLock = new object();
-        private readonly Dictionary<VkCommandBuffer, StagingResourceInfo> _submittedStagingInfos = new Dictionary<VkCommandBuffer, StagingResourceInfo>();
-        private readonly List<StagingResourceInfo> _availableStagingInfos = new List<StagingResourceInfo>();
-        private readonly List<VkBuffer> _availableStagingBuffers = new List<VkBuffer>();
+        private readonly object _commandBufferListLock = new();
+        private readonly Queue<VkCommandBuffer> _availableCommandBuffers = new();
+        private readonly List<VkCommandBuffer> _submittedCommandBuffers = new();
+
+        private StagingResourceInfo? _currentStagingInfo;
+        private readonly object _stagingLock = new();
+        private readonly Dictionary<VkCommandBuffer, StagingResourceInfo> _submittedStagingInfos = new();
+        private readonly List<StagingResourceInfo> _availableStagingInfos = new();
+        private readonly List<VkBuffer> _availableStagingBuffers = new();
 
         public VkCommandPool CommandPool => _pool;
+
         public VkCommandBuffer CommandBuffer => _cb;
 
         public ResourceRefCount RefCount { get; }
@@ -62,10 +65,12 @@ namespace XenoAtom.Graphics.Vk
             : base(ref description, gd.Features, gd.UniformBufferMinOffsetAlignment, gd.StructuredBufferMinOffsetAlignment)
         {
             _gd = gd;
-            VkCommandPoolCreateInfo poolCI = new VkCommandPoolCreateInfo();
-            poolCI.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-            poolCI.queueFamilyIndex = gd.GraphicsQueueIndex;
-            VkResult result = vkCreateCommandPool(_gd.Device, ref poolCI, null, out _pool);
+            var poolCInfo = new VkCommandPoolCreateInfo
+            {
+                flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                queueFamilyIndex = gd.GraphicsQueueIndex
+            };
+            VkResult result = vkCreateCommandPool(_gd.Device, poolCInfo, null, out _pool);
             CheckResult(result);
 
             _cb = GetNextCommandBuffer();
@@ -85,10 +90,12 @@ namespace XenoAtom.Graphics.Vk
                 }
             }
 
-            VkCommandBufferAllocateInfo cbAI = new VkCommandBufferAllocateInfo();
-            cbAI.commandPool = _pool;
-            cbAI.commandBufferCount = 1;
-            cbAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            var cbAI = new VkCommandBufferAllocateInfo
+            {
+                commandPool = _pool,
+                commandBufferCount = 1,
+                level = VK_COMMAND_BUFFER_LEVEL_PRIMARY
+            };
             VkCommandBuffer cb = default;
             VkResult result = vkAllocateCommandBuffers(_gd.Device, cbAI, &cb);
             CheckResult(result);
@@ -97,8 +104,10 @@ namespace XenoAtom.Graphics.Vk
 
         public void CommandBufferSubmitted(VkCommandBuffer cb)
         {
+            EnsureBegin();
+
             RefCount.Increment();
-            foreach (ResourceRefCount rrc in _currentStagingInfo.Resources)
+            foreach (ResourceRefCount rrc in _currentStagingInfo!.Resources)
             {
                 rrc.Increment();
             }
@@ -126,7 +135,7 @@ namespace XenoAtom.Graphics.Vk
 
             lock (_stagingLock)
             {
-                if (_submittedStagingInfos.TryGetValue(completedCB, out StagingResourceInfo info))
+                if (_submittedStagingInfos.TryGetValue(completedCB, out var info))
                 {
                     RecycleStagingInfo(info);
                     _submittedStagingInfos.Remove(completedCB);
@@ -156,7 +165,7 @@ namespace XenoAtom.Graphics.Vk
             _currentStagingInfo = GetStagingResourceInfo();
 
             VkCommandBufferBeginInfo beginInfo = new() { flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT };
-            vkBeginCommandBuffer(_cb, ref beginInfo);
+            vkBeginCommandBuffer(_cb, beginInfo);
             _commandBufferBegun = true;
 
             ClearCachedState();
@@ -171,22 +180,24 @@ namespace XenoAtom.Graphics.Vk
 
         private protected override void ClearColorTargetCore(uint index, RgbaFloat clearColor)
         {
-            VkClearValue clearValue = new VkClearValue
+            EnsureBegin();
+
+            var clearValue = new VkClearValue
             {
                 color = new VkClearColorValue(clearColor.R, clearColor.G, clearColor.B, clearColor.A)
             };
 
             if (_activeRenderPass != default)
             {
-                VkClearAttachment clearAttachment = new VkClearAttachment
+                var clearAttachment = new VkClearAttachment
                 {
                     colorAttachment = index,
                     aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     clearValue = clearValue
                 };
 
-                Texture colorTex = _currentFramebuffer.ColorTargets[(int)index].Target;
-                VkClearRect clearRect = new VkClearRect
+                Texture colorTex = _currentFramebuffer!.ColorTargets[(int)index].Target;
+                var clearRect = new VkClearRect
                 {
                     baseArrayLayer = 0,
                     layerCount = 1,
@@ -205,14 +216,21 @@ namespace XenoAtom.Graphics.Vk
 
         private protected override void ClearDepthStencilCore(float depth, byte stencil)
         {
-            VkClearValue clearValue = new VkClearValue { depthStencil = new VkClearDepthStencilValue(depth, stencil) };
+            EnsureBegin();
+
+            var clearValue = new VkClearValue { depthStencil = new VkClearDepthStencilValue(depth, stencil) };
 
             if (_activeRenderPass != default)
             {
+                if (_currentFramebuffer!.DepthTarget is null)
+                {
+                    throw new InvalidOperationException("No depth target set");
+                }
+
                 VkImageAspectFlags aspect = FormatHelpers.IsStencilFormat(_currentFramebuffer.DepthTarget.Value.Target.Format)
                     ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
                     : VK_IMAGE_ASPECT_DEPTH_BIT;
-                VkClearAttachment clearAttachment = new VkClearAttachment
+                var clearAttachment = new VkClearAttachment
                 {
                     aspectMask = aspect,
                     clearValue = clearValue
@@ -222,7 +240,7 @@ namespace XenoAtom.Graphics.Vk
                 uint renderableHeight = _currentFramebuffer.RenderableHeight;
                 if (renderableWidth > 0 && renderableHeight > 0)
                 {
-                    VkClearRect clearRect = new VkClearRect
+                    var clearRect = new VkClearRect
                     {
                         baseArrayLayer = 0,
                         layerCount = 1,
@@ -255,7 +273,7 @@ namespace XenoAtom.Graphics.Vk
         {
             PreDrawCommand();
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(indirectBuffer);
-            _currentStagingInfo.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo!.Resources.Add(vkBuffer.RefCount);
             vkCmdDrawIndirect(_cb, vkBuffer.DeviceBuffer, offset, drawCount, stride);
         }
 
@@ -263,12 +281,15 @@ namespace XenoAtom.Graphics.Vk
         {
             PreDrawCommand();
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(indirectBuffer);
-            _currentStagingInfo.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo!.Resources.Add(vkBuffer.RefCount);
             vkCmdDrawIndexedIndirect(_cb, vkBuffer.DeviceBuffer, offset, drawCount, stride);
         }
 
         private void PreDrawCommand()
         {
+            EnsureBegin();
+            EnsureGraphicsPipeline();
+
             TransitionImages(_preDrawSampledImages, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             _preDrawSampledImages.Clear();
 
@@ -277,7 +298,7 @@ namespace XenoAtom.Graphics.Vk
             FlushNewResourceSets(
                 _currentGraphicsResourceSets,
                 _graphicsResourceSetsChanged,
-                _currentGraphicsPipeline.ResourceSetCount,
+                _currentGraphicsPipeline!.ResourceSetCount,
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                 _currentGraphicsPipeline.PipelineLayout);
         }
@@ -289,7 +310,13 @@ namespace XenoAtom.Graphics.Vk
             VkPipelineBindPoint bindPoint,
             VkPipelineLayout pipelineLayout)
         {
-            VkPipeline pipeline = bindPoint == VK_PIPELINE_BIND_POINT_GRAPHICS ? _currentGraphicsPipeline : _currentComputePipeline;
+            EnsureBegin();
+
+            VkPipeline? pipeline = bindPoint == VK_PIPELINE_BIND_POINT_GRAPHICS ? _currentGraphicsPipeline : _currentComputePipeline;
+            if (pipeline == null)
+            {
+                throw new InvalidOperationException($"Invalid call. The method `{nameof(SetPipeline)}` should have been called before");
+            }
 
             VkDescriptorSet* descriptorSets = stackalloc VkDescriptorSet[(int)resourceSetCount];
             uint* dynamicOffsets = stackalloc uint[pipeline.DynamicOffsetsCount];
@@ -316,7 +343,7 @@ namespace XenoAtom.Graphics.Vk
                     }
 
                     // Increment ref count on first use of a set.
-                    _currentStagingInfo.Resources.Add(vkSet.RefCount);
+                    _currentStagingInfo!.Resources.Add(vkSet.RefCount);
                     for (int i = 0; i < vkSet.RefCounts.Count; i++)
                     {
                         _currentStagingInfo.Resources.Add(vkSet.RefCounts[i]);
@@ -363,9 +390,11 @@ namespace XenoAtom.Graphics.Vk
 
         private void PreDispatchCommand()
         {
+            EnsureBegin();
             EnsureNoRenderPass();
+            EnsureComputePipeline();
 
-            for (uint currentSlot = 0; currentSlot < _currentComputePipeline.ResourceSetCount; currentSlot++)
+            for (uint currentSlot = 0; currentSlot < _currentComputePipeline!.ResourceSetCount; currentSlot++)
             {
                 VkResourceSet vkSet = Util.AssertSubtype<ResourceSet, VkResourceSet>(
                     _currentComputeResourceSets[currentSlot].Set);
@@ -395,25 +424,27 @@ namespace XenoAtom.Graphics.Vk
             PreDispatchCommand();
 
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(indirectBuffer);
-            _currentStagingInfo.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo!.Resources.Add(vkBuffer.RefCount);
             vkCmdDispatchIndirect(_cb, vkBuffer.DeviceBuffer, offset);
         }
 
         protected override void ResolveTextureCore(Texture source, Texture destination)
         {
+            EnsureBegin();
+
             if (_activeRenderPass != default)
             {
                 EndCurrentRenderPass();
             }
 
             VkTexture vkSource = Util.AssertSubtype<Texture, VkTexture>(source);
-            _currentStagingInfo.Resources.Add(vkSource.RefCount);
+            _currentStagingInfo!.Resources.Add(vkSource.RefCount);
             VkTexture vkDestination = Util.AssertSubtype<Texture, VkTexture>(destination);
             _currentStagingInfo.Resources.Add(vkDestination.RefCount);
             VkImageAspectFlags aspectFlags = ((source.Usage & TextureUsage.DepthStencil) == TextureUsage.DepthStencil)
                 ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
                 : VK_IMAGE_ASPECT_COLOR_BIT;
-            VkImageResolve region = new VkImageResolve
+            var region = new VkImageResolve
             {
                 extent = new VkExtent3D { width = source.Width, height = source.Height, depth = source.Depth },
                 srcSubresource = new VkImageSubresourceLayers { layerCount = 1, aspectMask = aspectFlags },
@@ -455,7 +486,7 @@ namespace XenoAtom.Graphics.Vk
             if (_activeRenderPass != default)
             {
                 EndCurrentRenderPass();
-                _currentFramebuffer.TransitionToFinalLayout(_cb);
+                _currentFramebuffer!.TransitionToFinalLayout(_cb);
             }
 
             vkEndCommandBuffer(_cb);
@@ -464,6 +495,8 @@ namespace XenoAtom.Graphics.Vk
 
         protected override void SetFramebufferCore(Framebuffer fb)
         {
+            EnsureBegin();
+
             if (_activeRenderPass != default)
             {
                 EndCurrentRenderPass();
@@ -484,12 +517,12 @@ namespace XenoAtom.Graphics.Vk
             _currentFramebuffer = vkFB;
             _currentFramebufferEverActive = false;
             _newFramebuffer = true;
-            Util.EnsureArrayMinimumSize(ref _scissorRects, Math.Max(1, (uint)vkFB.ColorTargets.Count));
-            uint clearValueCount = (uint)vkFB.ColorTargets.Count;
+            Util.EnsureArrayMinimumSize(ref _scissorRects, Math.Max(1, (uint)vkFB.ColorTargets.Length));
+            uint clearValueCount = (uint)vkFB.ColorTargets.Length;
             Util.EnsureArrayMinimumSize(ref _clearValues, clearValueCount + 1); // Leave an extra space for the depth value (tracked separately).
             Util.ClearArray(_validColorClearValues);
             Util.EnsureArrayMinimumSize(ref _validColorClearValues, clearValueCount);
-            _currentStagingInfo.Resources.Add(vkFB.RefCount);
+            _currentStagingInfo!.Resources.Add(vkFB.RefCount);
 
             if (fb is VkSwapchainFramebuffer scFB)
             {
@@ -520,10 +553,10 @@ namespace XenoAtom.Graphics.Vk
             _currentFramebufferEverActive = true;
 
             uint attachmentCount = _currentFramebuffer.AttachmentCount;
-            bool haveAnyAttachments = _currentFramebuffer.ColorTargets.Count > 0 || _currentFramebuffer.DepthTarget != null;
+            bool haveAnyAttachments = _currentFramebuffer.ColorTargets.Length > 0 || _currentFramebuffer.DepthTarget != null;
             bool haveAllClearValues = _depthClearValue.HasValue || _currentFramebuffer.DepthTarget == null;
             bool haveAnyClearValues = _depthClearValue.HasValue;
-            for (int i = 0; i < _currentFramebuffer.ColorTargets.Count; i++)
+            for (int i = 0; i < _currentFramebuffer.ColorTargets.Length; i++)
             {
                 if (!_validColorClearValues[i])
                 {
@@ -535,16 +568,18 @@ namespace XenoAtom.Graphics.Vk
                 }
             }
 
-            VkRenderPassBeginInfo renderPassBI = new VkRenderPassBeginInfo();
-            renderPassBI.renderArea = new VkRect2D(0, 0, _currentFramebuffer.RenderableWidth, _currentFramebuffer.RenderableHeight);
-            renderPassBI.framebuffer = _currentFramebuffer.CurrentFramebuffer;
+            var renderPassBI = new VkRenderPassBeginInfo
+            {
+                renderArea = new VkRect2D(0, 0, _currentFramebuffer.RenderableWidth, _currentFramebuffer.RenderableHeight),
+                framebuffer = _currentFramebuffer.CurrentFramebuffer
+            };
 
             if (!haveAnyAttachments || !haveAllClearValues)
             {
                 renderPassBI.renderPass = _newFramebuffer
                     ? _currentFramebuffer.RenderPassNoClear_Init
                     : _currentFramebuffer.RenderPassNoClear_Load;
-                vkCmdBeginRenderPass(_cb, ref renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+                vkCmdBeginRenderPass(_cb, renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
                 _activeRenderPass = renderPassBI.renderPass;
 
                 if (haveAnyClearValues)
@@ -555,13 +590,13 @@ namespace XenoAtom.Graphics.Vk
                         _depthClearValue = null;
                     }
 
-                    for (uint i = 0; i < _currentFramebuffer.ColorTargets.Count; i++)
+                    for (uint i = 0; i < _currentFramebuffer.ColorTargets.Length; i++)
                     {
                         if (_validColorClearValues[i])
                         {
                             _validColorClearValues[i] = false;
                             VkClearValue vkClearValue = _clearValues[i];
-                            RgbaFloat clearColor = new RgbaFloat(
+                            var clearColor = new RgbaFloat(
                                 vkClearValue.color.float32[0],
                                 vkClearValue.color.float32[1],
                                 vkClearValue.color.float32[2],
@@ -581,10 +616,10 @@ namespace XenoAtom.Graphics.Vk
                     renderPassBI.pClearValues = clearValuesPtr;
                     if (_depthClearValue.HasValue)
                     {
-                        _clearValues[_currentFramebuffer.ColorTargets.Count] = _depthClearValue.Value;
+                        _clearValues[_currentFramebuffer.ColorTargets.Length] = _depthClearValue.Value;
                         _depthClearValue = null;
                     }
-                    vkCmdBeginRenderPass(_cb, ref renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
+                    vkCmdBeginRenderPass(_cb, renderPassBI, VK_SUBPASS_CONTENTS_INLINE);
                     _activeRenderPass = _currentFramebuffer.RenderPassClear;
                     Util.ClearArray(_validColorClearValues);
                 }
@@ -597,7 +632,7 @@ namespace XenoAtom.Graphics.Vk
         {
             Debug.Assert(_activeRenderPass != default);
             vkCmdEndRenderPass(_cb);
-            _currentFramebuffer.TransitionToIntermediateLayout(_cb);
+            _currentFramebuffer!.TransitionToIntermediateLayout(_cb);
             _activeRenderPass = default;
 
             // Place a barrier between RenderPasses, so that color / depth outputs
@@ -617,22 +652,28 @@ namespace XenoAtom.Graphics.Vk
 
         private protected override void SetVertexBufferCore(uint index, DeviceBuffer buffer, uint offset)
         {
+            EnsureBegin();
+
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(buffer);
             XenoAtom.Interop.vulkan.VkBuffer deviceBuffer = vkBuffer.DeviceBuffer;
             VkDeviceSize offset64 = offset;
             vkCmdBindVertexBuffers(_cb, index, 1, &deviceBuffer, &offset64);
-            _currentStagingInfo.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo!.Resources.Add(vkBuffer.RefCount);
         }
 
         private protected override void SetIndexBufferCore(DeviceBuffer buffer, IndexFormat format, uint offset)
         {
+            EnsureBegin();
+
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(buffer);
             vkCmdBindIndexBuffer(_cb, vkBuffer.DeviceBuffer, offset, VkFormats.VdToVkIndexFormat(format));
-            _currentStagingInfo.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo!.Resources.Add(vkBuffer.RefCount);
         }
 
         private protected override void SetPipelineCore(Pipeline pipeline)
         {
+            EnsureBegin();
+
             VkPipeline vkPipeline = Util.AssertSubtype<Pipeline, VkPipeline>(pipeline);
             if (!pipeline.IsComputePipeline && _currentGraphicsPipeline != pipeline)
             {
@@ -651,7 +692,7 @@ namespace XenoAtom.Graphics.Vk
                 _currentComputePipeline = vkPipeline;
             }
 
-            _currentStagingInfo.Resources.Add(vkPipeline.RefCount);
+            _currentStagingInfo!.Resources.Add(vkPipeline.RefCount);
         }
 
         private void ClearSets(BoundResourceSetInfo[] boundSets)
@@ -665,28 +706,34 @@ namespace XenoAtom.Graphics.Vk
 
         protected override void SetGraphicsResourceSetCore(uint slot, ResourceSet rs, uint dynamicOffsetsCount, ref uint dynamicOffsets)
         {
+            EnsureGraphicsPipeline();
+
             if (!_currentGraphicsResourceSets[slot].Equals(rs, dynamicOffsetsCount, ref dynamicOffsets))
             {
                 _currentGraphicsResourceSets[slot].Offsets.Dispose();
                 _currentGraphicsResourceSets[slot] = new BoundResourceSetInfo(rs, dynamicOffsetsCount, ref dynamicOffsets);
                 _graphicsResourceSetsChanged[slot] = true;
-                VkResourceSet vkRS = Util.AssertSubtype<ResourceSet, VkResourceSet>(rs);
+                Util.AssertSubtype<ResourceSet, VkResourceSet>(rs);
             }
         }
 
         protected override void SetComputeResourceSetCore(uint slot, ResourceSet rs, uint dynamicOffsetsCount, ref uint dynamicOffsets)
         {
+            EnsureComputePipeline();
+
             if (!_currentComputeResourceSets[slot].Equals(rs, dynamicOffsetsCount, ref dynamicOffsets))
             {
                 _currentComputeResourceSets[slot].Offsets.Dispose();
                 _currentComputeResourceSets[slot] = new BoundResourceSetInfo(rs, dynamicOffsetsCount, ref dynamicOffsets);
                 _computeResourceSetsChanged[slot] = true;
-                VkResourceSet vkRS = Util.AssertSubtype<ResourceSet, VkResourceSet>(rs);
+                Util.AssertSubtype<ResourceSet, VkResourceSet>(rs);
             }
         }
 
         public override void SetScissorRect(uint index, uint x, uint y, uint width, uint height)
         {
+            EnsureBegin();
+            
             if (index == 0 || _gd.Features.MultipleViewports)
             {
                 VkRect2D scissor = new VkRect2D((int)x, (int)y, width, height);
@@ -700,6 +747,8 @@ namespace XenoAtom.Graphics.Vk
 
         public override void SetViewport(uint index, ref Viewport viewport)
         {
+            EnsureBegin();
+            
             if (index == 0 || _gd.Features.MultipleViewports)
             {
                 float vpY = _gd.IsClipSpaceYInverted
@@ -725,6 +774,8 @@ namespace XenoAtom.Graphics.Vk
 
         private protected override void UpdateBufferCore(DeviceBuffer buffer, uint bufferOffsetInBytes, IntPtr source, uint sizeInBytes)
         {
+            EnsureBegin();
+
             VkBuffer stagingBuffer = GetStagingBuffer(sizeInBytes);
             _gd.UpdateBuffer(stagingBuffer, 0, source, sizeInBytes);
             CopyBuffer(stagingBuffer, 0, buffer, bufferOffsetInBytes, sizeInBytes);
@@ -737,10 +788,11 @@ namespace XenoAtom.Graphics.Vk
             uint destinationOffset,
             uint sizeInBytes)
         {
+            EnsureBegin();
             EnsureNoRenderPass();
 
             VkBuffer srcVkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(source);
-            _currentStagingInfo.Resources.Add(srcVkBuffer.RefCount);
+            _currentStagingInfo!.Resources.Add(srcVkBuffer.RefCount);
             VkBuffer dstVkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(destination);
             _currentStagingInfo.Resources.Add(dstVkBuffer.RefCount);
 
@@ -785,6 +837,7 @@ namespace XenoAtom.Graphics.Vk
             uint width, uint height, uint depth,
             uint layerCount)
         {
+            EnsureBegin();
             EnsureNoRenderPass();
             CopyTextureCore_VkCommandBuffer(
                 _cb,
@@ -793,7 +846,7 @@ namespace XenoAtom.Graphics.Vk
                 width, height, depth, layerCount);
 
             VkTexture srcVkTexture = Util.AssertSubtype<Texture, VkTexture>(source);
-            _currentStagingInfo.Resources.Add(srcVkTexture.RefCount);
+            _currentStagingInfo!.Resources.Add(srcVkTexture.RefCount);
             VkTexture dstVkTexture = Util.AssertSubtype<Texture, VkTexture>(destination);
             _currentStagingInfo.Resources.Add(dstVkTexture.RefCount);
         }
@@ -913,7 +966,7 @@ namespace XenoAtom.Graphics.Vk
                     baseArrayLayer = dstBaseArrayLayer
                 };
 
-                Util.GetMipDimensions(srcVkTexture, srcMipLevel, out uint mipWidth, out uint mipHeight, out uint mipDepth);
+                Util.GetMipDimensions(srcVkTexture, srcMipLevel, out uint mipWidth, out uint mipHeight, out _);
                 uint blockSize = FormatHelpers.IsCompressedFormat(srcVkTexture.Format) ? 4u : 1u;
                 uint bufferRowLength = Math.Max(mipWidth, blockSize);
                 uint bufferImageHeight = Math.Max(mipHeight, blockSize);
@@ -971,7 +1024,7 @@ namespace XenoAtom.Graphics.Vk
                     ? VK_IMAGE_ASPECT_DEPTH_BIT
                     : VK_IMAGE_ASPECT_COLOR_BIT;
 
-                Util.GetMipDimensions(dstVkTexture, dstMipLevel, out uint mipWidth, out uint mipHeight, out uint mipDepth);
+                Util.GetMipDimensions(dstVkTexture, dstMipLevel, out uint mipWidth, out uint mipHeight, out _);
                 uint blockSize = FormatHelpers.IsCompressedFormat(srcVkTexture.Format) ? 4u : 1u;
                 uint bufferRowLength = Math.Max(mipWidth, blockSize);
                 uint bufferImageHeight = Math.Max(mipHeight, blockSize);
@@ -1098,9 +1151,10 @@ namespace XenoAtom.Graphics.Vk
 
         private protected override void GenerateMipmapsCore(Texture texture)
         {
+            EnsureBegin();
             EnsureNoRenderPass();
             VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(texture);
-            _currentStagingInfo.Resources.Add(vkTex.RefCount);
+            _currentStagingInfo!.Resources.Add(vkTex.RefCount);
 
             uint layerCount = vkTex.ArrayLayers;
             if ((vkTex.Usage & TextureUsage.Cubemap) != 0)
@@ -1207,7 +1261,7 @@ namespace XenoAtom.Graphics.Vk
                 0, null);
         }
 
-        public override string Name
+        public override string? Name
         {
             get => _name;
             set
@@ -1219,9 +1273,11 @@ namespace XenoAtom.Graphics.Vk
 
         private VkBuffer GetStagingBuffer(uint size)
         {
+            EnsureBegin();
+
             lock (_stagingLock)
             {
-                VkBuffer ret = null;
+                VkBuffer? ret = null;
                 foreach (VkBuffer buffer in _availableStagingBuffers)
                 {
                     if (buffer.SizeInBytes >= size)
@@ -1237,7 +1293,7 @@ namespace XenoAtom.Graphics.Vk
                     ret.Name = $"Staging Buffer (CommandList {_name})";
                 }
 
-                _currentStagingInfo.BuffersUsed.Add(ret);
+                _currentStagingInfo!.BuffersUsed.Add(ret);
                 return ret;
             }
         }
@@ -1359,6 +1415,29 @@ namespace XenoAtom.Graphics.Vk
                 info.Clear();
 
                 _availableStagingInfos.Add(info);
+            }
+        }
+
+        private void EnsureBegin()
+        {
+            if (_currentStagingInfo is null)
+            {
+                throw new InvalidOperationException($"Invalid call. The `{nameof(Begin)}` method should have been called before.");
+            }
+        }
+        private void EnsureGraphicsPipeline()
+        {
+            if (_currentGraphicsPipeline is null)
+            {
+                throw new InvalidOperationException($"Invalid call. Current Graphics Pipeline is not set. The `{nameof(SetPipeline)}` method should have been called before.");
+            }
+        }
+
+        private void EnsureComputePipeline()
+        {
+            if (_currentComputePipeline is null)
+            {
+                throw new InvalidOperationException($"Invalid call. Current Compute Pipeline is not set. The `{nameof(SetPipeline)}` method should have been called before.");
             }
         }
     }

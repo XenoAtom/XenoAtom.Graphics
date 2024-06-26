@@ -1,4 +1,4 @@
-﻿using static XenoAtom.Interop.vulkan;
+using static XenoAtom.Interop.vulkan;
 
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System;
@@ -15,30 +15,33 @@ namespace XenoAtom.Graphics.Vk
         private readonly PixelFormat? _depthFormat;
         private uint _currentImageIndex;
 
-        private VkFramebuffer[] _scFramebuffers;
-        private VkImage[] _scImages = {};
+        private VkFramebuffer?[] _scFramebuffers = [null];
+        private VkImage[] _scImages = [];
         private VkFormat _scImageFormat;
         private VkExtent2D _scExtent;
-        private FramebufferAttachment[][] _scColorTextures;
+        private FramebufferAttachment[][] _scColorTextures = [];
 
         private FramebufferAttachment? _depthAttachment;
         private uint _desiredWidth;
         private uint _desiredHeight;
         private bool _destroyed;
-        private string _name;
+        private string? _name;
         private OutputDescription _outputDescription;
 
-        public override XenoAtom.Interop.vulkan.VkFramebuffer CurrentFramebuffer => _scFramebuffers[(int)_currentImageIndex].CurrentFramebuffer;
+        public override XenoAtom.Interop.vulkan.VkFramebuffer CurrentFramebuffer => _scFramebuffers[(int)_currentImageIndex]!.CurrentFramebuffer;
 
-        public override VkRenderPass RenderPassNoClear_Init => _scFramebuffers[0].RenderPassNoClear_Init;
-        public override VkRenderPass RenderPassNoClear_Load => _scFramebuffers[0].RenderPassNoClear_Load;
-        public override VkRenderPass RenderPassClear => _scFramebuffers[0].RenderPassClear;
+        public override VkRenderPass RenderPassNoClear_Init => _scFramebuffers[0]!.RenderPassNoClear_Init;
 
-        public override IReadOnlyList<FramebufferAttachment> ColorTargets => _scColorTextures[(int)_currentImageIndex];
+        public override VkRenderPass RenderPassNoClear_Load => _scFramebuffers[0]!.RenderPassNoClear_Load;
+
+        public override VkRenderPass RenderPassClear => _scFramebuffers[0]!.RenderPassClear;
+
+        public override ReadOnlySpan<FramebufferAttachment> ColorTargets => _scColorTextures[(int)_currentImageIndex];
 
         public override FramebufferAttachment? DepthTarget => _depthAttachment;
 
         public override uint RenderableWidth => _scExtent.width;
+
         public override uint RenderableHeight => _scExtent.height;
 
         public override uint Width => _desiredWidth;
@@ -137,15 +140,12 @@ namespace XenoAtom.Graphics.Vk
 
         private void CreateFramebuffers()
         {
-            if (_scFramebuffers != null)
+            for (int i = 0; i < _scFramebuffers.Length; i++)
             {
-                for (int i = 0; i < _scFramebuffers.Length; i++)
-                {
-                    _scFramebuffers[i]?.Dispose();
-                    _scFramebuffers[i] = null;
-                }
-                Array.Clear(_scFramebuffers, 0, _scFramebuffers.Length);
+                _scFramebuffers[i]?.Dispose();
+                _scFramebuffers[i] = null;
             }
+            Array.Clear(_scFramebuffers, 0, _scFramebuffers.Length);
 
             Util.EnsureArrayMinimumSize(ref _scFramebuffers, (uint)_scImages.Length);
             Util.EnsureArrayMinimumSize(ref _scColorTextures, (uint)_scImages.Length);
@@ -170,9 +170,8 @@ namespace XenoAtom.Graphics.Vk
 
         public override void TransitionToIntermediateLayout(VkCommandBuffer cb)
         {
-            for (int i = 0; i < ColorTargets.Count; i++)
+            foreach (var ca in ColorTargets)
             {
-                FramebufferAttachment ca = ColorTargets[i];
                 VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(ca.Target);
                 vkTex.SetImageLayout(0, ca.ArrayLayer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
             }
@@ -180,15 +179,14 @@ namespace XenoAtom.Graphics.Vk
 
         public override void TransitionToFinalLayout(VkCommandBuffer cb)
         {
-            for (int i = 0; i < ColorTargets.Count; i++)
+            foreach (var ca in ColorTargets)
             {
-                FramebufferAttachment ca = ColorTargets[i];
                 VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(ca.Target);
                 vkTex.TransitionImageLayout(cb, 0, 1, ca.ArrayLayer, 1, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
             }
         }
 
-        public override string Name
+        public override string? Name
         {
             get => _name;
             set

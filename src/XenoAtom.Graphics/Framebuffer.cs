@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -8,8 +8,10 @@ namespace XenoAtom.Graphics
     /// A device resource used to control which color and depth textures are rendered to.
     /// See <see cref="FramebufferDescription"/>.
     /// </summary>
-    public abstract class Framebuffer : DeviceResource, IDisposable
+    public abstract class Framebuffer : IDeviceResource, IDisposable
     {
+        private readonly FramebufferAttachment[] _colorTargets = [];
+
         /// <summary>
         /// Gets the depth attachment associated with this instance. May be null if no depth texture is used.
         /// </summary>
@@ -18,7 +20,7 @@ namespace XenoAtom.Graphics
         /// <summary>
         /// Gets the collection of color attachments associated with this instance. May be empty.
         /// </summary>
-        public virtual IReadOnlyList<FramebufferAttachment> ColorTargets { get; }
+        public virtual ReadOnlySpan<FramebufferAttachment> ColorTargets => _colorTargets;
 
         /// <summary>
         /// Gets an <see cref="XenoAtom.Graphics.OutputDescription"/> which describes the number and formats of the depth and color targets
@@ -36,16 +38,19 @@ namespace XenoAtom.Graphics
         /// </summary>
         public virtual uint Height { get; }
 
-        internal Framebuffer() { }
+        internal Framebuffer()
+        {
+        }
 
         internal Framebuffer(
             FramebufferAttachmentDescription? depthTargetDesc,
             IReadOnlyList<FramebufferAttachmentDescription> colorTargetDescs)
         {
+            FramebufferAttachment? depthTarget = null;
             if (depthTargetDesc != null)
             {
                 FramebufferAttachmentDescription depthAttachment = depthTargetDesc.Value;
-                DepthTarget = new FramebufferAttachment(
+                depthTarget = new FramebufferAttachment(
                     depthAttachment.Target,
                     depthAttachment.ArrayLayer,
                     depthAttachment.MipLevel);
@@ -59,20 +64,25 @@ namespace XenoAtom.Graphics
                     colorTargetDescs[i].MipLevel);
             }
 
-            ColorTargets = colorTargets;
+            if (colorTargetDescs.Count == 0 && depthTarget is null)
+            {
+                throw new ArgumentException("At least one color target or depth target must be specified.");
+            }
+
+            DepthTarget = depthTarget;
+            _colorTargets = colorTargets;
 
             Texture dimTex;
             uint mipLevel;
-            if (ColorTargets.Count > 0)
+            if (colorTargets.Length > 0)
             {
-                dimTex = ColorTargets[0].Target;
-                mipLevel = ColorTargets[0].MipLevel;
+                dimTex = colorTargets[0].Target;
+                mipLevel = colorTargets[0].MipLevel;
             }
             else
             {
-                Debug.Assert(DepthTarget != null);
-                dimTex = DepthTarget.Value.Target;
-                mipLevel = DepthTarget.Value.MipLevel;
+                dimTex = depthTarget!.Value.Target;
+                mipLevel = depthTarget.Value.MipLevel;
             }
 
             Util.GetMipDimensions(dimTex, mipLevel, out uint mipWidth, out uint mipHeight, out _);
@@ -87,7 +97,7 @@ namespace XenoAtom.Graphics
         /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
         /// tools.
         /// </summary>
-        public abstract string Name { get; set; }
+        public abstract string? Name { get; set; }
 
         /// <summary>
         /// A bool indicating whether this instance has been disposed.

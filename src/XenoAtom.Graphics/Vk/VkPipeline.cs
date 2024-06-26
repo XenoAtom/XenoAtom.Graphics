@@ -1,4 +1,4 @@
-﻿using static XenoAtom.Interop.vulkan;
+using static XenoAtom.Interop.vulkan;
 
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System;
@@ -18,7 +18,7 @@ namespace XenoAtom.Graphics.Vk
         private readonly VkPipelineLayout _pipelineLayout;
         private readonly VkRenderPass _renderPass;
         private bool _destroyed;
-        private string _name;
+        private string? _name;
 
         public XenoAtom.Interop.vulkan.VkPipeline DevicePipeline => _devicePipeline;
 
@@ -191,7 +191,7 @@ namespace XenoAtom.Graphics.Vk
             // Shader Stage
 
             VkSpecializationInfo specializationInfo;
-            SpecializationConstant[] specDescs = description.ShaderSet.Specializations;
+            SpecializationConstant[]? specDescs = description.ShaderSet.Specializations;
             if (specDescs != null)
             {
                 uint specDataSize = 0;
@@ -254,7 +254,7 @@ namespace XenoAtom.Graphics.Vk
             }
             pipelineLayoutCI.pSetLayouts = dsls;
 
-            vkCreatePipelineLayout(_gd.Device, ref pipelineLayoutCI, null, out _pipelineLayout).VkCheck();
+            vkCreatePipelineLayout(_gd.Device, pipelineLayoutCI, null, out _pipelineLayout).VkCheck();
             pipelineCI.layout = _pipelineLayout;
 
             // Create fake RenderPass for compatibility.
@@ -342,9 +342,10 @@ namespace XenoAtom.Graphics.Vk
 
             ResourceSetCount = (uint)description.ResourceLayouts.Length;
             DynamicOffsetsCount = 0;
-            foreach (VkResourceLayout layout in description.ResourceLayouts)
+            foreach (var layout in description.ResourceLayouts)
             {
-                DynamicOffsetsCount += layout.DynamicBufferCount;
+                var vkLayout = Util.AssertSubtype<ResourceLayout, VkResourceLayout>(layout);
+                DynamicOffsetsCount += vkLayout.DynamicBufferCount;
             }
         }
 
@@ -368,13 +369,13 @@ namespace XenoAtom.Graphics.Vk
             }
             pipelineLayoutCI.pSetLayouts = dsls;
 
-            vkCreatePipelineLayout(_gd.Device, ref pipelineLayoutCI, null, out _pipelineLayout);
+            vkCreatePipelineLayout(_gd.Device, pipelineLayoutCI, null, out _pipelineLayout);
             pipelineCI.layout = _pipelineLayout;
 
             // Shader Stage
 
             VkSpecializationInfo specializationInfo;
-            SpecializationConstant[] specDescs = description.Specializations;
+            SpecializationConstant[]? specDescs = description.Specializations;
             if (specDescs != null)
             {
                 uint specDataSize = 0;
@@ -425,13 +426,14 @@ namespace XenoAtom.Graphics.Vk
 
             ResourceSetCount = (uint)description.ResourceLayouts.Length;
             DynamicOffsetsCount = 0;
-            foreach (VkResourceLayout layout in description.ResourceLayouts)
+            foreach (var layout in description.ResourceLayouts)
             {
-                DynamicOffsetsCount += layout.DynamicBufferCount;
+                var vkLayout = Util.AssertSubtype<ResourceLayout, VkResourceLayout>(layout);
+                DynamicOffsetsCount += vkLayout.DynamicBufferCount;
             }
         }
 
-        public override string Name
+        public override string? Name
         {
             get => _name;
             set

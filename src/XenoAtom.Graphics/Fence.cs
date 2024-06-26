@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
@@ -6,7 +6,7 @@ namespace XenoAtom.Graphics
     /// <summary>
     /// A synchronization primitive which allows the GPU to communicate when submitted work items have finished executing.
     /// </summary>
-    public abstract class Fence : DeviceResource, IDisposable
+    public abstract class Fence : IDeviceResource, IDisposable
     {
         /// <summary>
         /// Gets a value indicating whether the Fence is currently signaled. A Fence is signaled after a CommandList finishes
@@ -23,7 +23,7 @@ namespace XenoAtom.Graphics
         /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
         /// tools.
         /// </summary>
-        public abstract string Name { get; set; }
+        public abstract string? Name { get; set; }
 
         /// <summary>
         /// A bool indicating whether this instance has been disposed.

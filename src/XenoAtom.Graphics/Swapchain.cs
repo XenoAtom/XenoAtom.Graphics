@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
@@ -6,7 +6,7 @@ namespace XenoAtom.Graphics
     /// A device resource providing the ability to present rendered images to a visible surface.
     /// See <see cref="SwapchainDescription"/>.
     /// </summary>
-    public abstract class Swapchain : DeviceResource, IDisposable
+    public abstract class Swapchain : IDeviceResource, IDisposable
     {
         /// <summary>
         /// Gets a <see cref="Framebuffer"/> representing the render targets of this instance.
@@ -27,7 +27,7 @@ namespace XenoAtom.Graphics
         /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
         /// tools.
         /// </summary>
-        public abstract string Name { get; set; }
+        public abstract string? Name { get; set; }
         /// <summary>
         /// A bool indicating whether this instance has been disposed.
         /// </summary>

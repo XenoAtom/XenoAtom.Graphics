@@ -58,7 +58,7 @@ namespace XenoAtom.Graphics
             {
                 case ResourceKind.UniformBuffer:
                 {
-                    if (!Util.GetDeviceBuffer(resource, out DeviceBuffer b)
+                    if (!Util.TryGetDeviceBuffer(resource, out var b)
                         || (b.Usage & BufferUsage.UniformBuffer) == 0)
                     {
                         throw new GraphicsException(
@@ -69,7 +69,7 @@ namespace XenoAtom.Graphics
                 }
                 case ResourceKind.StructuredBufferReadOnly:
                 {
-                    if (!Util.GetDeviceBuffer(resource, out DeviceBuffer b)
+                    if (!Util.TryGetDeviceBuffer(resource, out var b)
                         || (b.Usage & (BufferUsage.StructuredBufferReadOnly | BufferUsage.StructuredBufferReadWrite)) == 0)
                     {
                         throw new GraphicsException(
@@ -79,7 +79,7 @@ namespace XenoAtom.Graphics
                 }
                 case ResourceKind.StructuredBufferReadWrite:
                 {
-                    if (!Util.GetDeviceBuffer(resource, out DeviceBuffer b)
+                    if (!Util.TryGetDeviceBuffer(resource, out var b)
                         || (b.Usage & BufferUsage.StructuredBufferReadWrite) == 0)
                     {
                         throw new GraphicsException(

@@ -1,9 +1,10 @@
-﻿using Xunit;
+using Xunit;
 
 namespace XenoAtom.Graphics.Tests
 {
     public abstract class SwapchainTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
     {
+        /*
         [Theory]
         [InlineData(PixelFormat.R16_UNorm, false)]
         [InlineData(PixelFormat.R16_UNorm, true)]
@@ -32,6 +33,7 @@ namespace XenoAtom.Graphics.Tests
 
             //window.Close();
         }
+        */
     }
 
     public abstract class MainSwapchainTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator

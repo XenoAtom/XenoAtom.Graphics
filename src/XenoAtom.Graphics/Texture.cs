@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
@@ -6,10 +6,10 @@ namespace XenoAtom.Graphics
     /// A device resource used to store arbitrary image data in a specific format.
     /// See <see cref="TextureDescription"/>.
     /// </summary>
-    public abstract class Texture : DeviceResource, MappableResource, IDisposable, BindableResource
+    public abstract class Texture : IDeviceResource, MappableResource, IDisposable, BindableResource
     {
-        private readonly object _fullTextureViewLock = new object();
-        private TextureView _fullTextureView;
+        private readonly object _fullTextureViewLock = new();
+        private TextureView? _fullTextureView;
 
         /// <summary>
         /// Calculates the subresource index, given a mipmap level and array layer.
@@ -64,7 +64,7 @@ namespace XenoAtom.Graphics
         /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
         /// tools.
         /// </summary>
-        public abstract string Name { get; set; }
+        public abstract string? Name { get; set; }
         /// <summary>
         /// A bool indicating whether this instance has been disposed.
         /// </summary>

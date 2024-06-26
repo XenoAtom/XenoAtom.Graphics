@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using XenoAtom.Interop;
 
 namespace XenoAtom.Graphics
@@ -7,7 +7,7 @@ namespace XenoAtom.Graphics
     /// A device resource encapsulating a single shader module.
     /// See <see cref="ShaderDescription"/>.
     /// </summary>
-    public abstract class Shader : DeviceResource, IDisposable
+    public abstract class Shader : IDeviceResource, IDisposable
     {
         internal Shader(ShaderStages stage, ReadOnlyMemoryUtf8 entryPoint)
         {
@@ -29,7 +29,7 @@ namespace XenoAtom.Graphics
         /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
         /// tools.
         /// </summary>
-        public abstract string Name { get; set; }
+        public abstract string? Name { get; set; }
 
         /// <summary>
         /// A bool indicating whether this instance has been disposed.

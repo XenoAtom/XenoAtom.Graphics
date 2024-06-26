@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using static XenoAtom.Interop.vulkan;
 
 using static XenoAtom.Graphics.Vk.VulkanUtil;
@@ -12,7 +12,7 @@ namespace XenoAtom.Graphics.Vk
         private readonly DescriptorAllocationToken _descriptorAllocationToken;
         private readonly List<ResourceRefCount> _refCounts = new List<ResourceRefCount>();
         private bool _destroyed;
-        private string _name;
+        private string? _name;
 
         public VkDescriptorSet DescriptorSet => _descriptorAllocationToken.Set;
 
@@ -96,7 +96,7 @@ namespace XenoAtom.Graphics.Vk
             vkUpdateDescriptorSets(_gd.Device, descriptorWriteCount, descriptorWrites, 0, null);
         }
 
-        public override string Name
+        public override string? Name
         {
             get => _name;
             set

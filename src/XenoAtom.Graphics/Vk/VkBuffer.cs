@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using static XenoAtom.Interop.vulkan;
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 
@@ -12,7 +12,7 @@ namespace XenoAtom.Graphics.Vk
         private readonly VkMemoryRequirements _bufferMemoryRequirements;
         public ResourceRefCount RefCount { get; }
         private bool _destroyed;
-        private string _name;
+        private string? _name;
         public override bool IsDisposed => _destroyed;
 
         public override uint SizeInBytes { get; }
@@ -23,7 +23,7 @@ namespace XenoAtom.Graphics.Vk
 
         public VkMemoryRequirements BufferMemoryRequirements => _bufferMemoryRequirements;
 
-        public VkBuffer(VkGraphicsDevice gd, uint sizeInBytes, BufferUsage usage, string callerMember = null)
+        public VkBuffer(VkGraphicsDevice gd, uint sizeInBytes, BufferUsage usage)
         {
             _gd = gd;
             SizeInBytes = sizeInBytes;
@@ -61,7 +61,7 @@ namespace XenoAtom.Graphics.Vk
             CheckResult(result);
 
             bool prefersDedicatedAllocation;
-            VkBufferMemoryRequirementsInfo2 memReqInfo2 = new VkBufferMemoryRequirementsInfo2
+            var memReqInfo2 = new VkBufferMemoryRequirementsInfo2
             {
                 buffer = _deviceBuffer
             };
@@ -111,7 +111,7 @@ namespace XenoAtom.Graphics.Vk
             RefCount = new ResourceRefCount(DisposeCore);
         }
 
-        public override string Name
+        public override string? Name
         {
             get => _name;
             set

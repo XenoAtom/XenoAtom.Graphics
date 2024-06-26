@@ -24,7 +24,7 @@ namespace XenoAtom.Graphics
         /// <see cref="Pipeline"/>. Each element in this array describes a single ID-value pair, which will be matched with the
         /// constants specified in each <see cref="Shader"/>.
         /// </summary>
-        public SpecializationConstant[] Specializations;
+        public SpecializationConstant[]? Specializations;
 
         /// <summary>
         /// Constructs a new ShaderSetDescription.

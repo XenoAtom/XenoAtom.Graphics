@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
@@ -7,7 +7,7 @@ namespace XenoAtom.Graphics
     /// <see cref="CommandList.SetPipeline(Pipeline)"/> to prepare a <see cref="CommandList"/> for draw commands.
     /// See <see cref="GraphicsPipelineDescription"/>.
     /// </summary>
-    public abstract class Pipeline : DeviceResource, IDisposable
+    public abstract class Pipeline : IDeviceResource, IDisposable
     {
         internal Pipeline(ref GraphicsPipelineDescription graphicsDescription)
             : this(graphicsDescription.ResourceLayouts)
@@ -38,7 +38,7 @@ namespace XenoAtom.Graphics
         /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
         /// tools.
         /// </summary>
-        public abstract string Name { get; set; }
+        public abstract string? Name { get; set; }
 
         /// <summary>
         /// A bool indicating whether this instance has been disposed.

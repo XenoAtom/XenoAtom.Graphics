@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
@@ -7,7 +7,7 @@ namespace XenoAtom.Graphics
     /// The size of a <see cref="DeviceBuffer"/> is fixed upon creation, and resizing is not possible.
     /// See <see cref="BufferDescription"/>.
     /// </summary>
-    public abstract class DeviceBuffer : DeviceResource, BindableResource, MappableResource, IDisposable
+    public abstract class DeviceBuffer : IDeviceResource, BindableResource, MappableResource, IDisposable
     {
         /// <summary>
         /// The total capacity, in bytes, of the buffer. This value is fixed upon creation.
@@ -23,7 +23,7 @@ namespace XenoAtom.Graphics
         /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
         /// tools.
         /// </summary>
-        public abstract string Name { get; set; }
+        public abstract string? Name { get; set; }
 
         /// <summary>
         /// A bool indicating whether this instance has been disposed.

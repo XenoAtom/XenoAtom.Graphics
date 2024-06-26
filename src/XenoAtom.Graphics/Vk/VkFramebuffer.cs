@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using static XenoAtom.Interop.vulkan;
 
 using static XenoAtom.Graphics.Vk.VulkanUtil;
@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 namespace XenoAtom.Graphics.Vk
 {
-    internal unsafe class VkFramebuffer : VkFramebufferBase
+    internal sealed unsafe class VkFramebuffer : VkFramebufferBase
     {
         private readonly VkGraphicsDevice _gd;
         private readonly XenoAtom.Interop.vulkan.VkFramebuffer _deviceFramebuffer;
@@ -16,7 +16,7 @@ namespace XenoAtom.Graphics.Vk
         private readonly VkRenderPass _renderPassClear;
         private readonly List<VkImageView> _attachmentViews = new List<VkImageView>();
         private bool _destroyed;
-        private string _name;
+        private string? _name;
 
         public override XenoAtom.Interop.vulkan.VkFramebuffer CurrentFramebuffer => _deviceFramebuffer;
         public override VkRenderPass RenderPassNoClear_Init => _renderPassNoClear;
@@ -39,7 +39,7 @@ namespace XenoAtom.Graphics.Vk
 
             StackList<VkAttachmentDescription> attachments = new StackList<VkAttachmentDescription>();
 
-            uint colorAttachmentCount = (uint)ColorTargets.Count;
+            uint colorAttachmentCount = (uint)ColorTargets.Length;
             StackList<VkAttachmentReference> colorAttachmentRefs = new StackList<VkAttachmentReference>();
             for (int i = 0; i < colorAttachmentCount; i++)
             {
@@ -90,7 +90,7 @@ namespace XenoAtom.Graphics.Vk
 
             VkSubpassDescription subpass = new VkSubpassDescription();
             subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-            if (ColorTargets.Count > 0)
+            if (ColorTargets.Length > 0)
             {
                 subpass.colorAttachmentCount = colorAttachmentCount;
                 subpass.pColorAttachments = (VkAttachmentReference*)colorAttachmentRefs.Data;
@@ -135,7 +135,7 @@ namespace XenoAtom.Graphics.Vk
                 }
 
             }
-            creationResult = vkCreateRenderPass(_gd.Device, ref renderPassCI, null, out _renderPassNoClearLoad);
+            creationResult = vkCreateRenderPass(_gd.Device, renderPassCI, null, out _renderPassNoClearLoad);
             CheckResult(creationResult);
 
 
@@ -158,7 +158,7 @@ namespace XenoAtom.Graphics.Vk
                 attachments[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             }
 
-            creationResult = vkCreateRenderPass(_gd.Device, ref renderPassCI, null, out _renderPassClear);
+            creationResult = vkCreateRenderPass(_gd.Device, renderPassCI, null, out _renderPassClear);
             CheckResult(creationResult);
 
             VkFramebufferCreateInfo fbCI = new VkFramebufferCreateInfo();
@@ -219,15 +219,14 @@ namespace XenoAtom.Graphics.Vk
 
             Texture dimTex;
             uint mipLevel;
-            if (ColorTargets.Count > 0)
+            if (ColorTargets.Length > 0)
             {
                 dimTex = ColorTargets[0].Target;
                 mipLevel = ColorTargets[0].MipLevel;
             }
             else
             {
-                Debug.Assert(DepthTarget != null);
-                dimTex = DepthTarget.Value.Target;
+                dimTex = DepthTarget!.Value.Target;
                 mipLevel = DepthTarget.Value.MipLevel;
             }
 
@@ -253,17 +252,17 @@ namespace XenoAtom.Graphics.Vk
             {
                 AttachmentCount += 1;
             }
-            AttachmentCount += (uint)ColorTargets.Count;
+            AttachmentCount += (uint)ColorTargets.Length;
         }
 
         public override void TransitionToIntermediateLayout(VkCommandBuffer cb)
         {
-            for (int i = 0; i < ColorTargets.Count; i++)
+            foreach (var ca in ColorTargets)
             {
-                FramebufferAttachment ca = ColorTargets[i];
                 VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(ca.Target);
                 vkTex.SetImageLayout(ca.MipLevel, ca.ArrayLayer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
             }
+
             if (DepthTarget != null)
             {
                 VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(DepthTarget.Value.Target);
@@ -276,9 +275,8 @@ namespace XenoAtom.Graphics.Vk
 
         public override void TransitionToFinalLayout(VkCommandBuffer cb)
         {
-            for (int i = 0; i < ColorTargets.Count; i++)
+            foreach (var ca in ColorTargets)
             {
-                FramebufferAttachment ca = ColorTargets[i];
                 VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(ca.Target);
                 if ((vkTex.Usage & TextureUsage.Sampled) != 0)
                 {
@@ -289,6 +287,7 @@ namespace XenoAtom.Graphics.Vk
                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
                 }
             }
+
             if (DepthTarget != null)
             {
                 VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(DepthTarget.Value.Target);
@@ -303,7 +302,7 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        public override string Name
+        public override string? Name
         {
             get => _name;
             set

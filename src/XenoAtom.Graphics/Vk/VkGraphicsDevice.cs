@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -12,7 +13,7 @@ using XenoAtom.Interop;
 
 namespace XenoAtom.Graphics.Vk
 {
-    internal unsafe class VkGraphicsDevice : GraphicsDevice
+    internal sealed unsafe class VkGraphicsDevice : GraphicsDevice
     {
         private const uint VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR = 0x00000001;
         private static ReadOnlyMemoryUtf8 s_name => "XenoAtom.Graphics-VkGraphicsDevice"u8;
@@ -20,11 +21,11 @@ namespace XenoAtom.Graphics.Vk
 
         private VkInstance _instance;
         private VkPhysicalDevice _physicalDevice;
-        private string _deviceName;
-        private string _vendorName;
+        private string _deviceName = string.Empty;
+        private string _vendorName = string.Empty;
         private GraphicsApiVersion _apiVersion;
-        private string _driverName;
-        private string _driverInfo;
+        private string _driverName = string.Empty;
+        private string _driverInfo = string.Empty;
         private VkDeviceMemoryManager _memoryManager;
         private VkPhysicalDeviceProperties _physicalDeviceProperties;
         private VkPhysicalDeviceFeatures _physicalDeviceFeatures;
@@ -76,11 +77,27 @@ namespace XenoAtom.Graphics.Vk
 
         public override bool IsClipSpaceYInverted => !_standardClipYDirection;
 
-        public override Swapchain MainSwapchain => _mainSwapchain;
+        public override Swapchain? MainSwapchain => _mainSwapchain;
+
+        /// <summary>
+        /// Gets a simple point-filtered <see cref="Sampler"/> object owned by this instance.
+        /// This object is created with <see cref="SamplerDescription.Point"/>.
+        /// </summary>
+        public override Sampler PointSampler { get; }
+
+        /// <summary>
+        /// Gets a simple linear-filtered <see cref="Sampler"/> object owned by this instance.
+        /// This object is created with <see cref="SamplerDescription.Linear"/>.
+        /// </summary>
+        public override Sampler LinearSampler { get; }
+
+
+        public override Sampler? AnisotropicSampler4x { get; }
+
 
         public override GraphicsDeviceFeatures Features { get; }
 
-        public override bool GetVulkanInfo(out BackendInfoVulkan info)
+        public override bool TryGetVulkanInfo([NotNullWhen(true)] out BackendInfoVulkan? info)
         {
             info = _vulkanInfo;
             return true;
@@ -123,7 +140,7 @@ namespace XenoAtom.Graphics.Vk
         private readonly object _submittedFencesLock = new object();
         private readonly ConcurrentQueue<XenoAtom.Interop.vulkan.VkFence> _availableSubmissionFences = new ConcurrentQueue<XenoAtom.Interop.vulkan.VkFence>();
         private readonly List<FenceSubmissionInfo> _submittedFences = new List<FenceSubmissionInfo>();
-        private readonly VkSwapchain _mainSwapchain;
+        private readonly VkSwapchain? _mainSwapchain;
 
         private readonly List<ReadOnlyMemoryUtf8> _surfaceExtensions = new List<ReadOnlyMemoryUtf8>();
 
@@ -153,6 +170,7 @@ namespace XenoAtom.Graphics.Vk
             vkGetPhysicalDeviceSurfaceSupportKHR = vkGetDeviceProcAddr<PFN_vkGetPhysicalDeviceSurfaceSupportKHR>(Device);
             vkDestroySurfaceKHR = vkGetDeviceProcAddr<PFN_vkDestroySurfaceKHR>(Device);
             vkGetSwapchainImagesKHR = vkGetDeviceProcAddr<PFN_vkGetSwapchainImagesKHR>(Device);
+            _vkQueuePresentKHR = vkGetDeviceProcAddr<PFN_vkQueuePresentKHR>(Device);
 
             _memoryManager = new VkDeviceMemoryManager(
                 _device,
@@ -188,8 +206,8 @@ namespace XenoAtom.Graphics.Vk
                 _mainSwapchain = new VkSwapchain(this, ref desc, surface);
             }
 
-            CreateDescriptorPool();
-            CreateGraphicsCommandPool();
+            _descriptorPoolManager = new VkDescriptorPoolManager(this);
+            CreateGraphicsCommandPool(out _graphicsCommandPool);
             for (int i = 0; i < SharedCommandPoolCount; i++)
             {
                 _sharedGraphicsCommandPools.Push(new SharedCommandPool(this, true));
@@ -197,12 +215,17 @@ namespace XenoAtom.Graphics.Vk
 
             _vulkanInfo = new BackendInfoVulkan(this);
 
-            PostDeviceCreated();
+            PointSampler = ResourceFactory.CreateSampler(SamplerDescription.Point);
+            LinearSampler = ResourceFactory.CreateSampler(SamplerDescription.Linear);
+            if (Features.SamplerAnisotropy)
+            {
+                AnisotropicSampler4x = ResourceFactory.CreateSampler(SamplerDescription.Aniso4x);
+            }
         }
 
         public override ResourceFactory ResourceFactory { get; }
 
-        private protected override void SubmitCommandsCore(CommandList cl, Fence fence)
+        private protected override void SubmitCommandsCore(CommandList cl, Fence? fence)
         {
             SubmitCommandList(cl, 0, null, 0, null, fence);
         }
@@ -213,7 +236,7 @@ namespace XenoAtom.Graphics.Vk
             VkSemaphore* waitSemaphoresPtr,
             uint signalSemaphoreCount,
             VkSemaphore* signalSemaphoresPtr,
-            Fence fence)
+            Fence? fence)
         {
             VkCommandList vkCL = Util.AssertSubtype<CommandList, VkCommandList>(cl);
             VkCommandBuffer vkCB = vkCL.CommandBuffer;
@@ -233,7 +256,6 @@ namespace XenoAtom.Graphics.Vk
         {
             CheckSubmittedFences();
 
-            bool useExtraFence = fence != null;
             VkSubmitInfo si = new VkSubmitInfo();
             si.commandBufferCount = 1;
             si.pCommandBuffers = &vkCB;
@@ -247,9 +269,9 @@ namespace XenoAtom.Graphics.Vk
 
             XenoAtom.Interop.vulkan.VkFence vkFence = default;
             XenoAtom.Interop.vulkan.VkFence submissionFence = default;
-            if (useExtraFence)
+            if (fence != null)
             {
-                vkFence = Util.AssertSubtype<Fence, VkFence>(fence).DeviceFence;
+                vkFence = Util.AssertSubtype<Fence, VkFence>(fence!).DeviceFence;
                 submissionFence = GetFreeSubmissionFence();
             }
             else
@@ -262,7 +284,7 @@ namespace XenoAtom.Graphics.Vk
             {
                 VkResult result = vkQueueSubmit(_graphicsQueue, 1, &si, vkFence);
                 CheckResult(result);
-                if (useExtraFence)
+                if (fence != null)
                 {
                     result = vkQueueSubmit(_graphicsQueue, 0, null, submissionFence);
                     CheckResult(result);
@@ -306,12 +328,12 @@ namespace XenoAtom.Graphics.Vk
             ReturnSubmissionFence(fence);
             lock (_stagingResourcesLock)
             {
-                if (_submittedStagingTextures.TryGetValue(completedCB, out VkTexture stagingTex))
+                if (_submittedStagingTextures.TryGetValue(completedCB, out var stagingTex))
                 {
                     _submittedStagingTextures.Remove(completedCB);
                     _availableStagingTextures.Add(stagingTex);
                 }
-                if (_submittedStagingBuffers.TryGetValue(completedCB, out VkBuffer stagingBuffer))
+                if (_submittedStagingBuffers.TryGetValue(completedCB, out var stagingBuffer))
                 {
                     _submittedStagingBuffers.Remove(completedCB);
                     if (stagingBuffer.SizeInBytes <= MaxStagingBufferSize)
@@ -323,7 +345,7 @@ namespace XenoAtom.Graphics.Vk
                         stagingBuffer.Dispose();
                     }
                 }
-                if (_submittedSharedCommandPools.TryGetValue(completedCB, out SharedCommandPool sharedPool))
+                if (_submittedSharedCommandPools.TryGetValue(completedCB, out var sharedPool))
                 {
                     _submittedSharedCommandPools.Remove(completedCB);
                     lock (_graphicsCommandPoolLock)
@@ -355,7 +377,7 @@ namespace XenoAtom.Graphics.Vk
             else
             {
                 VkFenceCreateInfo fenceCI = new VkFenceCreateInfo();
-                VkResult result = vkCreateFence(_device, ref fenceCI, null, out XenoAtom.Interop.vulkan.VkFence newFence);
+                VkResult result = vkCreateFence(_device, fenceCI, null, out XenoAtom.Interop.vulkan.VkFence newFence);
                 CheckResult(result);
                 return newFence;
             }
@@ -374,7 +396,7 @@ namespace XenoAtom.Graphics.Vk
             object presentLock = vkSC.PresentQueueIndex == _graphicsQueueIndex ? _graphicsQueueLock : vkSC;
             lock (presentLock)
             {
-                _vkQueuePresentKHR.Invoke(vkSC.PresentQueue, ref presentInfo);
+                _vkQueuePresentKHR.Invoke(vkSC.PresentQueue, presentInfo);
                 if (vkSC.AcquireNextImage(_device, default, vkSC.ImageAvailableFence))
                 {
                     XenoAtom.Interop.vulkan.VkFence fence = vkSC.ImageAvailableFence;
@@ -384,7 +406,7 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        internal void SetResourceName(DeviceResource resource, string name)
+        internal void SetResourceName(IDeviceResource resource, string? name)
         {
             if (_debugMarkerEnabled)
             {
@@ -446,13 +468,17 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        private void SetDebugMarkerName(VkDebugReportObjectTypeEXT type, ulong target, string name)
+        private void SetDebugMarkerName(VkDebugReportObjectTypeEXT type, ulong target, string? name)
         {
             Debug.Assert(_vkDebugMarkerSetObjectNameEX != default);
 
-            VkDebugMarkerObjectNameInfoEXT nameInfo = new VkDebugMarkerObjectNameInfoEXT();
-            nameInfo.objectType = type;
-            nameInfo.@object = target;
+            name ??= string.Empty;
+
+            var nameInfo = new VkDebugMarkerObjectNameInfoEXT
+            {
+                objectType = type,
+                @object = target
+            };
 
             int byteCount = Encoding.UTF8.GetByteCount(name);
             byte* utf8Ptr = stackalloc byte[byteCount + 1];
@@ -574,7 +600,7 @@ namespace XenoAtom.Graphics.Vk
                 instanceCI.ppEnabledLayerNames = (byte**)instanceLayers.Data;
             }
 
-            VkResult result = vkCreateInstance(ref instanceCI, null, out _instance);
+            VkResult result = vkCreateInstance(instanceCI, null, out _instance);
             CheckResult(result);
 
             if (HasSurfaceExtension(VK_EXT_METAL_SURFACE_EXTENSION_NAME))
@@ -712,8 +738,6 @@ namespace XenoAtom.Graphics.Vk
 
             HashSet<ReadOnlyMemoryUtf8> requiredInstanceExtensions = new HashSet<ReadOnlyMemoryUtf8>(options.DeviceExtensions ?? Array.Empty<ReadOnlyMemoryUtf8>());
 
-            bool hasMemReqs2 = false;
-            bool hasDedicatedAllocation = false;
             bool hasDriverProperties = false;
             IntPtr[] activeExtensions = new IntPtr[props.Length];
             uint activeExtensionCount = 0;
@@ -744,13 +768,11 @@ namespace XenoAtom.Graphics.Vk
                     {
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
                         requiredInstanceExtensions.Remove(extensionName);
-                        hasMemReqs2 = true;
                     }
                     else if (extensionName == VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
                     {
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
                         requiredInstanceExtensions.Remove(extensionName);
-                        hasDedicatedAllocation = true;
                     }
                     else if (extensionName == VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)
                     {
@@ -797,7 +819,7 @@ namespace XenoAtom.Graphics.Vk
                 deviceCreateInfo.enabledExtensionCount = activeExtensionCount;
                 deviceCreateInfo.ppEnabledExtensionNames = (byte**)activeExtensionsPtr;
 
-                VkResult result = vkCreateDevice(_physicalDevice, ref deviceCreateInfo, null, out _device);
+                VkResult result = vkCreateDevice(_physicalDevice, deviceCreateInfo, null, out _device);
                 CheckResult(result);
             }
 
@@ -866,25 +888,20 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        private void CreateDescriptorPool()
-        {
-            _descriptorPoolManager = new VkDescriptorPoolManager(this);
-        }
-
-        private void CreateGraphicsCommandPool()
+        private void CreateGraphicsCommandPool(out VkCommandPool commandPool)
         {
             VkCommandPoolCreateInfo commandPoolCI = new()
             {
                 flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                 queueFamilyIndex = _graphicsQueueIndex
             };
-            VkResult result = vkCreateCommandPool(_device, ref commandPoolCI, null, out _graphicsCommandPool);
+            VkResult result = vkCreateCommandPool(_device, commandPoolCI, null, out commandPool);
             CheckResult(result);
         }
 
         protected override MappedResource MapCore(MappableResource resource, MapMode mode, uint subresource)
         {
-            VkMemoryBlock memoryBlock = default(VkMemoryBlock);
+            VkMemoryBlock memoryBlock;
             IntPtr mappedPtr = IntPtr.Zero;
             uint sizeInBytes;
             uint offset = 0;
@@ -931,7 +948,7 @@ namespace XenoAtom.Graphics.Vk
 
         protected override void UnmapCore(MappableResource resource, uint subresource)
         {
-            VkMemoryBlock memoryBlock = default(VkMemoryBlock);
+            VkMemoryBlock memoryBlock;
             if (resource is VkBuffer buffer)
             {
                 memoryBlock = buffer.Memory;
@@ -1068,7 +1085,7 @@ namespace XenoAtom.Graphics.Vk
 
             if (result == VK_ERROR_FORMAT_NOT_SUPPORTED)
             {
-                properties = default(PixelFormatProperties);
+                properties = default;
                 return false;
             }
             CheckResult(result);
@@ -1100,7 +1117,7 @@ namespace XenoAtom.Graphics.Vk
         private protected override void UpdateBufferCore(DeviceBuffer buffer, uint bufferOffsetInBytes, IntPtr source, uint sizeInBytes)
         {
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(buffer);
-            VkBuffer copySrcVkBuffer = null;
+            VkBuffer? copySrcVkBuffer = null;
             IntPtr mappedPtr;
             byte* destPtr;
             bool isPersistentMapped = vkBuffer.Memory.IsPersistentMapped;
@@ -1128,7 +1145,7 @@ namespace XenoAtom.Graphics.Vk
                     dstOffset = bufferOffsetInBytes,
                     size = sizeInBytes
                 };
-                vkCmdCopyBuffer(cb, copySrcVkBuffer.DeviceBuffer, vkBuffer.DeviceBuffer, 1, &copyRegion);
+                vkCmdCopyBuffer(cb, copySrcVkBuffer!.DeviceBuffer, vkBuffer.DeviceBuffer, 1, &copyRegion);
 
                 pool.EndAndSubmit(cb);
                 lock (_stagingResourcesLock)
@@ -1140,16 +1157,14 @@ namespace XenoAtom.Graphics.Vk
 
         private SharedCommandPool GetFreeCommandPool()
         {
-            SharedCommandPool sharedPool = null;
+            SharedCommandPool? sharedPool = null;
             lock (_graphicsCommandPoolLock)
             {
                 if (_sharedGraphicsCommandPools.Count > 0)
                     sharedPool = _sharedGraphicsCommandPools.Pop();
             }
 
-            if (sharedPool == null)
-                sharedPool = new SharedCommandPool(this, false);
-
+            sharedPool ??= new SharedCommandPool(this, false);
             return sharedPool;
         }
 
@@ -1324,7 +1339,7 @@ namespace XenoAtom.Graphics.Vk
 
             instanceCI.pApplicationInfo = &applicationInfo;
 
-            VkResult result = vkCreateInstance(ref instanceCI, null, out VkInstance testInstance);
+            VkResult result = vkCreateInstance(instanceCI, null, out VkInstance testInstance);
             if (result != VK_SUCCESS)
             {
                 return false;
@@ -1462,7 +1477,7 @@ namespace XenoAtom.Graphics.Vk
                 VkCommandPoolCreateInfo commandPoolCI = new VkCommandPoolCreateInfo();
                 commandPoolCI.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
                 commandPoolCI.queueFamilyIndex = _gd.GraphicsQueueIndex;
-                VkResult result = vkCreateCommandPool(_gd.Device, ref commandPoolCI, null, out _pool);
+                VkResult result = vkCreateCommandPool(_gd.Device, commandPoolCI, null, out _pool);
                 CheckResult(result);
 
                 VkCommandBufferAllocateInfo allocateInfo = new VkCommandBufferAllocateInfo();
@@ -1479,7 +1494,7 @@ namespace XenoAtom.Graphics.Vk
             public VkCommandBuffer BeginNewCommandBuffer()
             {
                 VkCommandBufferBeginInfo beginInfo = new() { flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT };
-                VkResult result = vkBeginCommandBuffer(_cb, ref beginInfo);
+                VkResult result = vkBeginCommandBuffer(_cb, beginInfo);
                 CheckResult(result);
 
                 return _cb;
@@ -1505,9 +1520,11 @@ namespace XenoAtom.Graphics.Vk
         private struct FenceSubmissionInfo
         {
             public XenoAtom.Interop.vulkan.VkFence Fence;
-            public VkCommandList CommandList;
+
+            public VkCommandList? CommandList;
+
             public VkCommandBuffer CommandBuffer;
-            public FenceSubmissionInfo(XenoAtom.Interop.vulkan.VkFence fence, VkCommandList commandList, VkCommandBuffer commandBuffer)
+            public FenceSubmissionInfo(XenoAtom.Interop.vulkan.VkFence fence, VkCommandList? commandList, VkCommandBuffer commandBuffer)
             {
                 Fence = fence;
                 CommandList = commandList;

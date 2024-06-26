@@ -1,4 +1,4 @@
-﻿using static XenoAtom.Interop.vulkan;
+using static XenoAtom.Interop.vulkan;
 
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 
@@ -10,7 +10,7 @@ namespace XenoAtom.Graphics.Vk
         private readonly VkDescriptorSetLayout _dsl;
         private readonly VkDescriptorType[] _descriptorTypes;
         private bool _disposed;
-        private string _name;
+        private string? _name;
 
         public VkDescriptorSetLayout DescriptorSetLayout => _dsl;
         public VkDescriptorType[] DescriptorTypes => _descriptorTypes;
@@ -88,11 +88,11 @@ namespace XenoAtom.Graphics.Vk
             dslCI.bindingCount = (uint)elements.Length;
             dslCI.pBindings = bindings;
 
-            VkResult result = vkCreateDescriptorSetLayout(_gd.Device, ref dslCI, null, out _dsl);
+            VkResult result = vkCreateDescriptorSetLayout(_gd.Device, dslCI, null, out _dsl);
             CheckResult(result);
         }
 
-        public override string Name
+        public override string? Name
         {
             get => _name;
             set

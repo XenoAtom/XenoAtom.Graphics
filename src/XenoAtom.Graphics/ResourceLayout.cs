@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
@@ -7,7 +7,7 @@ namespace XenoAtom.Graphics
     /// to a shader set.
     /// See <see cref="ResourceLayoutDescription"/>.
     /// </summary>
-    public abstract class ResourceLayout : DeviceResource, IDisposable
+    public abstract class ResourceLayout : IDeviceResource, IDisposable
     {
 #if VALIDATE_USAGE
         internal readonly ResourceLayoutDescription Description;
@@ -32,7 +32,7 @@ namespace XenoAtom.Graphics
         /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
         /// tools.
         /// </summary>
-        public abstract string Name { get; set; }
+        public abstract string? Name { get; set; }
 
         /// <summary>
         /// A bool indicating whether this instance has been disposed.

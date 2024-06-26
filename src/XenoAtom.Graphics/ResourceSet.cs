@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 
 namespace XenoAtom.Graphics
@@ -7,7 +7,7 @@ namespace XenoAtom.Graphics
     /// A device resource used to bind a particular set of <see cref="BindableResource"/> objects to a <see cref="CommandList"/>.
     /// See <see cref="ResourceSetDescription"/>.
     /// </summary>
-    public abstract class ResourceSet : DeviceResource, IDisposable
+    public abstract class ResourceSet : IDeviceResource, IDisposable
     {
         internal ResourceSet(ref ResourceSetDescription description)
         {
@@ -21,7 +21,7 @@ namespace XenoAtom.Graphics
         /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
         /// tools.
         /// </summary>
-        public abstract string Name { get; set; }
+        public abstract string? Name { get; set; }
 
         /// <summary>
         /// A bool indicating whether this instance has been disposed.

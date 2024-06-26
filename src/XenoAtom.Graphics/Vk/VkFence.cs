@@ -1,4 +1,4 @@
-﻿using static XenoAtom.Interop.vulkan;
+using static XenoAtom.Interop.vulkan;
 
 
 namespace XenoAtom.Graphics.Vk
@@ -7,7 +7,7 @@ namespace XenoAtom.Graphics.Vk
     {
         private readonly VkGraphicsDevice _gd;
         private XenoAtom.Interop.vulkan.VkFence _fence;
-        private string _name;
+        private string? _name;
         private bool _destroyed;
 
         public XenoAtom.Interop.vulkan.VkFence DeviceFence => _fence;
@@ -28,7 +28,7 @@ namespace XenoAtom.Graphics.Vk
         public override bool Signaled => vkGetFenceStatus(_gd.Device, _fence) == VkResult.VK_SUCCESS;
         public override bool IsDisposed => _destroyed;
 
-        public override string Name
+        public override string? Name
         {
             get => _name;
             set

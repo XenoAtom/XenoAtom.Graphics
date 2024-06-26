@@ -10,9 +10,10 @@ namespace XenoAtom.Graphics
 
         public readonly uint Count;
         private fixed uint FixedData[MaxFixedValues];
-        public readonly uint[] Data;
 
-        public uint Get(uint i) => Count > MaxFixedValues ? Data[i] : FixedData[i];
+        public readonly uint[]? Data;
+
+        public uint Get(uint i) => Count > MaxFixedValues ? Data![i] : FixedData[i];
 
         public SmallFixedOrDynamicArray(uint count, ref uint data)
         {

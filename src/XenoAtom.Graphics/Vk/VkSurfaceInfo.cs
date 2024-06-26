@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using static XenoAtom.Interop.vulkan;
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 
@@ -11,21 +11,6 @@ namespace XenoAtom.Graphics.Vk
     public abstract class VkSurfaceSource
     {
         internal VkSurfaceSource() { }
-
-        /// <summary>
-        /// Creates a new VkSurfaceKHR attached to this source.
-        /// </summary>
-        /// <param name="instance">The VkInstance to use.</param>
-        /// <returns>A new VkSurfaceKHR.</returns>
-        public abstract VkSurfaceKHR CreateSurface(VkInstance instance);
-
-        /// <summary>
-        /// Creates a new <see cref="VkSurfaceSource"/> from the given Win32 instance and window handle.
-        /// </summary>
-        /// <param name="hinstance">The Win32 instance handle.</param>
-        /// <param name="hwnd">The Win32 window handle.</param>
-        /// <returns>A new VkSurfaceSource.</returns>
-        public static VkSurfaceSource CreateWin32(IntPtr hinstance, IntPtr hwnd) => new Win32VkSurfaceInfo(hinstance, hwnd);
 
         /// <summary>
         /// Creates a new VkSurfaceSource from the given Xlib information.
@@ -47,11 +32,6 @@ namespace XenoAtom.Graphics.Vk
         {
             _hinstance = hinstance;
             _hwnd = hwnd;
-        }
-
-        public unsafe override VkSurfaceKHR CreateSurface(VkInstance instance)
-        {
-            return VkSurfaceUtil.CreateSurface(null, instance, GetSurfaceSource());
         }
 
         internal override SwapchainSource GetSurfaceSource()

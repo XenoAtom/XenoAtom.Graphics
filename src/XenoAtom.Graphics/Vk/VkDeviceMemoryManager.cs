@@ -1,4 +1,4 @@
-﻿using static XenoAtom.Interop.vulkan;
+using static XenoAtom.Interop.vulkan;
 
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System.Collections.Generic;
@@ -162,7 +162,7 @@ namespace XenoAtom.Graphics.Vk
 
         private ChunkAllocatorSet GetAllocator(uint memoryTypeIndex, bool persistentMapped)
         {
-            ChunkAllocatorSet ret = null;
+            ChunkAllocatorSet? ret;
             if (persistentMapped)
             {
                 if (!_allocatorsByMemoryType.TryGetValue(memoryTypeIndex, out ret))
@@ -258,7 +258,7 @@ namespace XenoAtom.Graphics.Vk
                 VkMemoryAllocateInfo memoryAI = new VkMemoryAllocateInfo();
                 memoryAI.allocationSize = _totalMemorySize;
                 memoryAI.memoryTypeIndex = _memoryTypeIndex;
-                VkResult result = vkAllocateMemory(_device, ref memoryAI, null, out _memory);
+                VkResult result = vkAllocateMemory(_device, memoryAI, null, out _memory);
                 CheckResult(result);
 
                 void* mappedPtr = null;
@@ -331,7 +331,7 @@ namespace XenoAtom.Graphics.Vk
                         }
                     }
 
-                    block = default(VkMemoryBlock);
+                    block = default;
                     return false;
                 }
             }

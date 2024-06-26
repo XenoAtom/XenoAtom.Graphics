@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using static XenoAtom.Interop.vulkan;
@@ -96,7 +96,7 @@ namespace XenoAtom.Graphics.Vk
             poolCI.pPoolSizes = sizes;
             poolCI.poolSizeCount = poolSizeCount;
 
-            VkResult result = vkCreateDescriptorPool(_gd.Device, ref poolCI, null, out VkDescriptorPool descriptorPool);
+            VkResult result = vkCreateDescriptorPool(_gd.Device, poolCI, null, out VkDescriptorPool descriptorPool);
             VulkanUtil.CheckResult(result);
 
             return new PoolInfo(descriptorPool, totalSets, descriptorCount);

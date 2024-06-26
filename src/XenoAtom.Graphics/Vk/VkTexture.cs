@@ -1,4 +1,4 @@
-﻿using static XenoAtom.Interop.vulkan;
+using static XenoAtom.Interop.vulkan;
 
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System.Diagnostics;
@@ -49,12 +49,12 @@ namespace XenoAtom.Graphics.Vk
         public VkFormat VkFormat { get; }
         public VkSampleCountFlags VkSampleCount { get; }
 
-        private VkImageLayout[] _imageLayouts;
-        private bool _isSwapchainTexture;
-        private string _name;
+        private readonly VkImageLayout[] _imageLayouts = [];
+        private string? _name;
 
         public ResourceRefCount RefCount { get; }
-        public bool IsSwapchainTexture => _isSwapchainTexture;
+
+        public bool IsSwapchainTexture { get; }
 
         internal VkTexture(VkGraphicsDevice gd, ref TextureDescription description)
         {
@@ -99,7 +99,7 @@ namespace XenoAtom.Graphics.Vk
                 }
 
                 uint subresourceCount = MipLevels * _actualImageArrayLayers * Depth;
-                VkResult result = vkCreateImage(gd.Device, ref imageCI, null, out _optimalImage);
+                VkResult result = vkCreateImage(gd.Device, imageCI, null, out _optimalImage);
                 CheckResult(result);
 
                 VkMemoryRequirements memoryRequirements;
@@ -156,7 +156,7 @@ namespace XenoAtom.Graphics.Vk
                 VkBufferCreateInfo bufferCI = new VkBufferCreateInfo();
                 bufferCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
                 bufferCI.size = stagingSize;
-                VkResult result = vkCreateBuffer(_gd.Device, ref bufferCI, null, out _stagingBuffer);
+                VkResult result = vkCreateBuffer(_gd.Device, bufferCI, null, out _stagingBuffer);
                 CheckResult(result);
 
                 VkMemoryRequirements bufferMemReqs;
@@ -224,7 +224,7 @@ namespace XenoAtom.Graphics.Vk
             VkSampleCount = VkFormats.VdToVkSampleCount(sampleCount);
             _optimalImage = existingImage;
             _imageLayouts = new[] { VK_IMAGE_LAYOUT_UNDEFINED };
-            _isSwapchainTexture = true;
+            IsSwapchainTexture = true;
 
             ClearIfRenderTarget();
             RefCount = new ResourceRefCount(DisposeCore);
@@ -267,7 +267,7 @@ namespace XenoAtom.Graphics.Vk
                     aspectMask = aspect,
                 };
 
-                vkGetImageSubresourceLayout(_gd.Device, _optimalImage, ref imageSubresource, out VkSubresourceLayout layout);
+                vkGetImageSubresourceLayout(_gd.Device, _optimalImage, imageSubresource, out VkSubresourceLayout layout);
                 return layout;
             }
             else
@@ -405,7 +405,7 @@ namespace XenoAtom.Graphics.Vk
             return _imageLayouts[CalculateSubresource(mipLevel, arrayLayer)];
         }
 
-        public override string Name
+        public override string? Name
         {
             get => _name;
             set

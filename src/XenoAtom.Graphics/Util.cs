@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -31,11 +32,7 @@ namespace XenoAtom.Graphics
 
         internal static void EnsureArrayMinimumSize<T>(ref T[] array, uint size)
         {
-            if (array == null)
-            {
-                array = new T[size];
-            }
-            else if (array.Length < size)
+            if (array.Length < size)
             {
                 Array.Resize(ref array, (int)size);
             }
@@ -90,7 +87,7 @@ namespace XenoAtom.Graphics
             return true;
         }
 
-        internal static bool ArrayEqualsEquatable<T>(T[] left, T[] right) where T : struct, IEquatable<T>
+        internal static bool ArrayEqualsEquatable<T>(T[]? left, T[]? right) where T : struct, IEquatable<T>
         {
             if (left == null || right == null)
             {
@@ -272,7 +269,7 @@ namespace XenoAtom.Graphics
             }
         }
 
-        public static bool GetDeviceBuffer(BindableResource resource, out DeviceBuffer buffer)
+        public static bool TryGetDeviceBuffer(BindableResource resource, [NotNullWhen(true)] out DeviceBuffer? buffer)
         {
             if (resource is DeviceBuffer db)
             {

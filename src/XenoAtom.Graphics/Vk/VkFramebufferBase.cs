@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using static XenoAtom.Interop.vulkan;
 
 namespace XenoAtom.Graphics.Vk
@@ -21,6 +21,7 @@ namespace XenoAtom.Graphics.Vk
         public ResourceRefCount RefCount { get; }
 
         public abstract uint RenderableWidth { get; }
+
         public abstract uint RenderableHeight { get; }
 
         public override void Dispose()

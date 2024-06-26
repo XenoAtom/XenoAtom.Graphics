@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 using XenoAtom.Graphics.Utilities;
 
@@ -6,12 +6,9 @@ namespace XenoAtom.Graphics.Tests
 {
     public static class TestUtils
     {
-        private static readonly bool InitializedSdl2;
-        private static readonly string InitializationFailedMessage;
-
         public static GraphicsDevice CreateVulkanDevice()
         {
-            return GraphicsDevice.CreateVulkan(new GraphicsDeviceOptions(true));
+            return GraphicsDevice.Create(new GraphicsDeviceOptions(true));
         }
 
         internal static unsafe string GetString(byte* stringStart)

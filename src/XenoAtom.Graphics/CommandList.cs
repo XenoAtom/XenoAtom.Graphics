@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -21,18 +21,18 @@ namespace XenoAtom.Graphics
     /// <see cref="GraphicsDevice"/>, they must be reset and commands must be issued again.
     /// See <see cref="CommandListDescription"/>.
     /// </summary>
-    public abstract class CommandList : DeviceResource, IDisposable
+    public abstract class CommandList : IDeviceResource, IDisposable
     {
         private readonly GraphicsDeviceFeatures _features;
         private readonly uint _uniformBufferAlignment;
         private readonly uint _structuredBufferAlignment;
 
-        private protected Framebuffer _framebuffer;
-        private protected Pipeline _graphicsPipeline;
-        private protected Pipeline _computePipeline;
+        private protected Framebuffer? _framebuffer;
+        private protected Pipeline? _graphicsPipeline;
+        private protected Pipeline? _computePipeline;
 
 #if VALIDATE_USAGE
-        private DeviceBuffer _indexBuffer;
+        private DeviceBuffer? _indexBuffer;
         private IndexFormat _indexFormat;
 #endif
 
@@ -401,9 +401,9 @@ namespace XenoAtom.Graphics
 #if VALIDATE_USAGE
             if (_framebuffer == null)
             {
-                throw new GraphicsException($"Cannot use ClearColorTarget. There is no Framebuffer bound.");
+                throw new GraphicsException($"Cannot use {nameof(ClearColorTarget)}. There is no Framebuffer bound.");
             }
-            if (_framebuffer.ColorTargets.Count <= index)
+            if (_framebuffer.ColorTargets.Length <= index)
             {
                 throw new GraphicsException(
                     "ClearColorTarget index must be less than the current Framebuffer's color target count.");
@@ -436,7 +436,7 @@ namespace XenoAtom.Graphics
 #if VALIDATE_USAGE
             if (_framebuffer == null)
             {
-                throw new GraphicsException($"Cannot use ClearDepthStencil. There is no Framebuffer bound.");
+                throw new GraphicsException($"Cannot use {nameof(ClearDepthStencil)}. There is no Framebuffer bound.");
             }
             if (_framebuffer.DepthTarget == null)
             {
@@ -455,9 +455,14 @@ namespace XenoAtom.Graphics
         /// </summary>
         public void SetFullViewports()
         {
+            if (_framebuffer == null)
+            {
+                throw new GraphicsException($"Cannot use {nameof(SetFullViewports)}. There is no Framebuffer bound.");
+            }
+            
             SetViewport(0, new Viewport(0, 0, _framebuffer.Width, _framebuffer.Height, 0, 1));
 
-            for (uint index = 1; index < _framebuffer.ColorTargets.Count; index++)
+            for (uint index = 1; index < _framebuffer.ColorTargets.Length; index++)
             {
                 SetViewport(index, new Viewport(0, 0, _framebuffer.Width, _framebuffer.Height, 0, 1));
             }
@@ -469,6 +474,11 @@ namespace XenoAtom.Graphics
         /// <param name="index">The color target index.</param>
         public void SetFullViewport(uint index)
         {
+            if (_framebuffer == null)
+            {
+                throw new GraphicsException($"Cannot use {nameof(SetFullViewport)}. There is no Framebuffer bound.");
+            }
+
             SetViewport(index, new Viewport(0, 0, _framebuffer.Width, _framebuffer.Height, 0, 1));
         }
 
@@ -493,9 +503,14 @@ namespace XenoAtom.Graphics
         /// </summary>
         public void SetFullScissorRects()
         {
+            if (_framebuffer == null)
+            {
+                throw new GraphicsException($"Cannot use {nameof(SetFullScissorRects)}. There is no Framebuffer bound.");
+            }
+
             SetScissorRect(0, 0, 0, _framebuffer.Width, _framebuffer.Height);
 
-            for (uint index = 1; index < _framebuffer.ColorTargets.Count; index++)
+            for (uint index = 1; index < _framebuffer.ColorTargets.Length; index++)
             {
                 SetScissorRect(index, 0, 0, _framebuffer.Width, _framebuffer.Height);
             }
@@ -507,6 +522,11 @@ namespace XenoAtom.Graphics
         /// <param name="index">The color target index.</param>
         public void SetFullScissorRect(uint index)
         {
+            if (_framebuffer == null)
+            {
+                throw new GraphicsException($"Cannot use {nameof(SetFullScissorRect)}. There is no Framebuffer bound.");
+            }
+
             SetScissorRect(index, 0, 0, _framebuffer.Width, _framebuffer.Height);
         }
 
@@ -571,8 +591,6 @@ namespace XenoAtom.Graphics
                 throw new GraphicsException("Drawing with a non-zero base instance is not supported on this device.");
             }
 #endif
-
-
             DrawIndexedCore(indexCount, instanceCount, indexStart, vertexOffset, instanceStart);
         }
 
@@ -1184,7 +1202,7 @@ namespace XenoAtom.Graphics
         /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
         /// tools.
         /// </summary>
-        public abstract string Name { get; set; }
+        public abstract string? Name { get; set; }
 
         /// <summary>
         /// A bool indicating whether this instance has been disposed.

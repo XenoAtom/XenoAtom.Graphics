@@ -1,4 +1,4 @@
-﻿using static XenoAtom.Interop.vulkan;
+using static XenoAtom.Interop.vulkan;
 
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System;
@@ -10,7 +10,7 @@ namespace XenoAtom.Graphics.Vk
         private readonly VkGraphicsDevice _gd;
         private readonly VkShaderModule _shaderModule;
         private bool _disposed;
-        private string _name;
+        private string? _name;
 
         public VkShaderModule ShaderModule => _shaderModule;
 
@@ -31,7 +31,7 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        public override string Name
+        public override string? Name
         {
             get => _name;
             set

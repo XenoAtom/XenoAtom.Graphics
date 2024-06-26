@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using static XenoAtom.Interop.vulkan;
 
 using static XenoAtom.Graphics.Vk.VulkanUtil;
@@ -22,10 +22,19 @@ namespace XenoAtom.Graphics.Vk
         private readonly bool _colorSrgb;
         private bool? _newSyncToVBlank;
         private uint _currentImageIndex;
-        private string _name;
+        private string? _name;
         private bool _disposed;
 
-        public override string Name { get => _name; set { _name = value; _gd.SetResourceName(this, value); } }
+        public override string? Name
+        {
+            get => _name;
+            set
+            {
+                _name = value;
+                _gd.SetResourceName(this, value);
+            }
+        }
+
         public override Framebuffer Framebuffer => _framebuffer;
         public override bool SyncToVerticalBlank
         {
@@ -79,7 +88,7 @@ namespace XenoAtom.Graphics.Vk
 
             VkFenceCreateInfo fenceCI = new VkFenceCreateInfo();
             fenceCI.flags = (VkFenceCreateFlagBits)0;
-            vkCreateFence(_gd.Device, ref fenceCI, null, out var imageAvailableFence);
+            vkCreateFence(_gd.Device, fenceCI, null, out var imageAvailableFence);
 
             AcquireNextImage(_gd.Device, default, imageAvailableFence);
             vkWaitForFences(_gd.Device, 1, &imageAvailableFence, true, ulong.MaxValue);

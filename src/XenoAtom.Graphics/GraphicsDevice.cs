@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -11,11 +12,13 @@ namespace XenoAtom.Graphics
     /// </summary>
     public abstract class GraphicsDevice : IDisposable
     {
-        private readonly object _deferredDisposalLock = new object();
-        private readonly List<IDisposable> _disposables = new List<IDisposable>();
-        private Sampler _aniso4xSampler;
+        private readonly object _deferredDisposalLock = new();
+        private readonly List<IDisposable> _disposables = new();
 
-        internal GraphicsDevice() { }
+        internal GraphicsDevice()
+        {
+
+        }
 
         /// <summary>
         /// Gets the name of the device.
@@ -65,7 +68,7 @@ namespace XenoAtom.Graphics
         /// Retrieves the main Swapchain for this device. This property is only valid if the device was created with a main
         /// Swapchain, and will return null otherwise.
         /// </summary>
-        public abstract Swapchain MainSwapchain { get; }
+        public abstract Swapchain? MainSwapchain { get; }
 
         /// <summary>
         /// Gets a <see cref="GraphicsDeviceFeatures"/> which enumerates the optional features supported by this instance.
@@ -131,9 +134,8 @@ namespace XenoAtom.Graphics
         /// execution.</param>
         public void SubmitCommands(CommandList commandList, Fence fence) => SubmitCommandsCore(commandList, fence);
 
-        private protected abstract void SubmitCommandsCore(
-            CommandList commandList,
-            Fence fence);
+        private protected abstract void SubmitCommandsCore(CommandList commandList,
+            Fence? fence);
 
         /// <summary>
         /// Blocks the calling thread until the given <see cref="Fence"/> becomes signaled.
@@ -236,7 +238,7 @@ namespace XenoAtom.Graphics
         /// This is equivalent to <see cref="MainSwapchain"/>.<see cref="Swapchain.Framebuffer"/>.
         /// If this GraphicsDevice was created without a main Swapchain, then this returns null.
         /// </summary>
-        public Framebuffer SwapchainFramebuffer => MainSwapchain?.Framebuffer;
+        public Framebuffer? SwapchainFramebuffer => MainSwapchain?.Framebuffer;
 
         /// <summary>
         /// Notifies this instance that the main window has been resized. This causes the <see cref="SwapchainFramebuffer"/> to
@@ -801,49 +803,23 @@ namespace XenoAtom.Graphics
         protected abstract void PlatformDispose();
 
         /// <summary>
-        /// Creates and caches common device resources after device creation completes.
-        /// </summary>
-        protected void PostDeviceCreated()
-        {
-            PointSampler = ResourceFactory.CreateSampler(SamplerDescription.Point);
-            LinearSampler = ResourceFactory.CreateSampler(SamplerDescription.Linear);
-            if (Features.SamplerAnisotropy)
-            {
-                _aniso4xSampler = ResourceFactory.CreateSampler(SamplerDescription.Aniso4x);
-            }
-        }
-
-        /// <summary>
         /// Gets a simple point-filtered <see cref="Sampler"/> object owned by this instance.
         /// This object is created with <see cref="SamplerDescription.Point"/>.
         /// </summary>
-        public Sampler PointSampler { get; private set; }
+        public abstract Sampler PointSampler { get; }
 
         /// <summary>
         /// Gets a simple linear-filtered <see cref="Sampler"/> object owned by this instance.
         /// This object is created with <see cref="SamplerDescription.Linear"/>.
         /// </summary>
-        public Sampler LinearSampler { get; private set; }
+        public abstract Sampler LinearSampler { get; }
 
         /// <summary>
         /// Gets a simple 4x anisotropic-filtered <see cref="Sampler"/> object owned by this instance.
         /// This object is created with <see cref="SamplerDescription.Aniso4x"/>.
         /// This property can only be used when <see cref="GraphicsDeviceFeatures.SamplerAnisotropy"/> is supported.
         /// </summary>
-        public Sampler Aniso4xSampler
-        {
-            get
-            {
-                if (!Features.SamplerAnisotropy)
-                {
-                    throw new GraphicsException(
-                        "GraphicsDevice.Aniso4xSampler cannot be used unless GraphicsDeviceFeatures.SamplerAnisotropy is supported.");
-                }
-
-                Debug.Assert(_aniso4xSampler != null);
-                return _aniso4xSampler;
-            }
-        }
+        public abstract Sampler? AnisotropicSampler4x { get; }
 
         /// <summary>
         /// Frees unmanaged resources controlled by this device.
@@ -854,7 +830,7 @@ namespace XenoAtom.Graphics
             WaitForIdle();
             PointSampler.Dispose();
             LinearSampler.Dispose();
-            _aniso4xSampler?.Dispose();
+            AnisotropicSampler4x?.Dispose();
             PlatformDispose();
         }
 
@@ -890,7 +866,11 @@ namespace XenoAtom.Graphics
         /// </summary>
         /// <param name="info">If successful, this will contain the <see cref="BackendInfoVulkan"/> for this instance.</param>
         /// <returns>True if this is a Vulkan GraphicsDevice and the operation was successful. False otherwise.</returns>
-        public virtual bool GetVulkanInfo(out BackendInfoVulkan info) { info = null; return false; }
+        public virtual bool TryGetVulkanInfo([NotNullWhen(true)] out BackendInfoVulkan? info)
+        {
+            info = null;
+            return false;
+        }
 
         /// <summary>
         /// Gets a <see cref="BackendInfoVulkan"/> for this instance. This method will only succeed if this is a Vulkan
@@ -899,9 +879,9 @@ namespace XenoAtom.Graphics
         /// <returns>The <see cref="BackendInfoVulkan"/> for this instance.</returns>
         public BackendInfoVulkan GetVulkanInfo()
         {
-            if (!GetVulkanInfo(out BackendInfoVulkan info))
+            if (!TryGetVulkanInfo(out var info))
             {
-                throw new GraphicsException($"{nameof(GetVulkanInfo)} can only be used on a Vulkan GraphicsDevice.");
+                throw new GraphicsException($"{nameof(TryGetVulkanInfo)} can only be used on a Vulkan GraphicsDevice.");
             }
 
             return info;
@@ -1103,7 +1083,7 @@ namespace XenoAtom.Graphics
         /// </summary>
         /// <param name="options">Describes several common properties of the GraphicsDevice.</param>
         /// <returns>A new <see cref="GraphicsDevice"/> using the Vulkan API.</returns>
-        public static GraphicsDevice CreateVulkan(GraphicsDeviceOptions options)
+        public static GraphicsDevice Create(GraphicsDeviceOptions options)
         {
             return new Vk.VkGraphicsDevice(options, null);
         }
@@ -1114,7 +1094,7 @@ namespace XenoAtom.Graphics
         /// <param name="options">Describes several common properties of the GraphicsDevice.</param>
         /// <param name="vkOptions">The Vulkan-specific options used to create the device.</param>
         /// <returns>A new <see cref="GraphicsDevice"/> using the Vulkan API.</returns>
-        public static GraphicsDevice CreateVulkan(GraphicsDeviceOptions options, VulkanDeviceOptions vkOptions)
+        public static GraphicsDevice Create(GraphicsDeviceOptions options, VulkanDeviceOptions vkOptions)
         {
             return new Vk.VkGraphicsDevice(options, null, vkOptions);
         }
@@ -1125,7 +1105,7 @@ namespace XenoAtom.Graphics
         /// <param name="options">Describes several common properties of the GraphicsDevice.</param>
         /// <param name="swapchainDescription">A description of the main Swapchain to create.</param>
         /// <returns>A new <see cref="GraphicsDevice"/> using the Vulkan API.</returns>
-        public static GraphicsDevice CreateVulkan(GraphicsDeviceOptions options, SwapchainDescription swapchainDescription)
+        public static GraphicsDevice Create(GraphicsDeviceOptions options, SwapchainDescription swapchainDescription)
         {
             return new Vk.VkGraphicsDevice(options, swapchainDescription);
         }
@@ -1137,7 +1117,7 @@ namespace XenoAtom.Graphics
         /// <param name="vkOptions">The Vulkan-specific options used to create the device.</param>
         /// <param name="swapchainDescription">A description of the main Swapchain to create.</param>
         /// <returns>A new <see cref="GraphicsDevice"/> using the Vulkan API.</returns>
-        public static GraphicsDevice CreateVulkan(
+        public static GraphicsDevice Create(
             GraphicsDeviceOptions options,
             SwapchainDescription swapchainDescription,
             VulkanDeviceOptions vkOptions)
@@ -1153,9 +1133,9 @@ namespace XenoAtom.Graphics
         /// <param name="width">The initial width of the window.</param>
         /// <param name="height">The initial height of the window.</param>
         /// <returns>A new <see cref="GraphicsDevice"/> using the Vulkan API.</returns>
-        public static GraphicsDevice CreateVulkan(GraphicsDeviceOptions options, Vk.VkSurfaceSource surfaceSource, uint width, uint height)
+        public static GraphicsDevice Create(GraphicsDeviceOptions options, Vk.VkSurfaceSource surfaceSource, uint width, uint height)
         {
-            SwapchainDescription scDesc = new SwapchainDescription(
+            var scDesc = new SwapchainDescription(
                 surfaceSource.GetSurfaceSource(),
                 width, height,
                 options.SwapchainDepthFormat,
