@@ -635,7 +635,6 @@ namespace XenoAtom.Graphics.Vk
         {
             Debug.Assert(_activeRenderPass != default);
             vkCmdEndRenderPass(_cb);
-            _currentFramebuffer!.TransitionToIntermediateLayout(_cb);
             _activeRenderPass = default;
 
             // Place a barrier between RenderPasses, so that color / depth outputs
