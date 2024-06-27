@@ -1,5 +1,6 @@
-﻿using System.Numerics;
+using System.Numerics;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
@@ -210,8 +211,17 @@ namespace XenoAtom.Graphics.Tests
             Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(0, set3)); // Wrong count
             cl.End();
         }
+
+        protected ResourceSetTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanResourceSetTests : ResourceSetTests<VulkanDeviceCreator> { }
+    public class VulkanResourceSetTests : ResourceSetTests<VulkanDeviceCreator>
+    {
+        public VulkanResourceSetTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+    }
 }

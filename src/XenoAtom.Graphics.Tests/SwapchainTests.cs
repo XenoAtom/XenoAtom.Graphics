@@ -1,4 +1,5 @@
 using Xunit;
+using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
@@ -34,10 +35,17 @@ namespace XenoAtom.Graphics.Tests
             //window.Close();
         }
         */
+        protected SwapchainTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
     }
 
     public abstract class MainSwapchainTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
     {
+        protected MainSwapchainTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+
         [Fact]
         public void Textures_Properties_Correct()
         {
@@ -61,8 +69,14 @@ namespace XenoAtom.Graphics.Tests
             Assert.Equal(TextureUsage.DepthStencil, depthTarget.Usage);
             Assert.Equal(TextureSampleCount.Count1, depthTarget.SampleCount);
         }
+
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanSwapchainTests : SwapchainTests<VulkanDeviceCreator> { }
+    public class VulkanSwapchainTests : SwapchainTests<VulkanDeviceCreator>
+    {
+        public VulkanSwapchainTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+    }
 }

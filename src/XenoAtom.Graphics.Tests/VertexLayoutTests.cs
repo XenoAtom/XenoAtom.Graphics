@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
@@ -53,8 +54,17 @@ namespace XenoAtom.Graphics.Tests
             }
             catch when (!succeeds) { }
         }
+
+        protected VertexLayoutTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanVertexLayoutTests : VertexLayoutTests<VulkanDeviceCreator> { }
+    public class VulkanVertexLayoutTests : VertexLayoutTests<VulkanDeviceCreator>
+    {
+        public VulkanVertexLayoutTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+    }
 }

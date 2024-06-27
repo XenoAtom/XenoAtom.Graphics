@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
@@ -28,6 +29,10 @@ namespace XenoAtom.Graphics.Tests
 
     public abstract class ComputeTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
     {
+        protected ComputeTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+
         [Fact]
         public void ComputeShader3dTexture()
         {
@@ -496,8 +501,14 @@ namespace XenoAtom.Graphics.Tests
                                 yield return new object[] { srcSetMultiple, srcBindingMultiple, dstSetMultiple, dstBindingMultiple, combinedLayout };
                             }
         }
+
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanComputeTests : ComputeTests<VulkanDeviceCreator> { }
+    public class VulkanComputeTests : ComputeTests<VulkanDeviceCreator>
+    {
+        public VulkanComputeTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+    }
 }

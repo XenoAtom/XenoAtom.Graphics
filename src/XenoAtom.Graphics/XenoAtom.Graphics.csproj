@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net8.0</TargetFramework>
@@ -47,12 +47,17 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="XenoAtom.Interop" Version="1.5.0" />
-    <PackageReference Include="XenoAtom.Interop.vulkan" Version="1.0.0-alpha.10" PrivateAssets="contentfiles;analyzers;build;compile" />
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="XenoAtom.Interop.vulkan" Version="1.0.0-alpha.13" PrivateAssets="contentfiles;analyzers;build;compile" />
+    <PackageReference Include="XenoAtom.Interop" Version="1.5.0" />
+    <!--<ProjectReference Include="..\..\..\Interop\src\common\XenoAtom.Interop.common\XenoAtom.Interop.common.csproj" />-->
+    <!--<ProjectReference Include="..\..\..\Interop\src\vulkan\XenoAtom.Interop.vulkan\XenoAtom.Interop.vulkan.csproj" />-->
   </ItemGroup>
 
 </Project>

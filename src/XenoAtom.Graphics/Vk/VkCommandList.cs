@@ -514,6 +514,9 @@ namespace XenoAtom.Graphics.Vk
             }
 
             VkFramebufferBase vkFB = Util.AssertSubtype<Framebuffer, VkFramebufferBase>(fb);
+            // We need to make sure that a Framebuffer is in the correct layout before we start rendering to it.
+            vkFB.TransitionToIntermediateLayout(_cb);
+
             _currentFramebuffer = vkFB;
             _currentFramebufferEverActive = false;
             _newFramebuffer = true;
@@ -807,8 +810,7 @@ namespace XenoAtom.Graphics.Vk
 
             bool needToProtectUniform = destination.Usage.HasFlag(BufferUsage.UniformBuffer);
 
-            VkMemoryBarrier barrier;
-            barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            VkMemoryBarrier barrier = new();
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             barrier.dstAccessMask = needToProtectUniform ? VK_ACCESS_UNIFORM_READ_BIT : VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
             barrier.pNext = null;

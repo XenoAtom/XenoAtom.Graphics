@@ -3,11 +3,16 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
     public abstract class BufferTestBase<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
     {
+        protected BufferTestBase(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+
         [Fact]
         public void CreateBuffer_Succeeds()
         {
@@ -581,5 +586,8 @@ namespace XenoAtom.Graphics.Tests
     [Trait("Backend", "Vulkan")]
     public class VulkanBufferTests : BufferTestBase<VulkanDeviceCreator>
     {
+        public VulkanBufferTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
     }
 }

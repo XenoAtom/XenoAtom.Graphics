@@ -102,7 +102,6 @@ namespace XenoAtom.Graphics.Vk
                 attachments.Add(depthAttachmentDesc);
             }
 
-            const uint VK_SUBPASS_EXTERNAL = ~0U;
             VkSubpassDependency subpassDependency = new VkSubpassDependency();
             subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
             subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -260,15 +259,20 @@ namespace XenoAtom.Graphics.Vk
             foreach (var ca in ColorTargets)
             {
                 VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(ca.Target);
-                vkTex.SetImageLayout(ca.MipLevel, ca.ArrayLayer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                vkTex.TransitionImageLayout(
+                    cb,
+                    ca.MipLevel, 1,
+                    ca.ArrayLayer, 1,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
             }
 
             if (DepthTarget != null)
             {
                 VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(DepthTarget.Value.Target);
-                vkTex.SetImageLayout(
-                    DepthTarget.Value.MipLevel,
-                    DepthTarget.Value.ArrayLayer,
+                vkTex.TransitionImageLayout(
+                    cb,
+                    DepthTarget.Value.MipLevel, 1,
+                    DepthTarget.Value.ArrayLayer, 1,
                     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
             }
         }

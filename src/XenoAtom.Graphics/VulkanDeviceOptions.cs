@@ -1,4 +1,4 @@
-﻿using XenoAtom.Interop;
+using XenoAtom.Interop;
 
 namespace XenoAtom.Graphics
 {
@@ -12,6 +12,7 @@ namespace XenoAtom.Graphics
         /// created VkInstance.
         /// </summary>
         public ReadOnlyMemoryUtf8[] InstanceExtensions { get; set; }
+
         /// <summary>
         /// An array of required Vulkan device extensions. Entries in this array will be enabled in the GraphicsDevice's
         /// created VkDevice.
@@ -28,6 +29,15 @@ namespace XenoAtom.Graphics
         /// </summary>
         public ReadOnlyMemoryUtf8 EngineName { get; set; }
 
+        /// <summary>
+        /// Constructs a new VulkanDeviceOptions.
+        /// </summary>
+        public VulkanDeviceOptions()
+        {
+            InstanceExtensions = [];
+            DeviceExtensions = [];
+        }
+        
         /// <summary>
         /// Constructs a new VulkanDeviceOptions.
         /// </summary>

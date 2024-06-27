@@ -1,4 +1,7 @@
-﻿namespace XenoAtom.Graphics
+using System;
+using System.IO;
+
+namespace XenoAtom.Graphics
 {
     /// <summary>
     /// A structure describing several common properties of a GraphicsDevice.
@@ -9,6 +12,12 @@
         /// Indicates whether the GraphicsDevice will support debug features, provided they are supported by the host system.
         /// </summary>
         public bool Debug;
+
+        /// <summary>
+        /// Logger used when <see cref="Debug"/> is true. Default is Console.Out.
+        /// </summary>
+        public DebugLogDelegate DebugLog;
+
         /// <summary>
         /// Indicates whether the Graphicsdevice will include a "main" Swapchain. If this value is true, then the GraphicsDevice
         /// must be created with one of the overloads that provides Swapchain source information.
@@ -53,6 +62,7 @@
         public GraphicsDeviceOptions(bool debug)
         {
             Debug = debug;
+            DebugLog = LogToConsole;
             HasMainSwapchain = false;
             SwapchainDepthFormat = null;
             SyncToVerticalBlank = false;
@@ -74,6 +84,7 @@
         public GraphicsDeviceOptions(bool debug, PixelFormat? swapchainDepthFormat, bool syncToVerticalBlank)
         {
             Debug = debug;
+            DebugLog = LogToConsole;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -100,6 +111,7 @@
             ResourceBindingModel resourceBindingModel)
         {
             Debug = debug;
+            DebugLog = LogToConsole;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -129,6 +141,7 @@
             bool preferDepthRangeZeroToOne)
         {
             Debug = debug;
+            DebugLog = LogToConsole;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -161,6 +174,7 @@
             bool preferStandardClipSpaceYDirection)
         {
             Debug = debug;
+            DebugLog = LogToConsole;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -198,6 +212,7 @@
             bool swapchainSrgbFormat)
         {
             Debug = debug;
+            DebugLog = LogToConsole;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -206,5 +221,7 @@
             PreferStandardClipSpaceYDirection = preferStandardClipSpaceYDirection;
             SwapchainSrgbFormat = swapchainSrgbFormat;
         }
+
+        private static readonly DebugLogDelegate LogToConsole = static (kind, message) => Console.WriteLine($"[{kind}] {message}");
     }
 }

@@ -19,34 +19,35 @@ namespace XenoAtom.Graphics.Vk
         private static ReadOnlyMemoryUtf8 s_name => "XenoAtom.Graphics-VkGraphicsDevice"u8;
         private static readonly Lazy<bool> s_isSupported = new Lazy<bool>(CheckIsSupported, isThreadSafe: true);
 
-        private VkInstance _instance;
-        private VkPhysicalDevice _physicalDevice;
-        private string _deviceName = string.Empty;
-        private string _vendorName = string.Empty;
-        private GraphicsApiVersion _apiVersion;
-        private string _driverName = string.Empty;
-        private string _driverInfo = string.Empty;
-        private VkDeviceMemoryManager _memoryManager;
-        private VkPhysicalDeviceProperties _physicalDeviceProperties;
-        private VkPhysicalDeviceFeatures _physicalDeviceFeatures;
-        private VkPhysicalDeviceMemoryProperties _physicalDeviceMemProperties;
-        private VkDevice _device;
-        private uint _graphicsQueueIndex;
-        private uint _presentQueueIndex;
-        private VkCommandPool _graphicsCommandPool;
+        private readonly VkInstance _instance;
+        private readonly VkPhysicalDevice _physicalDevice;
+        private readonly string _deviceName;
+        private readonly string _vendorName;
+        private readonly GraphicsApiVersion _apiVersion;
+        private readonly string _driverName;
+        private readonly string _driverInfo;
+        private readonly VkDeviceMemoryManager _memoryManager;
+        private readonly VkPhysicalDeviceProperties _physicalDeviceProperties;
+        private readonly VkPhysicalDeviceFeatures _physicalDeviceFeatures;
+        private readonly VkPhysicalDeviceMemoryProperties _physicalDeviceMemProperties;
+        private readonly VkDevice _device;
+        private readonly uint _graphicsQueueIndex;
+        private readonly uint _presentQueueIndex;
+        private readonly VkCommandPool _graphicsCommandPool;
         private readonly object _graphicsCommandPoolLock = new object();
-        private VkQueue _graphicsQueue;
+        private readonly VkQueue _graphicsQueue;
         private readonly object _graphicsQueueLock = new object();
-        private VkDebugReportCallbackEXT _debugCallbackHandle;
-        private bool _debugMarkerEnabled;
+        private readonly VkDebugReportCallbackEXT _debugCallbackHandle;
+        private readonly bool _debugMarkerEnabled;
         private readonly ConcurrentDictionary<VkFormat, VkFilter> _filters = new ConcurrentDictionary<VkFormat, VkFilter>();
         private readonly BackendInfoVulkan _vulkanInfo;
+        private readonly DebugLogDelegate? _log;
+        private readonly GCHandle _thisGcHandle;
 
         private const int SharedCommandPoolCount = 4;
-        private Stack<SharedCommandPool> _sharedGraphicsCommandPools = new Stack<SharedCommandPool>();
-        private VkDescriptorPoolManager _descriptorPoolManager;
-        private bool _khronosValidationSupported;
-        private bool _standardClipYDirection;
+        private readonly Stack<SharedCommandPool> _sharedGraphicsCommandPools = new Stack<SharedCommandPool>();
+        private readonly VkDescriptorPoolManager _descriptorPoolManager;
+        private readonly bool _standardClipYDirection;
 
         // Staging Resources
         private const uint MinStagingBufferSize = 64;
@@ -119,15 +120,14 @@ namespace XenoAtom.Graphics.Vk
         public PFN_vkCmdDebugMarkerInsertEXT vkCmdDebugMarkerInsertExt => _vkCmdDebugMarkerInsertEXT;
         public PFN_vkCreateMetalSurfaceEXT CreateMetalSurfaceEXT => _createMetalSurfaceEXT;
 
-        private PFN_vkDebugReportCallbackEXT _debugCallbackFunc;
-        private PFN_vkDebugMarkerSetObjectNameEXT _vkDebugMarkerSetObjectNameEX;
-        private PFN_vkCmdDebugMarkerBeginEXT _vkCmdDebugMarkerBeginEXT;
-        private PFN_vkCmdDebugMarkerEndEXT _vkCmdDebugMarkerEndEXT;
-        private PFN_vkCmdDebugMarkerInsertEXT _vkCmdDebugMarkerInsertEXT;
-        private PFN_vkQueuePresentKHR _vkQueuePresentKHR;
-        private PFN_vkCreateMetalSurfaceEXT _createMetalSurfaceEXT;
+        private readonly PFN_vkDebugMarkerSetObjectNameEXT _vkDebugMarkerSetObjectNameEX;
+        private readonly PFN_vkCmdDebugMarkerBeginEXT _vkCmdDebugMarkerBeginEXT;
+        private readonly PFN_vkCmdDebugMarkerEndEXT _vkCmdDebugMarkerEndEXT;
+        private readonly PFN_vkCmdDebugMarkerInsertEXT _vkCmdDebugMarkerInsertEXT;
+        private readonly PFN_vkQueuePresentKHR _vkQueuePresentKHR;
+        private readonly PFN_vkCreateMetalSurfaceEXT _createMetalSurfaceEXT;
 
-        public PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR;
+        public readonly PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR;
         public readonly PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR;
         public readonly PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
         public readonly PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR;
@@ -149,26 +149,392 @@ namespace XenoAtom.Graphics.Vk
 
         public VkGraphicsDevice(GraphicsDeviceOptions options, SwapchainDescription? scDesc, VulkanDeviceOptions vkOptions)
         {
-            CreateInstance(options.Debug, vkOptions);
+            _thisGcHandle = GCHandle.Alloc(this);
+
+            // ---------------------------------------------------------------
+            // Create vkInstance
+            // ---------------------------------------------------------------
+            HashSet<ReadOnlyMemoryUtf8> availableInstanceLayers = new(EnumerateInstanceLayers());
+            HashSet<ReadOnlyMemoryUtf8> availableInstanceExtensions = new(EnumerateInstanceExtensions());
+            StackList<nint, FixedArray64<byte>> instanceExtensions = new();
+            StackList<nint, FixedArray64<byte>> instanceLayers = new();
+            _log = options.Debug ? options.DebugLog : null;
+
+            // Check that vkEnumerateInstanceVersion is available
+            // This function is only available in Vulkan 1.1 and later
+            PFN_vkEnumerateInstanceVersion vkn = vkGetGlobalProcAddr<PFN_vkEnumerateInstanceVersion>();
+            if (vkn.IsNull)
+            {
+                throw new GraphicsException("Vulkan 1.1 is not supported on this system.");
+            }
+
+            var instanceCI = new VkInstanceCreateInfo();
+            var applicationInfo = new VkApplicationInfo
+            {
+                apiVersion = VK_API_VERSION_1_1, // Requesting a minimum of Vulkan 1.1
+                applicationVersion = new VkVersion(1, 0, 0),
+                engineVersion = new VkVersion(1, 0, 0),
+                pApplicationName = (byte*)(vkOptions.ApplicationName.IsNull ? s_name : vkOptions.ApplicationName),
+                pEngineName = (byte*)(vkOptions.EngineName.IsNull ? s_name : vkOptions.EngineName)
+            };
+
+            instanceCI.pApplicationInfo = &applicationInfo;
+            
+            if (availableInstanceExtensions.Contains(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
+            {
+                _surfaceExtensions.Add(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+            }
+
+            if (availableInstanceExtensions.Contains(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME))
+            {
+                instanceExtensions.Add((nint)(byte*)VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+                instanceCI.flags |= (VkInstanceCreateFlagBits)VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+            }
+
+            if (availableInstanceExtensions.Contains(VK_KHR_SURFACE_EXTENSION_NAME))
+            {
+                _surfaceExtensions.Add(VK_KHR_SURFACE_EXTENSION_NAME);
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                if (availableInstanceExtensions.Contains(VK_KHR_WIN32_SURFACE_EXTENSION_NAME))
+                {
+                    _surfaceExtensions.Add(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+                }
+            }
+            else if (
+#if NET5_0_OR_GREATER
+                OperatingSystem.IsAndroid() ||
+#endif
+                RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                if (availableInstanceExtensions.Contains(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME))
+                {
+                    _surfaceExtensions.Add(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+                }
+                if (availableInstanceExtensions.Contains(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
+                {
+                    _surfaceExtensions.Add(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+                }
+                if (availableInstanceExtensions.Contains(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
+                {
+                    _surfaceExtensions.Add(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+                }
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                if (availableInstanceExtensions.Contains(VK_EXT_METAL_SURFACE_EXTENSION_NAME))
+                {
+                    _surfaceExtensions.Add(VK_EXT_METAL_SURFACE_EXTENSION_NAME);
+                }
+            }
+
+            foreach (var ext in _surfaceExtensions)
+            {
+                instanceExtensions.Add((nint)(byte*)ext);
+            }
+
+            ReadOnlyMemoryUtf8[] requestedInstanceExtensions = vkOptions.InstanceExtensions;
+            foreach (ReadOnlyMemoryUtf8 requiredExt in requestedInstanceExtensions)
+            {
+                if (!availableInstanceExtensions.Contains(requiredExt))
+                {
+                    throw new GraphicsException($"The required instance extension was not available: {requiredExt}");
+                }
+
+                instanceExtensions.Add((nint)(byte*)requiredExt);
+            }
+
+            bool debugReportExtensionAvailable = false;
+            bool khronosValidationSupported = false;
+            if (options.Debug)
+            {
+                if (availableInstanceExtensions.Contains(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
+                {
+                    debugReportExtensionAvailable = true;
+                    instanceExtensions.Add((nint)(byte*)VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+
+                    // Check for validation layers
+                    khronosValidationSupported = availableInstanceLayers.Contains(VK_LAYER_KHRONOS_VALIDATION_EXTENSION_NAME);
+                    if (khronosValidationSupported)
+                    {
+                        instanceLayers.Add((nint)(byte*)VK_LAYER_KHRONOS_VALIDATION_EXTENSION_NAME);
+                    }
+                }
+            }
+
+            instanceCI.enabledExtensionCount = instanceExtensions.Count;
+            instanceCI.ppEnabledExtensionNames = (byte**)instanceExtensions.Data;
+            instanceCI.enabledLayerCount = instanceLayers.Count;
+            if (instanceLayers.Count > 0)
+            {
+                instanceCI.ppEnabledLayerNames = (byte**)instanceLayers.Data;
+            }
+
+            var vkResult = vkCreateInstance(instanceCI, null, out _instance);
+            //.VkCheck("vkCreateInstance failed. It could be that Vulkan is not supported, installed for the minimum required version 1.1 is not supported");
+            CheckResult(vkResult);
+
+            if (HasSurfaceExtension(VK_EXT_METAL_SURFACE_EXTENSION_NAME))
+            {
+                _createMetalSurfaceEXT = vkGetInstanceProcAddr<PFN_vkCreateMetalSurfaceEXT>(_instance);
+            }
+
+            // ---------------------------------------------------------------
+            // Debug Callbacks
+            // ---------------------------------------------------------------
+            if (options.Debug && debugReportExtensionAvailable)
+            {
+                var createFnPtr = vkGetInstanceProcAddr<PFN_vkCreateDebugReportCallbackEXT>(_instance);
+                if (!createFnPtr.IsNull)
+                {
+                    VkDebugReportCallbackCreateInfoEXT debugCallbackCi = new VkDebugReportCallbackCreateInfoEXT
+                    {
+                        flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                        pfnCallback = (delegate* unmanaged[Stdcall]<vulkan.VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, ulong, nuint, int, byte*, byte*, void*, vulkan.VkBool32>)&DebugCallback,
+                        pUserData = (void*)GCHandle.ToIntPtr(_thisGcHandle)
+                    };
+
+                    var result = createFnPtr.Invoke(_instance, debugCallbackCi, null, out _debugCallbackHandle);
+                    CheckResult(result);
+                }
+            }
+            else
+            {
+                Debugger.Break();
+            }
+            
+            // ---------------------------------------------------------------
+            // Create PhysicalDevice
+            // ---------------------------------------------------------------
+
+            // Get the function pointers for the extensions we need to use during device creation.
+            vkGetPhysicalDeviceSurfaceSupportKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceSupportKHR>(_instance);
+            if (vkGetPhysicalDeviceSurfaceSupportKHR.IsNull)
+            {
+                throw new GraphicsException("Vulkan surface support function not found.");
+            }
+
+            uint deviceCount = 0;
+            vkEnumeratePhysicalDevices(_instance, out deviceCount);
+            if (deviceCount == 0)
+            {
+                throw new InvalidOperationException("No physical devices exist.");
+            }
+
+            VkPhysicalDevice[] physicalDevices = new VkPhysicalDevice[deviceCount];
+            vkEnumeratePhysicalDevices(_instance, physicalDevices);
+            // Just use the first one.
+            _physicalDevice = physicalDevices[0];
+
+            vkGetPhysicalDeviceProperties(_physicalDevice, out _physicalDeviceProperties);
+            fixed (byte* utf8NamePtr = _physicalDeviceProperties.deviceName)
+            {
+                _deviceName = Encoding.UTF8.GetString(utf8NamePtr, (int)VK_MAX_PHYSICAL_DEVICE_NAME_SIZE).TrimEnd('\0');
+            }
+
+            _vendorName = "id:" + _physicalDeviceProperties.vendorID.ToString("x8");
+            _apiVersion = GraphicsApiVersion.Unknown;
+            _driverInfo = "version:" + _physicalDeviceProperties.driverVersion.ToString("x8");
+
+            vkGetPhysicalDeviceFeatures(_physicalDevice, out _physicalDeviceFeatures);
+
+            vkGetPhysicalDeviceMemoryProperties(_physicalDevice, out _physicalDeviceMemProperties);
+
+            // ---------------------------------------------------------------
+            // Get QueueFamilyIndices
+            // ---------------------------------------------------------------
+            uint queueFamilyCount = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, out queueFamilyCount);
+            VkQueueFamilyProperties[] qfp = new VkQueueFamilyProperties[queueFamilyCount];
+            vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, qfp);
+
+            bool foundGraphics = false;
+
 
             VkSurfaceKHR surface = default;
             if (scDesc != null)
             {
                 surface = VkSurfaceUtil.CreateSurface(this, _instance, scDesc.Value.Source);
             }
+            bool foundPresent = surface == default;
 
-            CreatePhysicalDevice();
-            CreateLogicalDevice(surface, options.PreferStandardClipSpaceYDirection, vkOptions);
+            for (uint i = 0; i < qfp.Length; i++)
+            {
+                if ((qfp[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+                {
+                    _graphicsQueueIndex = i;
+                    foundGraphics = true;
+                }
+
+                if (!foundPresent)
+                {
+                    vkGetPhysicalDeviceSurfaceSupportKHR.Invoke(_physicalDevice, i, surface, out VkBool32 presentSupported);
+                    if (presentSupported)
+                    {
+                        _presentQueueIndex = i;
+                        foundPresent = true;
+                    }
+                }
+
+                if (foundGraphics && foundPresent)
+                {
+                    break;
+                }
+            }
+
+            // ---------------------------------------------------------------
+            // Create LogicalDevice
+            // ---------------------------------------------------------------
+
+            HashSet<uint> familyIndices = new HashSet<uint> { _graphicsQueueIndex, _presentQueueIndex };
+            VkDeviceQueueCreateInfo* queueCreateInfos = stackalloc VkDeviceQueueCreateInfo[familyIndices.Count];
+            uint queueCreateInfosCount = (uint)familyIndices.Count;
+
+            int queueIndex = 0;
+            foreach (uint index in familyIndices)
+            {
+                VkDeviceQueueCreateInfo queueCreateInfo = new VkDeviceQueueCreateInfo();
+                queueCreateInfo.queueFamilyIndex = _graphicsQueueIndex;
+                queueCreateInfo.queueCount = 1;
+                float priority = 1f;
+                queueCreateInfo.pQueuePriorities = &priority;
+                queueCreateInfos[queueIndex] = queueCreateInfo;
+                queueIndex += 1;
+            }
+
+            VkPhysicalDeviceFeatures deviceFeatures = _physicalDeviceFeatures;
+
+            VkExtensionProperties[] props = GetDeviceExtensionProperties();
+
+            HashSet<ReadOnlyMemoryUtf8> requiredInstanceExtensions = new HashSet<ReadOnlyMemoryUtf8>(vkOptions.DeviceExtensions ?? Array.Empty<ReadOnlyMemoryUtf8>());
+
+            bool hasDriverProperties = false;
+            IntPtr[] activeExtensions = new IntPtr[props.Length];
+            uint activeExtensionCount = 0;
+
+            fixed (VkExtensionProperties* properties = props)
+            {
+                for (int property = 0; property < props.Length; property++)
+                {
+                    var extensionName = new ReadOnlyMemoryUtf8(properties[property].extensionName);
+                    if (extensionName == VK_EXT_DEBUG_MARKER_EXTENSION_NAME)
+                    {
+                        activeExtensions[activeExtensionCount++] = (nint)(byte*)VK_EXT_DEBUG_MARKER_EXTENSION_NAME;
+                        requiredInstanceExtensions.Remove(extensionName);
+                        _debugMarkerEnabled = true;
+                    }
+                    else if (extensionName == VK_KHR_SWAPCHAIN_EXTENSION_NAME)
+                    {
+                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                        requiredInstanceExtensions.Remove(extensionName);
+                    }
+                    else if (options.PreferStandardClipSpaceYDirection && extensionName == VK_KHR_MAINTENANCE1_EXTENSION_NAME)
+                    {
+                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                        requiredInstanceExtensions.Remove(extensionName);
+                        _standardClipYDirection = true;
+                    }
+                    else if (extensionName == VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME)
+                    {
+                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                        requiredInstanceExtensions.Remove(extensionName);
+                    }
+                    else if (extensionName == VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
+                    {
+                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                        requiredInstanceExtensions.Remove(extensionName);
+                    }
+                    else if (extensionName == VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)
+                    {
+                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                        requiredInstanceExtensions.Remove(extensionName);
+                        hasDriverProperties = true;
+                    }
+                    else if (extensionName == VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)
+                    {
+                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                        requiredInstanceExtensions.Remove(extensionName);
+                    }
+                    else if (requiredInstanceExtensions.Remove(extensionName))
+                    {
+                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                    }
+                }
+            }
+
+            if (requiredInstanceExtensions.Count != 0)
+            {
+                string missingList = string.Join(", ", requiredInstanceExtensions);
+                throw new GraphicsException(
+                    $"The following Vulkan device extensions were not available: {missingList}");
+            }
+
+            VkDeviceCreateInfo deviceCreateInfo = new VkDeviceCreateInfo();
+            deviceCreateInfo.queueCreateInfoCount = queueCreateInfosCount;
+            deviceCreateInfo.pQueueCreateInfos = queueCreateInfos;
+
+            deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
+
+            StackList<nint> layerNames = new StackList<IntPtr>();
+            if (khronosValidationSupported)
+            {
+                layerNames.Add((nint)(byte*)VK_LAYER_KHRONOS_VALIDATION_EXTENSION_NAME);
+            }
+            deviceCreateInfo.enabledLayerCount = layerNames.Count;
+            deviceCreateInfo.ppEnabledLayerNames = (byte**)layerNames.Data;
+
+            fixed (IntPtr* activeExtensionsPtr = activeExtensions)
+            {
+                deviceCreateInfo.enabledExtensionCount = activeExtensionCount;
+                deviceCreateInfo.ppEnabledExtensionNames = (byte**)activeExtensionsPtr;
+
+                VkResult result = vkCreateDevice(_physicalDevice, deviceCreateInfo, null, out _device);
+                CheckResult(result);
+            }
+
+            vkGetDeviceQueue(_device, _graphicsQueueIndex, 0, out _graphicsQueue);
+
+            if (_debugMarkerEnabled)
+            {
+                _vkDebugMarkerSetObjectNameEX = vkGetDeviceProcAddr<PFN_vkDebugMarkerSetObjectNameEXT>(_device);
+                _vkCmdDebugMarkerBeginEXT = vkGetDeviceProcAddr<PFN_vkCmdDebugMarkerBeginEXT>(_device);
+                _vkCmdDebugMarkerEndEXT = vkGetDeviceProcAddr<PFN_vkCmdDebugMarkerEndEXT>(_device);
+                _vkCmdDebugMarkerInsertEXT = vkGetDeviceProcAddr<PFN_vkCmdDebugMarkerInsertEXT>(_device);
+            }
+            if (hasDriverProperties)
+            {
+                VkPhysicalDeviceProperties2 deviceProps = new VkPhysicalDeviceProperties2();
+                VkPhysicalDeviceDriverProperties driverProps = new VkPhysicalDeviceDriverProperties();
+
+                deviceProps.pNext = &driverProps;
+                vkGetPhysicalDeviceProperties2(_physicalDevice, &deviceProps);
+
+                string driverName = Encoding.UTF8.GetString(
+                    driverProps.driverName, (int)VK_MAX_DRIVER_NAME_SIZE).TrimEnd('\0');
+
+                string driverInfo = Encoding.UTF8.GetString(
+                    driverProps.driverInfo, (int)VK_MAX_DRIVER_INFO_SIZE).TrimEnd('\0');
+
+                VkConformanceVersion conforming = driverProps.conformanceVersion;
+                _apiVersion = new GraphicsApiVersion(conforming.major, conforming.minor, conforming.subminor, conforming.patch);
+                _driverName = driverName;
+                _driverInfo = driverInfo;
+            }
+            else
+            {
+                _driverName = "Unknown";
+            }
 
             // Used by VkSwapChain
-            vkAcquireNextImageKHR = vkGetInstanceProcAddr<PFN_vkAcquireNextImageKHR>(Instance);
-            vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vkGetDeviceProcAddr<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(Device);
-            vkGetPhysicalDeviceSurfaceFormatsKHR = vkGetDeviceProcAddr<PFN_vkGetPhysicalDeviceSurfaceFormatsKHR>(Device);
-            vkGetPhysicalDeviceSurfacePresentModesKHR = vkGetDeviceProcAddr<PFN_vkGetPhysicalDeviceSurfacePresentModesKHR>(Device);
+            vkAcquireNextImageKHR = vkGetDeviceProcAddr<PFN_vkAcquireNextImageKHR>(_device);
+            vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(Instance);
+            vkGetPhysicalDeviceSurfaceFormatsKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceFormatsKHR>(Instance);
+            vkGetPhysicalDeviceSurfacePresentModesKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfacePresentModesKHR>(Instance);
             vkCreateSwapchainKHR = vkGetDeviceProcAddr<PFN_vkCreateSwapchainKHR>(Device);
             vkDestroySwapchainKHR = vkGetDeviceProcAddr<PFN_vkDestroySwapchainKHR>(Device);
-            vkGetPhysicalDeviceSurfaceSupportKHR = vkGetDeviceProcAddr<PFN_vkGetPhysicalDeviceSurfaceSupportKHR>(Device);
-            vkDestroySurfaceKHR = vkGetDeviceProcAddr<PFN_vkDestroySurfaceKHR>(Device);
+            vkDestroySurfaceKHR = vkGetInstanceProcAddr<PFN_vkDestroySurfaceKHR>(Instance);
             vkGetSwapchainImagesKHR = vkGetDeviceProcAddr<PFN_vkGetSwapchainImagesKHR>(Device);
             _vkQueuePresentKHR = vkGetDeviceProcAddr<PFN_vkQueuePresentKHR>(Device);
 
@@ -387,9 +753,11 @@ namespace XenoAtom.Graphics.Vk
         {
             VkSwapchain vkSC = Util.AssertSubtype<Swapchain, VkSwapchain>(swapchain);
             VkSwapchainKHR deviceSwapchain = vkSC.DeviceSwapchain;
-            VkPresentInfoKHR presentInfo = new VkPresentInfoKHR();
-            presentInfo.swapchainCount = 1;
-            presentInfo.pSwapchains = &deviceSwapchain;
+            var presentInfo = new VkPresentInfoKHR
+            {
+                swapchainCount = 1,
+                pSwapchains = &deviceSwapchain
+            };
             uint imageIndex = vkSC.ImageIndex;
             presentInfo.pImageIndices = &imageIndex;
 
@@ -408,63 +776,65 @@ namespace XenoAtom.Graphics.Vk
 
         internal void SetResourceName(IDeviceResource resource, string? name)
         {
-            if (_debugMarkerEnabled)
+            if (!_debugMarkerEnabled)
             {
-                switch (resource)
-                {
-                    case VkBuffer buffer:
-                        SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, (ulong)buffer.DeviceBuffer.Value.Handle, name);
-                        break;
-                    case VkCommandList commandList:
-                        SetDebugMarkerName(
-                            VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
-                            (ulong)commandList.CommandBuffer.Value.Handle,
-                            $"{name}_CommandBuffer");
-                        SetDebugMarkerName(
-                            VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT,
-                            (ulong)commandList.CommandPool.Value.Handle,
-                            $"{name}_CommandPool");
-                        break;
-                    case VkFramebuffer framebuffer:
-                        SetDebugMarkerName(
-                            VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT,
-                            (ulong)framebuffer.CurrentFramebuffer.Value.Handle,
-                            name);
-                        break;
-                    case VkPipeline pipeline:
-                        SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, (ulong)pipeline.DevicePipeline.Value.Handle, name);
-                        SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, (ulong)pipeline.PipelineLayout.Value.Handle, name);
-                        break;
-                    case VkResourceLayout resourceLayout:
-                        SetDebugMarkerName(
-                            VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
-                            (ulong)resourceLayout.DescriptorSetLayout.Value.Handle,
-                            name);
-                        break;
-                    case VkResourceSet resourceSet:
-                        SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (ulong)resourceSet.DescriptorSet.Value.Handle, name);
-                        break;
-                    case VkSampler sampler:
-                        SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, (ulong)sampler.DeviceSampler.Value.Handle, name);
-                        break;
-                    case VkShader shader:
-                        SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, (ulong)shader.ShaderModule.Value.Handle, name);
-                        break;
-                    case VkTexture tex:
-                        SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (ulong)tex.OptimalDeviceImage.Value.Handle, name);
-                        break;
-                    case VkTextureView texView:
-                        SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, (ulong)texView.ImageView.Value.Handle, name);
-                        break;
-                    case VkFence fence:
-                        SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, (ulong)fence.DeviceFence.Value.Handle, name);
-                        break;
-                    case VkSwapchain sc:
-                        SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, (ulong)sc.DeviceSwapchain.Value.Handle, name);
-                        break;
-                    default:
-                        break;
-                }
+                return;
+            }
+
+            switch (resource)
+            {
+                case VkBuffer buffer:
+                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, (ulong)buffer.DeviceBuffer.Value.Handle, name);
+                    break;
+                case VkCommandList commandList:
+                    SetDebugMarkerName(
+                        VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        (ulong)commandList.CommandBuffer.Value.Handle,
+                        $"{name}_CommandBuffer");
+                    SetDebugMarkerName(
+                        VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT,
+                        (ulong)commandList.CommandPool.Value.Handle,
+                        $"{name}_CommandPool");
+                    break;
+                case VkFramebuffer framebuffer:
+                    SetDebugMarkerName(
+                        VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT,
+                        (ulong)framebuffer.CurrentFramebuffer.Value.Handle,
+                        name);
+                    break;
+                case VkPipeline pipeline:
+                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, (ulong)pipeline.DevicePipeline.Value.Handle, name);
+                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, (ulong)pipeline.PipelineLayout.Value.Handle, name);
+                    break;
+                case VkResourceLayout resourceLayout:
+                    SetDebugMarkerName(
+                        VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
+                        (ulong)resourceLayout.DescriptorSetLayout.Value.Handle,
+                        name);
+                    break;
+                case VkResourceSet resourceSet:
+                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (ulong)resourceSet.DescriptorSet.Value.Handle, name);
+                    break;
+                case VkSampler sampler:
+                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, (ulong)sampler.DeviceSampler.Value.Handle, name);
+                    break;
+                case VkShader shader:
+                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, (ulong)shader.ShaderModule.Value.Handle, name);
+                    break;
+                case VkTexture tex:
+                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (ulong)tex.OptimalDeviceImage.Value.Handle, name);
+                    break;
+                case VkTextureView texView:
+                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, (ulong)texView.ImageView.Value.Handle, name);
+                    break;
+                case VkFence fence:
+                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, (ulong)fence.DeviceFence.Value.Handle, name);
+                    break;
+                case VkSwapchain sc:
+                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, (ulong)sc.DeviceSwapchain.Value.Handle, name);
+                    break;
+                default:
+                    break;
             }
         }
 
@@ -493,148 +863,9 @@ namespace XenoAtom.Graphics.Vk
             CheckResult(result);
         }
 
-        private void CreateInstance(bool debug, VulkanDeviceOptions options)
-        {
-            HashSet<ReadOnlyMemoryUtf8> availableInstanceLayers = new HashSet<ReadOnlyMemoryUtf8>(EnumerateInstanceLayers());
-            HashSet<ReadOnlyMemoryUtf8> availableInstanceExtensions = new(GetInstanceExtensions());
-
-            VkInstanceCreateInfo instanceCI = new VkInstanceCreateInfo();
-            VkApplicationInfo applicationInfo = new VkApplicationInfo();
-            applicationInfo.apiVersion = new VkVersion(1, 1, 0);
-            applicationInfo.applicationVersion = new VkVersion(1, 0, 0);
-            applicationInfo.engineVersion = new VkVersion(1, 0, 0);
-            // TODO: use options.ApplicationName and options.EngineName
-            applicationInfo.pApplicationName = (byte*)s_name;
-            applicationInfo.pEngineName = (byte*)s_name;
-
-            instanceCI.pApplicationInfo = &applicationInfo;
-
-            StackList<nint, FixedArray64<byte>> instanceExtensions = new();
-            StackList<nint, FixedArray64<byte>> instanceLayers = new();
-
-            if (availableInstanceExtensions.Contains(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
-            {
-                _surfaceExtensions.Add(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
-            }
-
-            if (availableInstanceExtensions.Contains(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME))
-            {
-                instanceExtensions.Add((nint)(byte*)VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-                instanceCI.flags |= (VkInstanceCreateFlagBits)VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-            }
-
-            if (availableInstanceExtensions.Contains(VK_KHR_SURFACE_EXTENSION_NAME))
-            {
-                _surfaceExtensions.Add(VK_KHR_SURFACE_EXTENSION_NAME);
-            }
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                if (availableInstanceExtensions.Contains(VK_KHR_WIN32_SURFACE_EXTENSION_NAME))
-                {
-                    _surfaceExtensions.Add(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-                }
-            }
-            else if (
-#if NET5_0_OR_GREATER
-                OperatingSystem.IsAndroid() ||
-#endif
-                RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                if (availableInstanceExtensions.Contains(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME))
-                {
-                    _surfaceExtensions.Add(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
-                }
-                if (availableInstanceExtensions.Contains(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
-                {
-                    _surfaceExtensions.Add(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-                }
-                if (availableInstanceExtensions.Contains(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
-                {
-                    _surfaceExtensions.Add(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
-                }
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                if (availableInstanceExtensions.Contains(VK_EXT_METAL_SURFACE_EXTENSION_NAME))
-                {
-                    _surfaceExtensions.Add(VK_EXT_METAL_SURFACE_EXTENSION_NAME);
-                }
-            }
-
-            foreach (var ext in _surfaceExtensions)
-            {
-                instanceExtensions.Add((nint)(byte*)ext);
-            }
-
-            //string[] requestedInstanceExtensions = options.InstanceExtensions ?? Array.Empty<FixedUtf8String>();
-            //List<FixedUtf8String> tempStrings = new List<FixedUtf8String>();
-            //foreach (string requiredExt in requestedInstanceExtensions)
-            //{
-            //    if (!availableInstanceExtensions.Contains(requiredExt))
-            //    {
-            //        throw new VeldridException($"The required instance extension was not available: {requiredExt}");
-            //    }
-
-            //    FixedUtf8String utf8Str = new FixedUtf8String(requiredExt);
-            //    instanceExtensions.Add(utf8Str);
-            //    tempStrings.Add(utf8Str);
-            //}
-
-            bool debugReportExtensionAvailable = false;
-            if (debug)
-            {
-                if (availableInstanceExtensions.Contains(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
-                {
-                    debugReportExtensionAvailable = true;
-                    instanceExtensions.Add((nint)(byte*)VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-                }
-            }
-
-            instanceCI.enabledExtensionCount = instanceExtensions.Count;
-            instanceCI.ppEnabledExtensionNames = (byte**)instanceExtensions.Data;
-
-            instanceCI.enabledLayerCount = instanceLayers.Count;
-            if (instanceLayers.Count > 0)
-            {
-                instanceCI.ppEnabledLayerNames = (byte**)instanceLayers.Data;
-            }
-
-            VkResult result = vkCreateInstance(instanceCI, null, out _instance);
-            CheckResult(result);
-
-            if (HasSurfaceExtension(VK_EXT_METAL_SURFACE_EXTENSION_NAME))
-            {
-                _createMetalSurfaceEXT = vkGetInstanceProcAddr<PFN_vkCreateMetalSurfaceEXT>(_instance);
-            }
-
-            if (debug && debugReportExtensionAvailable)
-            {
-                EnableDebugCallback();
-            }
-        }
-
         public bool HasSurfaceExtension(ReadOnlyMemoryUtf8 extension)
         {
             return _surfaceExtensions.Contains(extension);
-        }
-
-        public void EnableDebugCallback(VkDebugReportFlagBitsEXT flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT)
-        {
-            Debug.WriteLine("Enabling Vulkan Debug callbacks.");
-            _debugCallbackFunc = (delegate* unmanaged[Stdcall]<vulkan.VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, ulong, nuint, int, byte*, byte*, void*, vulkan.VkBool32>)&DebugCallback;
-            VkDebugReportCallbackCreateInfoEXT debugCallbackCI = new VkDebugReportCallbackCreateInfoEXT();
-            debugCallbackCI.flags = flags;
-            debugCallbackCI.pfnCallback = _debugCallbackFunc;
-            PFN_vkCreateDebugReportCallbackEXT createFnPtr;
-            createFnPtr = vkGetInstanceProcAddr<PFN_vkCreateDebugReportCallbackEXT>(_instance);
-            if (createFnPtr.IsNull)
-            {
-                return;
-            }
-
-            VkResult result = createFnPtr.Invoke(_instance, debugCallbackCI, null, out _debugCallbackHandle);
-            CheckResult(result);
         }
 
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvStdcall)])]
@@ -658,234 +889,34 @@ namespace XenoAtom.Graphics.Vk
             }
 #endif
 
-            string fullMessage = $"[{debugReportFlags}] ({objectType}) {message}";
-
-            if (debugReportFlags == VkDebugReportFlagBitsEXT.VK_DEBUG_REPORT_ERROR_BIT_EXT)
+            var gcHandle = GCHandle.FromIntPtr((IntPtr)pUserData);
+            var device = (VkGraphicsDevice)gcHandle.Target!;
+            if (device._log != null)
             {
-                throw new GraphicsException("A Vulkan validation error was encountered: " + fullMessage);
-            }
+                DebugLogKind kind = (VkDebugReportFlagBitsEXT)debugReportFlags switch
+                {
+                    VK_DEBUG_REPORT_INFORMATION_BIT_EXT => DebugLogKind.Info,
+                    VK_DEBUG_REPORT_WARNING_BIT_EXT => DebugLogKind.Warning,
+                    VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT => DebugLogKind.Warning,
+                    VK_DEBUG_REPORT_ERROR_BIT_EXT => DebugLogKind.Error,
+                    _ => DebugLogKind.Debug
+                };
 
-            Console.WriteLine(fullMessage);
+                string fullMessage = $"[{debugReportFlags}] ({objectType}) {message}";
+                device._log(kind, fullMessage);
+            }
+            
             return 0;
         }
-
-        private void CreatePhysicalDevice()
-        {
-            uint deviceCount = 0;
-            vkEnumeratePhysicalDevices(_instance, out deviceCount);
-            if (deviceCount == 0)
-            {
-                throw new InvalidOperationException("No physical devices exist.");
-            }
-
-            VkPhysicalDevice[] physicalDevices = new VkPhysicalDevice[deviceCount];
-            vkEnumeratePhysicalDevices(_instance, physicalDevices);
-            // Just use the first one.
-            _physicalDevice = physicalDevices[0];
-
-            vkGetPhysicalDeviceProperties(_physicalDevice, out _physicalDeviceProperties);
-            fixed (byte* utf8NamePtr = _physicalDeviceProperties.deviceName)
-            {
-                _deviceName = Encoding.UTF8.GetString(utf8NamePtr, (int)VK_MAX_PHYSICAL_DEVICE_NAME_SIZE).TrimEnd('\0');
-            }
-
-            _vendorName = "id:" + _physicalDeviceProperties.vendorID.ToString("x8");
-            _apiVersion = GraphicsApiVersion.Unknown;
-            _driverInfo = "version:" + _physicalDeviceProperties.driverVersion.ToString("x8");
-
-            vkGetPhysicalDeviceFeatures(_physicalDevice, out _physicalDeviceFeatures);
-
-            vkGetPhysicalDeviceMemoryProperties(_physicalDevice, out _physicalDeviceMemProperties);
-        }
-
+        
         public VkExtensionProperties[] GetDeviceExtensionProperties()
         {
-            uint propertyCount = 0;
-            VkResult result = vkEnumerateDeviceExtensionProperties(_physicalDevice, (byte*)null, &propertyCount, null);
+            VkResult result = vkEnumerateDeviceExtensionProperties(_physicalDevice, default, out var propertyCount);
             CheckResult(result);
             VkExtensionProperties[] props = new VkExtensionProperties[(int)propertyCount];
-            fixed (VkExtensionProperties* properties = props)
-            {
-                result = vkEnumerateDeviceExtensionProperties(_physicalDevice, (byte*)null, &propertyCount, properties);
-                CheckResult(result);
-            }
+            result = vkEnumerateDeviceExtensionProperties(_physicalDevice, default, props);
+            CheckResult(result);
             return props;
-        }
-
-        private void CreateLogicalDevice(VkSurfaceKHR surface, bool preferStandardClipY, VulkanDeviceOptions options)
-        {
-            GetQueueFamilyIndices(surface);
-
-            HashSet<uint> familyIndices = new HashSet<uint> { _graphicsQueueIndex, _presentQueueIndex };
-            VkDeviceQueueCreateInfo* queueCreateInfos = stackalloc VkDeviceQueueCreateInfo[familyIndices.Count];
-            uint queueCreateInfosCount = (uint)familyIndices.Count;
-
-            int i = 0;
-            foreach (uint index in familyIndices)
-            {
-                VkDeviceQueueCreateInfo queueCreateInfo = new VkDeviceQueueCreateInfo();
-                queueCreateInfo.queueFamilyIndex = _graphicsQueueIndex;
-                queueCreateInfo.queueCount = 1;
-                float priority = 1f;
-                queueCreateInfo.pQueuePriorities = &priority;
-                queueCreateInfos[i] = queueCreateInfo;
-                i += 1;
-            }
-
-            VkPhysicalDeviceFeatures deviceFeatures = _physicalDeviceFeatures;
-
-            VkExtensionProperties[] props = GetDeviceExtensionProperties();
-
-            HashSet<ReadOnlyMemoryUtf8> requiredInstanceExtensions = new HashSet<ReadOnlyMemoryUtf8>(options.DeviceExtensions ?? Array.Empty<ReadOnlyMemoryUtf8>());
-
-            bool hasDriverProperties = false;
-            IntPtr[] activeExtensions = new IntPtr[props.Length];
-            uint activeExtensionCount = 0;
-
-            fixed (VkExtensionProperties* properties = props)
-            {
-                for (int property = 0; property < props.Length; property++)
-                {
-                    var extensionName = new ReadOnlyMemoryUtf8(properties[property].extensionName);
-                    if (extensionName == VK_EXT_DEBUG_MARKER_EXTENSION_NAME)
-                    {
-                        activeExtensions[activeExtensionCount++] = (nint)(byte*)VK_EXT_DEBUG_MARKER_EXTENSION_NAME;
-                        requiredInstanceExtensions.Remove(extensionName);
-                        _debugMarkerEnabled = true;
-                    }
-                    else if (extensionName == VK_KHR_SWAPCHAIN_EXTENSION_NAME)
-                    {
-                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                        requiredInstanceExtensions.Remove(extensionName);
-                    }
-                    else if (preferStandardClipY && extensionName == VK_KHR_MAINTENANCE1_EXTENSION_NAME)
-                    {
-                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                        requiredInstanceExtensions.Remove(extensionName);
-                        _standardClipYDirection = true;
-                    }
-                    else if (extensionName == VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME)
-                    {
-                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                        requiredInstanceExtensions.Remove(extensionName);
-                    }
-                    else if (extensionName == VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
-                    {
-                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                        requiredInstanceExtensions.Remove(extensionName);
-                    }
-                    else if (extensionName == VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)
-                    {
-                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                        requiredInstanceExtensions.Remove(extensionName);
-                        hasDriverProperties = true;
-                    }
-                    else if (extensionName == VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)
-                    {
-                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                        requiredInstanceExtensions.Remove(extensionName);
-                    }
-                    else if (requiredInstanceExtensions.Remove(extensionName))
-                    {
-                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                    }
-                }
-            }
-
-            if (requiredInstanceExtensions.Count != 0)
-            {
-                string missingList = string.Join(", ", requiredInstanceExtensions);
-                throw new GraphicsException(
-                    $"The following Vulkan device extensions were not available: {missingList}");
-            }
-
-            VkDeviceCreateInfo deviceCreateInfo = new VkDeviceCreateInfo();
-            deviceCreateInfo.queueCreateInfoCount = queueCreateInfosCount;
-            deviceCreateInfo.pQueueCreateInfos = queueCreateInfos;
-
-            deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
-
-            StackList<nint> layerNames = new StackList<IntPtr>();
-            _khronosValidationSupported = true;
-            if (_khronosValidationSupported)
-            {
-                layerNames.Add((nint)(byte*)VK_LAYER_KHRONOS_VALIDATION_EXTENSION_NAME);
-            }
-            deviceCreateInfo.enabledLayerCount = layerNames.Count;
-            deviceCreateInfo.ppEnabledLayerNames = (byte**)layerNames.Data;
-
-            fixed (IntPtr* activeExtensionsPtr = activeExtensions)
-            {
-                deviceCreateInfo.enabledExtensionCount = activeExtensionCount;
-                deviceCreateInfo.ppEnabledExtensionNames = (byte**)activeExtensionsPtr;
-
-                VkResult result = vkCreateDevice(_physicalDevice, deviceCreateInfo, null, out _device);
-                CheckResult(result);
-            }
-
-            vkGetDeviceQueue(_device, _graphicsQueueIndex, 0, out _graphicsQueue);
-
-            if (_debugMarkerEnabled)
-            {
-                _vkDebugMarkerSetObjectNameEX = vkGetInstanceProcAddr<PFN_vkDebugMarkerSetObjectNameEXT>(_instance);
-                _vkCmdDebugMarkerBeginEXT = vkGetInstanceProcAddr<PFN_vkCmdDebugMarkerBeginEXT>(_instance);
-                _vkCmdDebugMarkerEndEXT = vkGetInstanceProcAddr<PFN_vkCmdDebugMarkerEndEXT>(_instance);
-                _vkCmdDebugMarkerInsertEXT = vkGetInstanceProcAddr<PFN_vkCmdDebugMarkerInsertEXT>(_instance);
-            }
-            if (hasDriverProperties)
-            {
-                VkPhysicalDeviceProperties2 deviceProps = new VkPhysicalDeviceProperties2();
-                VkPhysicalDeviceDriverProperties driverProps = new VkPhysicalDeviceDriverProperties();
-
-                deviceProps.pNext = &driverProps;
-                vkGetPhysicalDeviceProperties2(_physicalDevice, &deviceProps);
-
-                string driverName = Encoding.UTF8.GetString(
-                    driverProps.driverName, (int) VK_MAX_DRIVER_NAME_SIZE).TrimEnd('\0');
-
-                string driverInfo = Encoding.UTF8.GetString(
-                    driverProps.driverInfo, (int)VK_MAX_DRIVER_INFO_SIZE).TrimEnd('\0');
-
-                VkConformanceVersion conforming = driverProps.conformanceVersion;
-                _apiVersion = new GraphicsApiVersion(conforming.major, conforming.minor, conforming.subminor, conforming.patch);
-                _driverName = driverName;
-                _driverInfo = driverInfo;
-            }
-        }
-
-        private void GetQueueFamilyIndices(VkSurfaceKHR surface)
-        {
-            uint queueFamilyCount = 0;
-            vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, out queueFamilyCount);
-            VkQueueFamilyProperties[] qfp = new VkQueueFamilyProperties[queueFamilyCount];
-            vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, qfp);
-
-            bool foundGraphics = false;
-            bool foundPresent = surface == default;
-
-            for (uint i = 0; i < qfp.Length; i++)
-            {
-                if ((qfp[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
-                {
-                    _graphicsQueueIndex = i;
-                    foundGraphics = true;
-                }
-
-                if (!foundPresent)
-                {
-                    vkGetPhysicalDeviceSurfaceSupportKHR.Invoke(_physicalDevice, i, surface, out VkBool32 presentSupported);
-                    if (presentSupported)
-                    {
-                        _presentQueueIndex = i;
-                        foundPresent = true;
-                    }
-                }
-
-                if (foundGraphics && foundPresent)
-                {
-                    return;
-                }
-            }
         }
 
         private void CreateGraphicsCommandPool(out VkCommandPool commandPool)
@@ -974,10 +1005,8 @@ namespace XenoAtom.Graphics.Vk
             }
 
             _mainSwapchain?.Dispose();
-            if (_debugCallbackFunc != null)
+            if (_debugCallbackHandle != default)
             {
-                _debugCallbackFunc = null;
-
                 PFN_vkDestroyDebugReportCallbackEXT destroyFuncPtr = vkGetInstanceProcAddr<PFN_vkDestroyDebugReportCallbackEXT>(_instance);
                 destroyFuncPtr.Invoke(_instance, _debugCallbackHandle, null);
             }
@@ -1012,6 +1041,9 @@ namespace XenoAtom.Graphics.Vk
             CheckResult(result);
             vkDestroyDevice(_device, null);
             vkDestroyInstance(_instance, null);
+
+            var thisGcHandle = _thisGcHandle;
+            thisGcHandle.Free();
         }
 
         private protected override void WaitForIdleCore()
@@ -1345,7 +1377,7 @@ namespace XenoAtom.Graphics.Vk
                 return false;
             }
 
-            uint physicalDeviceCount = 0;
+            uint physicalDeviceCount;
             result = vkEnumeratePhysicalDevices(testInstance, out physicalDeviceCount);
             if (result != VK_SUCCESS || physicalDeviceCount == 0)
             {

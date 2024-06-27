@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
@@ -1536,8 +1537,17 @@ namespace XenoAtom.Graphics.Tests
                 AlphaBits = alphaBits;
             }
         }
+
+        protected TextureTestBase(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanTextureTests : TextureTestBase<VulkanDeviceCreator> { }
+    public class VulkanTextureTests : TextureTestBase<VulkanDeviceCreator>
+    {
+        public VulkanTextureTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+    }
 }

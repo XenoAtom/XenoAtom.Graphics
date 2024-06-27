@@ -1,4 +1,4 @@
-﻿#if !EXCLUDE_VULKAN_BACKEND
+#if !EXCLUDE_VULKAN_BACKEND
 using System;
 using System.Collections.ObjectModel;
 using XenoAtom.Graphics.Vk;
@@ -23,7 +23,7 @@ namespace XenoAtom.Graphics
         {
             _gd = gd;
             _instanceLayers = new Lazy<ReadOnlyCollection<ReadOnlyMemoryUtf8>>(() => new ReadOnlyCollection<ReadOnlyMemoryUtf8>(VulkanUtil.EnumerateInstanceLayers()));
-            _instanceExtensions = new ReadOnlyCollection<ReadOnlyMemoryUtf8>(VulkanUtil.GetInstanceExtensions());
+            _instanceExtensions = new ReadOnlyCollection<ReadOnlyMemoryUtf8>(VulkanUtil.EnumerateInstanceExtensions());
             _deviceExtensions = new Lazy<ReadOnlyCollection<ExtensionProperties>>(EnumerateDeviceExtensions);
         }
 

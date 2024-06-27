@@ -1,14 +1,21 @@
 using System;
+using System.IO;
 using System.Text;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using XenoAtom.Graphics.Utilities;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
     public static class TestUtils
     {
-        public static GraphicsDevice CreateVulkanDevice()
+        public static GraphicsDevice CreateVulkanDevice(DebugLogDelegate log)
         {
-            return GraphicsDevice.Create(new GraphicsDeviceOptions(true));
+            return GraphicsDevice.Create(new GraphicsDeviceOptions(true)
+            {
+                DebugLog = log
+            });
         }
 
         internal static unsafe string GetString(byte* stringStart)
@@ -25,18 +32,28 @@ namespace XenoAtom.Graphics.Tests
 
     public abstract class GraphicsDeviceTestBase<T> : IDisposable where T : GraphicsDeviceCreator
     {
+        private readonly ITestOutputHelper _textOutputHelper;
         private readonly GraphicsDevice _gd;
         private readonly DisposeCollectorResourceFactory _factory;
-
+        private bool _hasWarningOrErrorLogs;
+        
         public GraphicsDevice GD => _gd;
         public ResourceFactory RF => _factory;
 
-        public GraphicsDeviceTestBase()
+        public GraphicsDeviceTestBase(ITestOutputHelper textOutputHelper)
         {
-            Activator.CreateInstance<T>().CreateGraphicsDevice(out _gd);
+            _textOutputHelper = textOutputHelper;
+            Activator.CreateInstance<T>().CreateGraphicsDevice(out _gd, DebugLogImpl);
             _factory = new DisposeCollectorResourceFactory(_gd.ResourceFactory);
         }
 
+
+        private void DebugLogImpl(DebugLogKind kind, string message)
+        {
+            _hasWarningOrErrorLogs = true;
+            _textOutputHelper.WriteLine(message);
+        }
+        
         protected DeviceBuffer GetReadback(DeviceBuffer buffer)
         {
             DeviceBuffer readback;
@@ -92,19 +109,21 @@ namespace XenoAtom.Graphics.Tests
             GD.WaitForIdle();
             _factory.DisposeCollector.DisposeAll();
             GD.Dispose();
+
+            Assert.False(_hasWarningOrErrorLogs);
         }
     }
 
     public interface GraphicsDeviceCreator
     {
-        void CreateGraphicsDevice(out GraphicsDevice gd);
+        void CreateGraphicsDevice(out GraphicsDevice gd, DebugLogDelegate log);
     }
 
     public class VulkanDeviceCreator : GraphicsDeviceCreator
     {
-        public void CreateGraphicsDevice(out GraphicsDevice gd)
+        public void CreateGraphicsDevice(out GraphicsDevice gd, DebugLogDelegate log)
         {
-            gd = TestUtils.CreateVulkanDevice();
+            gd = TestUtils.CreateVulkanDevice(log);
         }
     }
 }

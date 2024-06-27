@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
@@ -1529,8 +1530,17 @@ namespace XenoAtom.Graphics.Tests
                 }
             }
         }
+
+        protected RenderTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanRenderTests : RenderTests<VulkanDeviceCreator> { }
+    public class VulkanRenderTests : RenderTests<VulkanDeviceCreator>
+    {
+        public VulkanRenderTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+    }
 }

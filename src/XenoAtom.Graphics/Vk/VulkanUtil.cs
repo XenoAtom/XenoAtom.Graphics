@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using XenoAtom.Interop;
 using static XenoAtom.Interop.vulkan;
@@ -9,7 +9,6 @@ namespace XenoAtom.Graphics.Vk
     internal static unsafe class VulkanUtil
     {
         private static Lazy<bool> s_isVulkanLoaded = new Lazy<bool>(TryLoadVulkan);
-        private static readonly Lazy<ReadOnlyMemoryUtf8[]> s_instanceExtensions = new Lazy<ReadOnlyMemoryUtf8[]>(EnumerateInstanceExtensions);
 
         [Conditional("DEBUG")]
         public static void CheckResult(VkResult result)
@@ -62,9 +61,10 @@ namespace XenoAtom.Graphics.Vk
             return ret;
         }
 
-        public static ReadOnlyMemoryUtf8[] GetInstanceExtensions() => s_instanceExtensions.Value;
+        public static ReadOnlyMemoryUtf8[] GetInstanceExtensions() => EnumerateInstanceExtensions();
 
-        private static ReadOnlyMemoryUtf8[] EnumerateInstanceExtensions()
+
+        public static ReadOnlyMemoryUtf8[] EnumerateInstanceExtensions()
         {
             if (!IsVulkanLoaded())
             {
@@ -265,12 +265,40 @@ namespace XenoAtom.Graphics.Vk
                 srcStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
                 dstStageFlags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
             }
+            else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            {
+                barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                srcStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                dstStageFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            }
+            else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            {
+                barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                srcStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                dstStageFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            }
             else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
             {
                 barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
                 barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
                 srcStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
                 dstStageFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            }
+            else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+            {
+                barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                srcStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                dstStageFlags = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            }
+            else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+            {
+                barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                srcStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                dstStageFlags = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
             }
             else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
             {

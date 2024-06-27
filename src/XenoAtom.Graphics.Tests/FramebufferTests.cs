@@ -1,10 +1,15 @@
-﻿using System;
+using System;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
     public abstract class FramebufferTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
     {
+        protected FramebufferTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+
         [Fact]
         public void NoDepthTarget_ClearAllColors_Succeeds()
         {
@@ -136,6 +141,10 @@ namespace XenoAtom.Graphics.Tests
 
     public abstract class SwapchainFramebufferTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
     {
+        protected SwapchainFramebufferTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+
         [Fact]
         public void ClearSwapchainFramebuffer_Succeeds()
         {
@@ -149,5 +158,10 @@ namespace XenoAtom.Graphics.Tests
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanFramebufferTests : FramebufferTests<VulkanDeviceCreator> { }
+    public class VulkanFramebufferTests : FramebufferTests<VulkanDeviceCreator>
+    {
+        public VulkanFramebufferTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+    }
 }

@@ -1,9 +1,14 @@
 using Xunit;
+using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
     public abstract class DisposalTestBase<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
     {
+        protected DisposalTestBase(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+
         [Fact]
         public void Dispose_Buffer()
         {
@@ -123,5 +128,10 @@ namespace XenoAtom.Graphics.Tests
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanDisposalTests : DisposalTestBase<VulkanDeviceCreator> { }
+    public class VulkanDisposalTests : DisposalTestBase<VulkanDeviceCreator>
+    {
+        public VulkanDisposalTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+    }
 }

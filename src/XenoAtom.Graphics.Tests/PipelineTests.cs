@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
@@ -48,8 +49,17 @@ namespace XenoAtom.Graphics.Tests
             gpd.ShaderSet.VertexLayouts[0].InstanceStepRate = 5;
             Pipeline pipeline4 = RF.CreateGraphicsPipeline(ref gpd);
         }
+
+        protected PipelineTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanPipelineTests : PipelineTests<VulkanDeviceCreator> { }
+    public class VulkanPipelineTests : PipelineTests<VulkanDeviceCreator>
+    {
+        public VulkanPipelineTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        {
+        }
+    }
 }

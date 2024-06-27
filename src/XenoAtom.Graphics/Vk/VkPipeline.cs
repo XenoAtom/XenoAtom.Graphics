@@ -11,8 +11,6 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkPipeline : Pipeline
     {
-        private const uint VK_SUBPASS_EXTERNAL = (~0U);
-
         private readonly VkGraphicsDevice _gd;
         private readonly XenoAtom.Interop.vulkan.VkPipeline _devicePipeline;
         private readonly VkPipelineLayout _pipelineLayout;
