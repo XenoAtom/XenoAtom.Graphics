@@ -15,7 +15,6 @@ namespace XenoAtom.Graphics.Vk
 {
     internal sealed unsafe class VkGraphicsDevice : GraphicsDevice
     {
-        private const uint VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR = 0x00000001;
         private static ReadOnlyMemoryUtf8 s_name => "XenoAtom.Graphics-VkGraphicsDevice"u8;
         private static readonly Lazy<bool> s_isSupported = new Lazy<bool>(CheckIsSupported, isThreadSafe: true);
 
