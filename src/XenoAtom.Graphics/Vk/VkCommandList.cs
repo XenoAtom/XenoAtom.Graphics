@@ -98,14 +98,9 @@ namespace XenoAtom.Graphics.Vk
         public void CommandBufferSubmitted(VkCommandBuffer cb)
         {
             EnsureBegin();
-
             AddReference();
-            foreach (ResourceRefCount rrc in _currentStagingInfo!.Resources)
-            {
-                rrc.Increment();
-            }
 
-            _submittedStagingInfos.Add(cb, _currentStagingInfo);
+            _submittedStagingInfos.Add(cb, _currentStagingInfo!);
             _currentStagingInfo = null;
         }
 
@@ -265,7 +260,7 @@ namespace XenoAtom.Graphics.Vk
         {
             PreDrawCommand();
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(indirectBuffer);
-            _currentStagingInfo!.Resources.Add(vkBuffer);
+            _currentStagingInfo!.AddResource(vkBuffer);
             vkCmdDrawIndirect(_cb, vkBuffer.DeviceBuffer, offset, drawCount, stride);
         }
 
@@ -273,7 +268,7 @@ namespace XenoAtom.Graphics.Vk
         {
             PreDrawCommand();
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(indirectBuffer);
-            _currentStagingInfo!.Resources.Add(vkBuffer);
+            _currentStagingInfo!.AddResource(vkBuffer);
             vkCmdDrawIndexedIndirect(_cb, vkBuffer.DeviceBuffer, offset, drawCount, stride);
         }
 
@@ -335,10 +330,10 @@ namespace XenoAtom.Graphics.Vk
                     }
 
                     // Increment ref count on first use of a set.
-                    _currentStagingInfo!.Resources.Add(vkSet);
+                    _currentStagingInfo!.AddResource(vkSet);
                     for (int i = 0; i < vkSet.RefCounts.Count; i++)
                     {
-                        _currentStagingInfo.Resources.Add(vkSet.RefCounts[i]);
+                        _currentStagingInfo.AddResource(vkSet.RefCounts[i]);
                     }
                 }
 
@@ -416,7 +411,7 @@ namespace XenoAtom.Graphics.Vk
             PreDispatchCommand();
 
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(indirectBuffer);
-            _currentStagingInfo!.Resources.Add(vkBuffer);
+            _currentStagingInfo!.AddResource(vkBuffer);
             vkCmdDispatchIndirect(_cb, vkBuffer.DeviceBuffer, offset);
         }
 
@@ -430,9 +425,9 @@ namespace XenoAtom.Graphics.Vk
             }
 
             VkTexture vkSource = Util.AssertSubtype<Texture, VkTexture>(source);
-            _currentStagingInfo!.Resources.Add(vkSource);
+            _currentStagingInfo!.AddResource(vkSource);
             VkTexture vkDestination = Util.AssertSubtype<Texture, VkTexture>(destination);
-            _currentStagingInfo.Resources.Add(vkDestination);
+            _currentStagingInfo.AddResource(vkDestination);
             VkImageAspectFlags aspectFlags = ((source.Usage & TextureUsage.DepthStencil) == TextureUsage.DepthStencil)
                 ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
                 : VK_IMAGE_ASPECT_COLOR_BIT;
@@ -517,11 +512,11 @@ namespace XenoAtom.Graphics.Vk
             Util.EnsureArrayMinimumSize(ref _clearValues, clearValueCount + 1); // Leave an extra space for the depth value (tracked separately).
             Util.ClearArray(_validColorClearValues);
             Util.EnsureArrayMinimumSize(ref _validColorClearValues, clearValueCount);
-            _currentStagingInfo!.Resources.Add(vkFB);
+            _currentStagingInfo!.AddResource(vkFB);
 
             if (fb is VkSwapchainFramebuffer scFB)
             {
-                _currentStagingInfo.Resources.Add(scFB.Swapchain);
+                _currentStagingInfo.AddResource(scFB.Swapchain);
             }
         }
 
@@ -652,7 +647,7 @@ namespace XenoAtom.Graphics.Vk
             XenoAtom.Interop.vulkan.VkBuffer deviceBuffer = vkBuffer.DeviceBuffer;
             VkDeviceSize offset64 = offset;
             vkCmdBindVertexBuffers(_cb, index, 1, &deviceBuffer, &offset64);
-            _currentStagingInfo!.Resources.Add(vkBuffer);
+            _currentStagingInfo!.AddResource(vkBuffer);
         }
 
         private protected override void SetIndexBufferCore(DeviceBuffer buffer, IndexFormat format, uint offset)
@@ -661,7 +656,7 @@ namespace XenoAtom.Graphics.Vk
 
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(buffer);
             vkCmdBindIndexBuffer(_cb, vkBuffer.DeviceBuffer, offset, VkFormats.VdToVkIndexFormat(format));
-            _currentStagingInfo!.Resources.Add(vkBuffer);
+            _currentStagingInfo!.AddResource(vkBuffer);
         }
 
         private protected override void SetPipelineCore(Pipeline pipeline)
@@ -686,7 +681,7 @@ namespace XenoAtom.Graphics.Vk
                 _currentComputePipeline = vkPipeline;
             }
 
-            _currentStagingInfo!.Resources.Add(vkPipeline);
+            _currentStagingInfo!.AddResource(vkPipeline);
         }
 
         private void ClearSets(BoundResourceSetInfo[] boundSets)
@@ -786,9 +781,9 @@ namespace XenoAtom.Graphics.Vk
             EnsureNoRenderPass();
 
             VkBuffer srcVkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(source);
-            _currentStagingInfo!.Resources.Add(srcVkBuffer);
+            _currentStagingInfo!.AddResource(srcVkBuffer);
             VkBuffer dstVkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(destination);
-            _currentStagingInfo.Resources.Add(dstVkBuffer);
+            _currentStagingInfo.AddResource(dstVkBuffer);
 
             VkBufferCopy region = new VkBufferCopy
             {
@@ -839,9 +834,9 @@ namespace XenoAtom.Graphics.Vk
                 width, height, depth, layerCount);
 
             VkTexture srcVkTexture = Util.AssertSubtype<Texture, VkTexture>(source);
-            _currentStagingInfo!.Resources.Add(srcVkTexture);
+            _currentStagingInfo!.AddResource(srcVkTexture);
             VkTexture dstVkTexture = Util.AssertSubtype<Texture, VkTexture>(destination);
-            _currentStagingInfo.Resources.Add(dstVkTexture);
+            _currentStagingInfo.AddResource(dstVkTexture);
         }
 
         internal static void CopyTextureCore_VkCommandBuffer(
@@ -1147,7 +1142,7 @@ namespace XenoAtom.Graphics.Vk
             EnsureBegin();
             EnsureNoRenderPass();
             VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(texture);
-            _currentStagingInfo!.Resources.Add(vkTex);
+            _currentStagingInfo!.AddResource(vkTex);
 
             uint layerCount = vkTex.ArrayLayers;
             if ((vkTex.Usage & TextureUsage.Cubemap) != 0)
@@ -1317,6 +1312,12 @@ namespace XenoAtom.Graphics.Vk
 
         internal override void DisposeCore()
         {
+            if (_currentStagingInfo is not null)
+            {
+                RecycleStagingInfo(_currentStagingInfo);
+                _currentStagingInfo = null;
+            }
+            
             vkDestroyCommandPool(_gd.Device, _pool, null);
 
             Debug.Assert(_submittedStagingInfos.Count == 0);
@@ -1324,17 +1325,6 @@ namespace XenoAtom.Graphics.Vk
             foreach (VkBuffer buffer in _availableStagingBuffers)
             {
                 buffer.Dispose();
-            }
-        }
-
-        private class StagingResourceInfo
-        {
-            public List<VkBuffer> BuffersUsed { get; } = new List<VkBuffer>();
-            public HashSet<ResourceRefCount> Resources { get; } = new HashSet<ResourceRefCount>();
-            public void Clear()
-            {
-                BuffersUsed.Clear();
-                Resources.Clear();
             }
         }
 
@@ -1398,6 +1388,27 @@ namespace XenoAtom.Graphics.Vk
             if (_currentComputePipeline is null)
             {
                 throw new InvalidOperationException($"Invalid call. Current Compute Pipeline is not set. The `{nameof(SetPipeline)}` method should have been called before.");
+            }
+        }
+        
+        private class StagingResourceInfo
+        {
+            public readonly List<VkBuffer> BuffersUsed = new ();
+
+            public readonly HashSet<ResourceRefCount> Resources = new();
+
+            public void AddResource(ResourceRefCount refCount)
+            {
+                if (Resources.Add(refCount))
+                {
+                    refCount.Increment();
+                }
+            }
+
+            public void Clear()
+            {
+                BuffersUsed.Clear();
+                Resources.Clear();
             }
         }
     }
