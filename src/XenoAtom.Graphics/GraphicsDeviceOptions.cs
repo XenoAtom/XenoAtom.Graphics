@@ -19,6 +19,11 @@ namespace XenoAtom.Graphics
         public DebugLogDelegate DebugLog;
 
         /// <summary>
+        /// Flags used to log messages from the graphics backend. Default is <see cref="Graphics.DebugLogFlags.Error"/> and <see cref="Graphics.DebugLogFlags.Warning"/>.
+        /// </summary>
+        public DebugLogFlags DebugLogFlags;
+
+        /// <summary>
         /// Indicates whether the Graphicsdevice will include a "main" Swapchain. If this value is true, then the GraphicsDevice
         /// must be created with one of the overloads that provides Swapchain source information.
         /// </summary>
@@ -63,13 +68,7 @@ namespace XenoAtom.Graphics
         {
             Debug = debug;
             DebugLog = LogToConsole;
-            HasMainSwapchain = false;
-            SwapchainDepthFormat = null;
-            SyncToVerticalBlank = false;
-            ResourceBindingModel = ResourceBindingModel.Default;
-            PreferDepthRangeZeroToOne = false;
-            PreferStandardClipSpaceYDirection = false;
-            SwapchainSrgbFormat = false;
+            DebugLogFlags = DebugLogFlags.Warning | DebugLogFlags.Error;
         }
 
         /// <summary>
@@ -85,13 +84,10 @@ namespace XenoAtom.Graphics
         {
             Debug = debug;
             DebugLog = LogToConsole;
+            DebugLogFlags = DebugLogFlags.Warning | DebugLogFlags.Error;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
-            ResourceBindingModel = ResourceBindingModel.Default;
-            PreferDepthRangeZeroToOne = false;
-            PreferStandardClipSpaceYDirection = false;
-            SwapchainSrgbFormat = false;
         }
 
         /// <summary>
@@ -112,13 +108,11 @@ namespace XenoAtom.Graphics
         {
             Debug = debug;
             DebugLog = LogToConsole;
+            DebugLogFlags = DebugLogFlags.Warning | DebugLogFlags.Error;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
             ResourceBindingModel = resourceBindingModel;
-            PreferDepthRangeZeroToOne = false;
-            PreferStandardClipSpaceYDirection = false;
-            SwapchainSrgbFormat = false;
         }
 
         /// <summary>
@@ -142,13 +136,12 @@ namespace XenoAtom.Graphics
         {
             Debug = debug;
             DebugLog = LogToConsole;
+            DebugLogFlags = DebugLogFlags.Warning | DebugLogFlags.Error;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
             ResourceBindingModel = resourceBindingModel;
             PreferDepthRangeZeroToOne = preferDepthRangeZeroToOne;
-            PreferStandardClipSpaceYDirection = false;
-            SwapchainSrgbFormat = false;
         }
 
         /// <summary>
@@ -175,13 +168,13 @@ namespace XenoAtom.Graphics
         {
             Debug = debug;
             DebugLog = LogToConsole;
+            DebugLogFlags = DebugLogFlags.Warning | DebugLogFlags.Error;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
             ResourceBindingModel = resourceBindingModel;
             PreferDepthRangeZeroToOne = preferDepthRangeZeroToOne;
             PreferStandardClipSpaceYDirection = preferStandardClipSpaceYDirection;
-            SwapchainSrgbFormat = false;
         }
 
         /// <summary>
@@ -213,6 +206,7 @@ namespace XenoAtom.Graphics
         {
             Debug = debug;
             DebugLog = LogToConsole;
+            DebugLogFlags = DebugLogFlags.Warning | DebugLogFlags.Error;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -222,6 +216,6 @@ namespace XenoAtom.Graphics
             SwapchainSrgbFormat = swapchainSrgbFormat;
         }
 
-        private static readonly DebugLogDelegate LogToConsole = static (kind, message) => Console.WriteLine($"[{kind}] {message}");
+        private static readonly DebugLogDelegate LogToConsole = static (kind, message) => Console.WriteLine($"[{kind.ToText()}] {message}");
     }
 }

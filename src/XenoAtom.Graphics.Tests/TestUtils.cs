@@ -48,10 +48,10 @@ namespace XenoAtom.Graphics.Tests
         }
 
 
-        private void DebugLogImpl(DebugLogKind kind, string message)
+        private void DebugLogImpl(DebugLogFlags flags, string message)
         {
             _hasWarningOrErrorLogs = true;
-            _textOutputHelper.WriteLine(message);
+            _textOutputHelper.WriteLine($"[{flags}] {message}");
         }
         
         protected DeviceBuffer GetReadback(DeviceBuffer buffer)

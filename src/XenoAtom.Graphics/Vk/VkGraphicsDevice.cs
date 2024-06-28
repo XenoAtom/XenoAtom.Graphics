@@ -15,7 +15,7 @@ namespace XenoAtom.Graphics.Vk
 {
     internal sealed unsafe class VkGraphicsDevice : GraphicsDevice
     {
-        private static ReadOnlyMemoryUtf8 s_name => "XenoAtom.Graphics-VkGraphicsDevice"u8;
+        private static ReadOnlyMemoryUtf8 DefaultAppName => "XenoAtom.Graphics-VkGraphicsDevice"u8;
         private static readonly Lazy<bool> s_isSupported = new Lazy<bool>(CheckIsSupported, isThreadSafe: true);
 
         private readonly VkInstance _instance;
@@ -40,7 +40,7 @@ namespace XenoAtom.Graphics.Vk
         private readonly bool _debugMarkerEnabled;
         private readonly ConcurrentDictionary<VkFormat, VkFilter> _filters = new ConcurrentDictionary<VkFormat, VkFilter>();
         private readonly BackendInfoVulkan _vulkanInfo;
-        private readonly DebugLogDelegate? _log;
+        private readonly DebugLogDelegate? _debugLog;
         private readonly GCHandle _thisGcHandle;
 
         private const int SharedCommandPoolCount = 4;
@@ -157,7 +157,7 @@ namespace XenoAtom.Graphics.Vk
             HashSet<ReadOnlyMemoryUtf8> availableInstanceExtensions = new(EnumerateInstanceExtensions());
             StackList<nint, FixedArray64<byte>> instanceExtensions = new();
             StackList<nint, FixedArray64<byte>> instanceLayers = new();
-            _log = options.Debug ? options.DebugLog : null;
+            _debugLog = options.Debug ? options.DebugLog : null;
 
             // Check that vkEnumerateInstanceVersion is available
             // This function is only available in Vulkan 1.1 and later
@@ -173,8 +173,8 @@ namespace XenoAtom.Graphics.Vk
                 apiVersion = VK_API_VERSION_1_1, // Requesting a minimum of Vulkan 1.1
                 applicationVersion = new VkVersion(1, 0, 0),
                 engineVersion = new VkVersion(1, 0, 0),
-                pApplicationName = (byte*)(vkOptions.ApplicationName.IsNull ? s_name : vkOptions.ApplicationName),
-                pEngineName = (byte*)(vkOptions.EngineName.IsNull ? s_name : vkOptions.EngineName)
+                pApplicationName = (byte*)(vkOptions.ApplicationName.IsNull ? DefaultAppName : vkOptions.ApplicationName),
+                pEngineName = (byte*)(vkOptions.EngineName.IsNull ? DefaultAppName : vkOptions.EngineName)
             };
 
             instanceCI.pApplicationInfo = &applicationInfo;
@@ -194,19 +194,19 @@ namespace XenoAtom.Graphics.Vk
             {
                 _surfaceExtensions.Add(VK_KHR_SURFACE_EXTENSION_NAME);
             }
+            else
+            {
+                throw new GraphicsException($"Required `{VK_KHR_SURFACE_EXTENSION_NAME}` extension not found.");
+            }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (OperatingSystem.IsWindows())
             {
                 if (availableInstanceExtensions.Contains(VK_KHR_WIN32_SURFACE_EXTENSION_NAME))
                 {
                     _surfaceExtensions.Add(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
                 }
             }
-            else if (
-#if NET5_0_OR_GREATER
-                OperatingSystem.IsAndroid() ||
-#endif
-                RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            else if (OperatingSystem.IsLinux() || OperatingSystem.IsAndroid())
             {
                 if (availableInstanceExtensions.Contains(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME))
                 {
@@ -221,7 +221,7 @@ namespace XenoAtom.Graphics.Vk
                     _surfaceExtensions.Add(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
                 }
             }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            else if (OperatingSystem.IsMacOS() || OperatingSystem.IsIOS())
             {
                 if (availableInstanceExtensions.Contains(VK_EXT_METAL_SURFACE_EXTENSION_NAME))
                 {
@@ -271,9 +271,8 @@ namespace XenoAtom.Graphics.Vk
                 instanceCI.ppEnabledLayerNames = (byte**)instanceLayers.Data;
             }
 
-            var vkResult = vkCreateInstance(instanceCI, null, out _instance);
-            //.VkCheck("vkCreateInstance failed. It could be that Vulkan is not supported, installed for the minimum required version 1.1 is not supported");
-            CheckResult(vkResult);
+            vkCreateInstance(instanceCI, null, out _instance)
+                .VkCheck("vkCreateInstance failed. It could be that Vulkan is not supported, installed for the minimum required version 1.1 is not supported");
 
             if (HasSurfaceExtension(VK_EXT_METAL_SURFACE_EXTENSION_NAME))
             {
@@ -290,18 +289,33 @@ namespace XenoAtom.Graphics.Vk
                 {
                     VkDebugReportCallbackCreateInfoEXT debugCallbackCi = new VkDebugReportCallbackCreateInfoEXT
                     {
-                        flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT,
                         pfnCallback = (delegate* unmanaged[Stdcall]<vulkan.VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, ulong, nuint, int, byte*, byte*, void*, vulkan.VkBool32>)&DebugCallback,
                         pUserData = (void*)GCHandle.ToIntPtr(_thisGcHandle)
                     };
 
-                    var result = createFnPtr.Invoke(_instance, debugCallbackCi, null, out _debugCallbackHandle);
-                    CheckResult(result);
+                    if ((options.DebugLogFlags & DebugLogFlags.Debug) != 0)
+                    {
+                        debugCallbackCi.flags |= VK_DEBUG_REPORT_DEBUG_BIT_EXT;
+                    }
+
+                    if ((options.DebugLogFlags & DebugLogFlags.Info) != 0)
+                    {
+                        debugCallbackCi.flags |= VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
+                    }
+
+                    if ((options.DebugLogFlags & DebugLogFlags.Warning) != 0)
+                    {
+                        debugCallbackCi.flags |= VK_DEBUG_REPORT_WARNING_BIT_EXT;
+                    }
+
+                    if ((options.DebugLogFlags & DebugLogFlags.Error) != 0)
+                    {
+                        debugCallbackCi.flags |= VK_DEBUG_REPORT_ERROR_BIT_EXT;
+                    }
+
+                    createFnPtr.Invoke(_instance, debugCallbackCi, null, out _debugCallbackHandle)
+                        .VkCheck("Unable to setup debug callbacks.");
                 }
-            }
-            else
-            {
-                Debugger.Break();
             }
             
             // ---------------------------------------------------------------
@@ -387,7 +401,7 @@ namespace XenoAtom.Graphics.Vk
             // Create LogicalDevice
             // ---------------------------------------------------------------
 
-            HashSet<uint> familyIndices = new HashSet<uint> { _graphicsQueueIndex, _presentQueueIndex };
+            var familyIndices = new HashSet<uint> { _graphicsQueueIndex, _presentQueueIndex };
             VkDeviceQueueCreateInfo* queueCreateInfos = stackalloc VkDeviceQueueCreateInfo[familyIndices.Count];
             uint queueCreateInfosCount = (uint)familyIndices.Count;
 
@@ -407,10 +421,13 @@ namespace XenoAtom.Graphics.Vk
 
             VkExtensionProperties[] props = GetDeviceExtensionProperties();
 
-            HashSet<ReadOnlyMemoryUtf8> requiredInstanceExtensions = new HashSet<ReadOnlyMemoryUtf8>(vkOptions.DeviceExtensions ?? Array.Empty<ReadOnlyMemoryUtf8>());
+            var requiredDeviceExtensions = new HashSet<ReadOnlyMemoryUtf8>(vkOptions.DeviceExtensions);
 
-            bool hasDriverProperties = false;
-            IntPtr[] activeExtensions = new IntPtr[props.Length];
+            // Enforce the presence of these extensions
+            requiredDeviceExtensions.Add(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
+            requiredDeviceExtensions.Add(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+            var activeExtensions = new nint[props.Length];
             uint activeExtensionCount = 0;
 
             fixed (VkExtensionProperties* properties = props)
@@ -421,80 +438,89 @@ namespace XenoAtom.Graphics.Vk
                     if (extensionName == VK_EXT_DEBUG_MARKER_EXTENSION_NAME)
                     {
                         activeExtensions[activeExtensionCount++] = (nint)(byte*)VK_EXT_DEBUG_MARKER_EXTENSION_NAME;
-                        requiredInstanceExtensions.Remove(extensionName);
+                        requiredDeviceExtensions.Remove(extensionName);
                         _debugMarkerEnabled = true;
                     }
                     else if (extensionName == VK_KHR_SWAPCHAIN_EXTENSION_NAME)
                     {
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                        requiredInstanceExtensions.Remove(extensionName);
+                        requiredDeviceExtensions.Remove(extensionName);
                     }
                     else if (options.PreferStandardClipSpaceYDirection && extensionName == VK_KHR_MAINTENANCE1_EXTENSION_NAME)
                     {
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                        requiredInstanceExtensions.Remove(extensionName);
+                        requiredDeviceExtensions.Remove(extensionName);
                         _standardClipYDirection = true;
-                    }
-                    else if (extensionName == VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME)
-                    {
-                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                        requiredInstanceExtensions.Remove(extensionName);
-                    }
-                    else if (extensionName == VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
-                    {
-                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                        requiredInstanceExtensions.Remove(extensionName);
                     }
                     else if (extensionName == VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)
                     {
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                        requiredInstanceExtensions.Remove(extensionName);
-                        hasDriverProperties = true;
+                        requiredDeviceExtensions.Remove(extensionName);
                     }
                     else if (extensionName == VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)
                     {
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                        requiredInstanceExtensions.Remove(extensionName);
+                        requiredDeviceExtensions.Remove(extensionName);
                     }
-                    else if (requiredInstanceExtensions.Remove(extensionName))
+                    else if (requiredDeviceExtensions.Remove(extensionName))
                     {
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
                     }
                 }
             }
 
-            if (requiredInstanceExtensions.Count != 0)
+            if (requiredDeviceExtensions.Count != 0)
             {
-                string missingList = string.Join(", ", requiredInstanceExtensions);
-                throw new GraphicsException(
-                    $"The following Vulkan device extensions were not available: {missingList}");
+                string missingList = string.Join(", ", requiredDeviceExtensions);
+                throw new GraphicsException($"The following Vulkan device extensions were not available: {missingList}");
             }
 
-            VkDeviceCreateInfo deviceCreateInfo = new VkDeviceCreateInfo();
-            deviceCreateInfo.queueCreateInfoCount = queueCreateInfosCount;
-            deviceCreateInfo.pQueueCreateInfos = queueCreateInfos;
-
-            deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
             StackList<nint> layerNames = new StackList<IntPtr>();
             if (khronosValidationSupported)
             {
                 layerNames.Add((nint)(byte*)VK_LAYER_KHRONOS_VALIDATION_EXTENSION_NAME);
             }
-            deviceCreateInfo.enabledLayerCount = layerNames.Count;
-            deviceCreateInfo.ppEnabledLayerNames = (byte**)layerNames.Data;
 
+            var deviceCreateInfo = new VkDeviceCreateInfo
+            {
+                queueCreateInfoCount = queueCreateInfosCount,
+                pQueueCreateInfos = queueCreateInfos,
+                pEnabledFeatures = &deviceFeatures,
+                enabledLayerCount = layerNames.Count
+            };
+
+            if (layerNames.Count > 0)
+            {
+                deviceCreateInfo.ppEnabledLayerNames = (byte**)layerNames.Data;
+            }
+
+            // Create the logical device
             fixed (IntPtr* activeExtensionsPtr = activeExtensions)
             {
                 deviceCreateInfo.enabledExtensionCount = activeExtensionCount;
                 deviceCreateInfo.ppEnabledExtensionNames = (byte**)activeExtensionsPtr;
 
-                VkResult result = vkCreateDevice(_physicalDevice, deviceCreateInfo, null, out _device);
-                CheckResult(result);
+                vkCreateDevice(_physicalDevice, deviceCreateInfo, null, out _device)
+                    .VkCheck("Unable to create device.");
             }
 
             vkGetDeviceQueue(_device, _graphicsQueueIndex, 0, out _graphicsQueue);
 
+            // Get driver name and version
+            VkPhysicalDeviceProperties2 deviceProps = new VkPhysicalDeviceProperties2();
+            VkPhysicalDeviceDriverProperties driverProps = new VkPhysicalDeviceDriverProperties();
+
+            deviceProps.pNext = &driverProps;
+            vkGetPhysicalDeviceProperties2(_physicalDevice, &deviceProps);
+
+            VkConformanceVersion conforming = driverProps.conformanceVersion;
+            _apiVersion = new GraphicsApiVersion(conforming.major, conforming.minor, conforming.subminor, conforming.patch);
+            _driverName = Encoding.UTF8.GetString(driverProps.driverName, (int)VK_MAX_DRIVER_NAME_SIZE).TrimEnd('\0');
+            _driverInfo = Encoding.UTF8.GetString(driverProps.driverInfo, (int)VK_MAX_DRIVER_INFO_SIZE).TrimEnd('\0');
+
+
+            // 
             if (_debugMarkerEnabled)
             {
                 _vkDebugMarkerSetObjectNameEX = vkGetDeviceProcAddr<PFN_vkDebugMarkerSetObjectNameEXT>(_device);
@@ -502,40 +528,19 @@ namespace XenoAtom.Graphics.Vk
                 _vkCmdDebugMarkerEndEXT = vkGetDeviceProcAddr<PFN_vkCmdDebugMarkerEndEXT>(_device);
                 _vkCmdDebugMarkerInsertEXT = vkGetDeviceProcAddr<PFN_vkCmdDebugMarkerInsertEXT>(_device);
             }
-            if (hasDriverProperties)
-            {
-                VkPhysicalDeviceProperties2 deviceProps = new VkPhysicalDeviceProperties2();
-                VkPhysicalDeviceDriverProperties driverProps = new VkPhysicalDeviceDriverProperties();
 
-                deviceProps.pNext = &driverProps;
-                vkGetPhysicalDeviceProperties2(_physicalDevice, &deviceProps);
-
-                string driverName = Encoding.UTF8.GetString(
-                    driverProps.driverName, (int)VK_MAX_DRIVER_NAME_SIZE).TrimEnd('\0');
-
-                string driverInfo = Encoding.UTF8.GetString(
-                    driverProps.driverInfo, (int)VK_MAX_DRIVER_INFO_SIZE).TrimEnd('\0');
-
-                VkConformanceVersion conforming = driverProps.conformanceVersion;
-                _apiVersion = new GraphicsApiVersion(conforming.major, conforming.minor, conforming.subminor, conforming.patch);
-                _driverName = driverName;
-                _driverInfo = driverInfo;
-            }
-            else
-            {
-                _driverName = "Unknown";
-            }
-
-            // Used by VkSwapChain
-            vkAcquireNextImageKHR = vkGetDeviceProcAddr<PFN_vkAcquireNextImageKHR>(_device);
+            // VK_KHR_surface
             vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(Instance);
             vkGetPhysicalDeviceSurfaceFormatsKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceFormatsKHR>(Instance);
             vkGetPhysicalDeviceSurfacePresentModesKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfacePresentModesKHR>(Instance);
+            vkDestroySurfaceKHR = vkGetInstanceProcAddr<PFN_vkDestroySurfaceKHR>(Instance);
+
+            // VK_KHR_swapchain
+            vkAcquireNextImageKHR = vkGetDeviceProcAddr<PFN_vkAcquireNextImageKHR>(_device);
             vkCreateSwapchainKHR = vkGetDeviceProcAddr<PFN_vkCreateSwapchainKHR>(Device);
             vkDestroySwapchainKHR = vkGetDeviceProcAddr<PFN_vkDestroySwapchainKHR>(Device);
-            vkDestroySurfaceKHR = vkGetInstanceProcAddr<PFN_vkDestroySurfaceKHR>(Instance);
-            vkGetSwapchainImagesKHR = vkGetDeviceProcAddr<PFN_vkGetSwapchainImagesKHR>(Device);
             _vkQueuePresentKHR = vkGetDeviceProcAddr<PFN_vkQueuePresentKHR>(Device);
+            vkGetSwapchainImagesKHR = vkGetDeviceProcAddr<PFN_vkGetSwapchainImagesKHR>(Device);
 
             _memoryManager = new VkDeviceMemoryManager(
                 _device,
@@ -647,12 +652,13 @@ namespace XenoAtom.Graphics.Vk
 
             lock (_graphicsQueueLock)
             {
-                VkResult result = vkQueueSubmit(_graphicsQueue, 1, &si, vkFence);
-                CheckResult(result);
+                vkQueueSubmit(_graphicsQueue, 1, &si, vkFence)
+                    .VkCheck("Error while submitting command buffer");
+
                 if (fence != null)
                 {
-                    result = vkQueueSubmit(_graphicsQueue, 0, null, submissionFence);
-                    CheckResult(result);
+                    vkQueueSubmit(_graphicsQueue, 0, null, submissionFence)
+                        .VkCheck("Error while submitting command buffer with fence");
                 }
             }
 
@@ -688,8 +694,8 @@ namespace XenoAtom.Graphics.Vk
             XenoAtom.Interop.vulkan.VkFence fence = fsi.Fence;
             VkCommandBuffer completedCB = fsi.CommandBuffer;
             fsi.CommandList?.CommandBufferCompleted(completedCB);
-            VkResult resetResult = vkResetFences(_device, 1, &fence);
-            CheckResult(resetResult);
+            vkResetFences(_device, 1, &fence)
+                .VkCheck("Unable to reset fence");
             ReturnSubmissionFence(fence);
             lock (_stagingResourcesLock)
             {
@@ -742,8 +748,8 @@ namespace XenoAtom.Graphics.Vk
             else
             {
                 VkFenceCreateInfo fenceCI = new VkFenceCreateInfo();
-                VkResult result = vkCreateFence(_device, fenceCI, null, out XenoAtom.Interop.vulkan.VkFence newFence);
-                CheckResult(result);
+                vkCreateFence(_device, fenceCI, null, out XenoAtom.Interop.vulkan.VkFence newFence)
+                    .VkCheck("Unable to create fence");
                 return newFence;
             }
         }
@@ -858,8 +864,8 @@ namespace XenoAtom.Graphics.Vk
             utf8Ptr[byteCount] = 0;
 
             nameInfo.pObjectName = utf8Ptr;
-            VkResult result = _vkDebugMarkerSetObjectNameEX.Invoke(_device, &nameInfo);
-            CheckResult(result);
+            _vkDebugMarkerSetObjectNameEX.Invoke(_device, &nameInfo)
+                .VkCheck("Unable to set debug marker object name");
         }
 
         public bool HasSurfaceExtension(ReadOnlyMemoryUtf8 extension)
@@ -879,7 +885,7 @@ namespace XenoAtom.Graphics.Vk
             void* pUserData)
         {
             string message = Util.GetString(pMessage);
-            VkDebugReportFlagsEXT debugReportFlags = (VkDebugReportFlagBitsEXT)flags;
+            var debugReportFlags = (VkDebugReportFlagBitsEXT)flags;
 
 #if DEBUG
             if (Debugger.IsAttached)
@@ -890,19 +896,37 @@ namespace XenoAtom.Graphics.Vk
 
             var gcHandle = GCHandle.FromIntPtr((IntPtr)pUserData);
             var device = (VkGraphicsDevice)gcHandle.Target!;
-            if (device._log != null)
+            if (device._debugLog != null)
             {
-                DebugLogKind kind = (VkDebugReportFlagBitsEXT)debugReportFlags switch
+                DebugLogFlags debugLogFlags = DebugLogFlags.None;
+
+                if ((debugReportFlags & VkDebugReportFlagBitsEXT.VK_DEBUG_REPORT_ERROR_BIT_EXT) != 0)
                 {
-                    VK_DEBUG_REPORT_INFORMATION_BIT_EXT => DebugLogKind.Info,
-                    VK_DEBUG_REPORT_WARNING_BIT_EXT => DebugLogKind.Warning,
-                    VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT => DebugLogKind.Warning,
-                    VK_DEBUG_REPORT_ERROR_BIT_EXT => DebugLogKind.Error,
-                    _ => DebugLogKind.Debug
-                };
+                    debugLogFlags |= DebugLogFlags.Error;
+                }
+
+                if ((debugReportFlags & VkDebugReportFlagBitsEXT.VK_DEBUG_REPORT_WARNING_BIT_EXT) != 0)
+                {
+                    debugLogFlags |= DebugLogFlags.Warning;
+                }
+
+                if ((debugReportFlags & VkDebugReportFlagBitsEXT.VK_DEBUG_REPORT_INFORMATION_BIT_EXT) != 0)
+                {
+                    debugLogFlags |= DebugLogFlags.Info;
+                }
+                
+                if ((debugReportFlags & VkDebugReportFlagBitsEXT.VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) != 0)
+                {
+                    debugLogFlags |= DebugLogFlags.Performance;
+                }
+                
+                if ((debugReportFlags & VkDebugReportFlagBitsEXT.VK_DEBUG_REPORT_DEBUG_BIT_EXT) != 0)
+                {
+                    debugLogFlags |= DebugLogFlags.Debug;
+                }
 
                 string fullMessage = $"[{debugReportFlags}] ({objectType}) {message}";
-                device._log(kind, fullMessage);
+                device._debugLog(debugLogFlags, fullMessage);
             }
             
             return 0;
@@ -910,11 +934,11 @@ namespace XenoAtom.Graphics.Vk
         
         public VkExtensionProperties[] GetDeviceExtensionProperties()
         {
-            VkResult result = vkEnumerateDeviceExtensionProperties(_physicalDevice, default, out var propertyCount);
-            CheckResult(result);
+            vkEnumerateDeviceExtensionProperties(_physicalDevice, default, out var propertyCount)
+                .VkCheck("Unable to enumerate device extensions");
             VkExtensionProperties[] props = new VkExtensionProperties[(int)propertyCount];
-            result = vkEnumerateDeviceExtensionProperties(_physicalDevice, default, props);
-            CheckResult(result);
+            vkEnumerateDeviceExtensionProperties(_physicalDevice, default, props)
+                .VkCheck("Unable to enumerate device extensions");
             return props;
         }
 
@@ -925,8 +949,8 @@ namespace XenoAtom.Graphics.Vk
                 flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                 queueFamilyIndex = _graphicsQueueIndex
             };
-            VkResult result = vkCreateCommandPool(_device, commandPoolCI, null, out commandPool);
-            CheckResult(result);
+            vkCreateCommandPool(_device, commandPoolCI, null, out commandPool)
+                .VkCheck("Unable to create Graphics Command Pool");
         }
 
         protected override MappedResource MapCore(MappableResource resource, MapMode mode, uint subresource)
@@ -1036,8 +1060,8 @@ namespace XenoAtom.Graphics.Vk
 
             _memoryManager.Dispose();
 
-            VkResult result = vkDeviceWaitIdle(_device);
-            CheckResult(result);
+            vkDeviceWaitIdle(_device)
+                .VkCheck("Unable to wait for idle on device");
             vkDestroyDevice(_device, null);
             vkDestroyInstance(_instance, null);
 
@@ -1119,7 +1143,7 @@ namespace XenoAtom.Graphics.Vk
                 properties = default;
                 return false;
             }
-            CheckResult(result);
+            result.VkCheck("Unable to get pixel image format properties");
 
             properties = new PixelFormatProperties(
                vkProps.maxExtent.width,
@@ -1208,8 +1232,8 @@ namespace XenoAtom.Graphics.Vk
             else
             {
                 void* mappedPtr;
-                VkResult result = vkMapMemory(Device, buffer.Memory.DeviceMemory, buffer.Memory.Offset, numBytes, default, &mappedPtr);
-                CheckResult(result);
+                vkMapMemory(Device, buffer.Memory.DeviceMemory, buffer.Memory.Offset, numBytes, default, &mappedPtr)
+                    .VkCheck("Unable to map buffer memory");
                 return (IntPtr)mappedPtr;
             }
         }
@@ -1365,8 +1389,8 @@ namespace XenoAtom.Graphics.Vk
             applicationInfo.apiVersion = new VkVersion(1, 1, 0);
             applicationInfo.applicationVersion = new VkVersion(1, 0, 0);
             applicationInfo.engineVersion = new VkVersion(1, 0, 0);
-            applicationInfo.pApplicationName = (byte*)s_name;
-            applicationInfo.pEngineName = (byte*)s_name;
+            applicationInfo.pApplicationName = (byte*)DefaultAppName;
+            applicationInfo.pEngineName = (byte*)DefaultAppName;
 
             instanceCI.pApplicationInfo = &applicationInfo;
 
@@ -1508,8 +1532,8 @@ namespace XenoAtom.Graphics.Vk
                 VkCommandPoolCreateInfo commandPoolCI = new VkCommandPoolCreateInfo();
                 commandPoolCI.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
                 commandPoolCI.queueFamilyIndex = _gd.GraphicsQueueIndex;
-                VkResult result = vkCreateCommandPool(_gd.Device, commandPoolCI, null, out _pool);
-                CheckResult(result);
+                vkCreateCommandPool(_gd.Device, commandPoolCI, null, out _pool)
+                    .VkCheck("Unable to create shared command pool");
 
                 VkCommandBufferAllocateInfo allocateInfo = new VkCommandBufferAllocateInfo();
                 allocateInfo.commandBufferCount = 1;
@@ -1517,24 +1541,25 @@ namespace XenoAtom.Graphics.Vk
                 allocateInfo.commandPool = _pool;
 
                 VkCommandBuffer cb;
-                result = vkAllocateCommandBuffers(_gd.Device, allocateInfo, &cb);
-                CheckResult(result);
+                vkAllocateCommandBuffers(_gd.Device, allocateInfo, &cb)
+                    .VkCheck("Unable to allocate shared command buffer");
                 _cb = cb;
             }
 
             public VkCommandBuffer BeginNewCommandBuffer()
             {
                 VkCommandBufferBeginInfo beginInfo = new() { flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT };
-                VkResult result = vkBeginCommandBuffer(_cb, beginInfo);
-                CheckResult(result);
+                vkBeginCommandBuffer(_cb, beginInfo)
+                    .VkCheck("Unable to begin shared command buffer");
 
                 return _cb;
             }
 
             public void EndAndSubmit(VkCommandBuffer cb)
             {
-                VkResult result = vkEndCommandBuffer(cb);
-                CheckResult(result);
+                vkEndCommandBuffer(cb)
+                    .VkCheck("Unable to end shared command buffer");
+
                 _gd.SubmitCommandBuffer(null, cb, 0, null, 0, null, null);
                 lock (_gd._stagingResourcesLock)
                 {
@@ -1563,33 +1588,4 @@ namespace XenoAtom.Graphics.Vk
             }
         }
     }
-
-    //internal unsafe delegate VkResult vkCreateDebugReportCallbackEXT_d(
-    //    VkInstance instance,
-    //    VkDebugReportCallbackCreateInfoEXT* createInfo,
-    //    IntPtr allocatorPtr,
-    //    out VkDebugReportCallbackEXT ret);
-
-    //internal unsafe delegate void vkDestroyDebugReportCallbackEXT_d(
-    //    VkInstance instance,
-    //    VkDebugReportCallbackEXT callback,
-    //    VkAllocationCallbacks* pAllocator);
-
-    //internal unsafe delegate VkResult vkDebugMarkerSetObjectNameEXT_t(VkDevice device, VkDebugMarkerObjectNameInfoEXT* pNameInfo);
-    //internal unsafe delegate void vkCmdDebugMarkerBeginEXT_t(VkCommandBuffer commandBuffer, VkDebugMarkerMarkerInfoEXT* pMarkerInfo);
-    //internal unsafe delegate void vkCmdDebugMarkerEndEXT_t(VkCommandBuffer commandBuffer);
-    //internal unsafe delegate void vkCmdDebugMarkerInsertEXT_t(VkCommandBuffer commandBuffer, VkDebugMarkerMarkerInfoEXT* pMarkerInfo);
-
-    //internal unsafe delegate void vkGetBufferMemoryRequirements2_t(VkDevice device, VkBufferMemoryRequirementsInfo2KHR* pInfo, VkMemoryRequirements2KHR* pMemoryRequirements);
-    //internal unsafe delegate void vkGetImageMemoryRequirements2_t(VkDevice device, VkImageMemoryRequirementsInfo2KHR* pInfo, VkMemoryRequirements2KHR* pMemoryRequirements);
-
-    //internal unsafe delegate void vkGetPhysicalDeviceProperties2_t(VkPhysicalDevice physicalDevice, void* properties);
-
-    //// VK_EXT_metal_surface
-
-    //internal unsafe delegate VkResult vkCreateMetalSurfaceEXT_t(
-    //    VkInstance instance,
-    //    VkMetalSurfaceCreateInfoEXT* pCreateInfo,
-    //    VkAllocationCallbacks* pAllocator,
-    //    VkSurfaceKHR* pSurface);
 }
