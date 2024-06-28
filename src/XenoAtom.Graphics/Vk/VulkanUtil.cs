@@ -139,7 +139,7 @@ namespace XenoAtom.Graphics.Vk
             VkPipelineStageFlagBits dstStageFlags;
 
             barrier.srcAccessMask = GetDefaultTransitionImageLayoutFlags(oldLayout, out srcStageFlags, true);
-            barrier.dstAccessMask = GetDefaultTransitionImageLayoutFlags(newLayout, out dstStageFlags, true);
+            barrier.dstAccessMask = GetDefaultTransitionImageLayoutFlags(newLayout, out dstStageFlags, false);
 
             // Special cases for transitions
             if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
