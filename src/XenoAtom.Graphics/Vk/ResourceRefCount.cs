@@ -12,18 +12,18 @@ namespace XenoAtom.Graphics.Vk
     /// </remarks>
     internal readonly struct ResourceRefCount : IEquatable<ResourceRefCount>
     {
-        private readonly InternalRefCount _internalInstance;
+        private readonly GraphicsObject _internalInstance;
 
-        public ResourceRefCount(Action disposeAction)
+        public ResourceRefCount(GraphicsObject instance)
         {
-            _internalInstance = new InternalRefCount(disposeAction);
+            _internalInstance = instance;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int Increment() => _internalInstance.Increment();
+        public int Increment() => _internalInstance.AddReference();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int Decrement() => _internalInstance.Decrement();
+        public int Decrement() => _internalInstance.ReleaseReference();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(ResourceRefCount other) => _internalInstance == other._internalInstance;
@@ -40,39 +40,6 @@ namespace XenoAtom.Graphics.Vk
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator !=(ResourceRefCount left, ResourceRefCount right) => !left.Equals(right);
 
-        internal sealed class InternalRefCount
-        {
-            private readonly Action _disposeAction;
-            private int _refCount;
-
-            public InternalRefCount(Action disposeAction)
-            {
-                _disposeAction = disposeAction;
-                _refCount = 1;
-            }
-
-            public int Increment()
-            {
-                int ret = Interlocked.Increment(ref _refCount);
-#if VALIDATE_USAGE
-                if (ret == 0)
-                {
-                    throw new GraphicsException("An attempt was made to reference a disposed resource.");
-                }
-#endif
-                return ret;
-            }
-
-            public int Decrement()
-            {
-                int ret = Interlocked.Decrement(ref _refCount);
-                if (ret == 0)
-                {
-                    _disposeAction();
-                }
-
-                return ret;
-            }
-        }
+        public static implicit operator ResourceRefCount(GraphicsObject instance) => new(instance);
     }
 }

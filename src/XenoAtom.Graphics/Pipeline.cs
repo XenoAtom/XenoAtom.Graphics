@@ -7,21 +7,21 @@ namespace XenoAtom.Graphics
     /// <see cref="CommandList.SetPipeline(Pipeline)"/> to prepare a <see cref="CommandList"/> for draw commands.
     /// See <see cref="GraphicsPipelineDescription"/>.
     /// </summary>
-    public abstract class Pipeline : IDeviceResource, IDisposable
+    public abstract class Pipeline : GraphicsObject
     {
-        internal Pipeline(ref GraphicsPipelineDescription graphicsDescription)
-            : this(graphicsDescription.ResourceLayouts)
+        internal Pipeline(GraphicsDevice device, ref GraphicsPipelineDescription graphicsDescription)
+            : this(device, graphicsDescription.ResourceLayouts)
         {
 #if VALIDATE_USAGE
             GraphicsOutputDescription = graphicsDescription.Outputs;
 #endif
         }
 
-        internal Pipeline(ref ComputePipelineDescription computeDescription)
-            : this(computeDescription.ResourceLayouts)
+        internal Pipeline(GraphicsDevice device, ref ComputePipelineDescription computeDescription)
+            : this(device, computeDescription.ResourceLayouts)
         { }
 
-        internal Pipeline(ResourceLayout[] resourceLayouts)
+        internal Pipeline(GraphicsDevice device, ResourceLayout[] resourceLayouts) : base(device)
         {
 #if VALIDATE_USAGE
             ResourceLayouts = Util.ShallowClone(resourceLayouts);
@@ -33,22 +33,6 @@ namespace XenoAtom.Graphics
         /// If false, this instance is a graphics pipeline.
         /// </summary>
         public abstract bool IsComputePipeline { get; }
-
-        /// <summary>
-        /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
-        /// tools.
-        /// </summary>
-        public abstract string? Name { get; set; }
-
-        /// <summary>
-        /// A bool indicating whether this instance has been disposed.
-        /// </summary>
-        public abstract bool IsDisposed { get; }
-
-        /// <summary>
-        /// Frees unmanaged device resources controlled by this instance.
-        /// </summary>
-        public abstract void Dispose();
 
 #if VALIDATE_USAGE
         internal OutputDescription GraphicsOutputDescription { get; }

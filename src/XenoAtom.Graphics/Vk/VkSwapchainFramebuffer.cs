@@ -4,12 +4,13 @@ using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkSwapchainFramebuffer : VkFramebufferBase
     {
-        private readonly VkGraphicsDevice _gd;
+        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
         private readonly VkSwapchain _swapchain;
         private readonly VkSurfaceKHR _surface;
         private readonly PixelFormat? _depthFormat;
@@ -24,8 +25,6 @@ namespace XenoAtom.Graphics.Vk
         private FramebufferAttachment? _depthAttachment;
         private uint _desiredWidth;
         private uint _desiredHeight;
-        private bool _destroyed;
-        private string? _name;
         private OutputDescription _outputDescription;
 
         public override XenoAtom.Interop.vulkan.VkFramebuffer CurrentFramebuffer => _scFramebuffers[(int)_currentImageIndex]!.CurrentFramebuffer;
@@ -55,8 +54,6 @@ namespace XenoAtom.Graphics.Vk
 
         public VkSwapchain Swapchain => _swapchain;
 
-        public override bool IsDisposed => _destroyed;
-
         public VkSwapchainFramebuffer(
             VkGraphicsDevice gd,
             VkSwapchain swapchain,
@@ -64,9 +61,8 @@ namespace XenoAtom.Graphics.Vk
             uint width,
             uint height,
             PixelFormat? depthFormat)
-            : base()
+            : base(gd)
         {
-            _gd = gd;
             _swapchain = swapchain;
             _surface = surface;
             _depthFormat = depthFormat;
@@ -186,24 +182,10 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        public override string? Name
+        internal override void DisposeCore()
         {
-            get => _name;
-            set
-            {
-                _name = value;
-                _gd.SetResourceName(this, value);
-            }
-        }
-
-        protected override void DisposeCore()
-        {
-            if (!_destroyed)
-            {
-                _destroyed = true;
-                _depthAttachment?.Target.Dispose();
-                DestroySwapchainFramebuffers();
-            }
+            _depthAttachment?.Target.Dispose();
+            DestroySwapchainFramebuffers();
         }
     }
 }

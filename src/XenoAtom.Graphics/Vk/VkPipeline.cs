@@ -11,12 +11,10 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkPipeline : Pipeline
     {
-        private readonly VkGraphicsDevice _gd;
+        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
         private readonly XenoAtom.Interop.vulkan.VkPipeline _devicePipeline;
         private readonly VkPipelineLayout _pipelineLayout;
         private readonly VkRenderPass _renderPass;
-        private bool _destroyed;
-        private string? _name;
 
         public XenoAtom.Interop.vulkan.VkPipeline DevicePipeline => _devicePipeline;
 
@@ -27,17 +25,11 @@ namespace XenoAtom.Graphics.Vk
         public bool ScissorTestEnabled { get; }
 
         public override bool IsComputePipeline { get; }
-
-        public ResourceRefCount RefCount { get; }
-
-        public override bool IsDisposed => _destroyed;
-
+        
         public VkPipeline(VkGraphicsDevice gd, ref GraphicsPipelineDescription description)
-            : base(ref description)
+            : base(gd, ref description)
         {
-            _gd = gd;
             IsComputePipeline = false;
-            RefCount = new ResourceRefCount(DisposeCore);
 
             VkGraphicsPipelineCreateInfo pipelineCI = new VkGraphicsPipelineCreateInfo();
 
@@ -348,11 +340,9 @@ namespace XenoAtom.Graphics.Vk
         }
 
         public VkPipeline(VkGraphicsDevice gd, ref ComputePipelineDescription description)
-            : base(ref description)
+            : base(gd,ref description)
         {
-            _gd = gd;
             IsComputePipeline = true;
-            RefCount = new ResourceRefCount(DisposeCore);
 
             VkComputePipelineCreateInfo pipelineCI = new VkComputePipelineCreateInfo();
 
@@ -431,32 +421,13 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        public override string? Name
+        internal override void DisposeCore()
         {
-            get => _name;
-            set
+            vkDestroyPipelineLayout(_gd.Device, _pipelineLayout, null);
+            vkDestroyPipeline(_gd.Device, _devicePipeline, null);
+            if (!IsComputePipeline)
             {
-                _name = value;
-                _gd.SetResourceName(this, value);
-            }
-        }
-
-        public override void Dispose()
-        {
-            RefCount.Decrement();
-        }
-
-        private void DisposeCore()
-        {
-            if (!_destroyed)
-            {
-                _destroyed = true;
-                vkDestroyPipelineLayout(_gd.Device, _pipelineLayout, null);
-                vkDestroyPipeline(_gd.Device, _devicePipeline, null);
-                if (!IsComputePipeline)
-                {
-                    vkDestroyRenderPass(_gd.Device, _renderPass, null);
-                }
+                vkDestroyRenderPass(_gd.Device, _renderPass, null);
             }
         }
     }

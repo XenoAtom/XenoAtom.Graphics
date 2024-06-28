@@ -6,7 +6,7 @@ namespace XenoAtom.Graphics
     /// A bindable device resource which provides a shader with access to a sampled <see cref="Texture"/> object.
     /// See <see cref="TextureViewDescription"/>.
     /// </summary>
-    public abstract class TextureView : BindableResource, IDeviceResource, IDisposable
+    public abstract class TextureView : GraphicsObject, BindableResource
     {
         /// <summary>
         /// The target <see cref="Texture"/> object to be sampled via this instance.
@@ -34,7 +34,7 @@ namespace XenoAtom.Graphics
         /// </summary>
         public PixelFormat Format { get; }
 
-        internal TextureView(ref TextureViewDescription description)
+        internal TextureView(GraphicsDevice device, ref TextureViewDescription description) : base(device)
         {
             Target = description.Target;
             BaseMipLevel = description.BaseMipLevel;
@@ -43,21 +43,5 @@ namespace XenoAtom.Graphics
             ArrayLayers = description.ArrayLayers;
             Format = description.Format ?? description.Target.Format;
         }
-
-        /// <summary>
-        /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
-        /// tools.
-        /// </summary>
-        public abstract string? Name { get; set; }
-
-        /// <summary>
-        /// A bool indicating whether this instance has been disposed.
-        /// </summary>
-        public abstract bool IsDisposed { get; }
-
-        /// <summary>
-        /// Frees unmanaged device resources controlled by this instance.
-        /// </summary>
-        public abstract void Dispose();
     }
 }

@@ -8,15 +8,15 @@ using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Text;
 using XenoAtom.Interop;
+using System.Runtime.CompilerServices;
 
 namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkCommandList : CommandList
     {
-        private readonly VkGraphicsDevice _gd;
+        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
         private readonly VkCommandPool _pool;
         private VkCommandBuffer _cb;
-        private bool _destroyed;
 
         private bool _commandBufferBegun;
         private bool _commandBufferEnded;
@@ -42,8 +42,6 @@ namespace XenoAtom.Graphics.Vk
         private BoundResourceSetInfo[] _currentComputeResourceSets = [];
         private bool[] _computeResourceSetsChanged = [];
 
-        private string? _name;
-
         private readonly object _commandBufferListLock = new();
         private readonly Queue<VkCommandBuffer> _availableCommandBuffers = new();
         private readonly List<VkCommandBuffer> _submittedCommandBuffers = new();
@@ -58,14 +56,9 @@ namespace XenoAtom.Graphics.Vk
 
         public VkCommandBuffer CommandBuffer => _cb;
 
-        public ResourceRefCount RefCount { get; }
-
-        public override bool IsDisposed => _destroyed;
-
         public VkCommandList(VkGraphicsDevice gd, ref CommandListDescription description)
-            : base(ref description, gd.Features, gd.UniformBufferMinOffsetAlignment, gd.StructuredBufferMinOffsetAlignment)
+            : base(gd, ref description, gd.Features, gd.UniformBufferMinOffsetAlignment, gd.StructuredBufferMinOffsetAlignment)
         {
-            _gd = gd;
             var poolCInfo = new VkCommandPoolCreateInfo
             {
                 flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
@@ -75,7 +68,6 @@ namespace XenoAtom.Graphics.Vk
             CheckResult(result);
 
             _cb = GetNextCommandBuffer();
-            RefCount = new ResourceRefCount(DisposeCore);
         }
 
         private VkCommandBuffer GetNextCommandBuffer()
@@ -107,7 +99,7 @@ namespace XenoAtom.Graphics.Vk
         {
             EnsureBegin();
 
-            RefCount.Increment();
+            AddReference();
             foreach (ResourceRefCount rrc in _currentStagingInfo!.Resources)
             {
                 rrc.Increment();
@@ -119,7 +111,6 @@ namespace XenoAtom.Graphics.Vk
 
         public void CommandBufferCompleted(VkCommandBuffer completedCB)
         {
-
             lock (_commandBufferListLock)
             {
                 for (int i = 0; i < _submittedCommandBuffers.Count; i++)
@@ -143,7 +134,7 @@ namespace XenoAtom.Graphics.Vk
                 }
             }
 
-            RefCount.Decrement();
+            ReleaseReference();
         }
 
         public override void Begin()
@@ -274,7 +265,7 @@ namespace XenoAtom.Graphics.Vk
         {
             PreDrawCommand();
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(indirectBuffer);
-            _currentStagingInfo!.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo!.Resources.Add(vkBuffer);
             vkCmdDrawIndirect(_cb, vkBuffer.DeviceBuffer, offset, drawCount, stride);
         }
 
@@ -282,7 +273,7 @@ namespace XenoAtom.Graphics.Vk
         {
             PreDrawCommand();
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(indirectBuffer);
-            _currentStagingInfo!.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo!.Resources.Add(vkBuffer);
             vkCmdDrawIndexedIndirect(_cb, vkBuffer.DeviceBuffer, offset, drawCount, stride);
         }
 
@@ -344,7 +335,7 @@ namespace XenoAtom.Graphics.Vk
                     }
 
                     // Increment ref count on first use of a set.
-                    _currentStagingInfo!.Resources.Add(vkSet.RefCount);
+                    _currentStagingInfo!.Resources.Add(vkSet);
                     for (int i = 0; i < vkSet.RefCounts.Count; i++)
                     {
                         _currentStagingInfo.Resources.Add(vkSet.RefCounts[i]);
@@ -425,7 +416,7 @@ namespace XenoAtom.Graphics.Vk
             PreDispatchCommand();
 
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(indirectBuffer);
-            _currentStagingInfo!.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo!.Resources.Add(vkBuffer);
             vkCmdDispatchIndirect(_cb, vkBuffer.DeviceBuffer, offset);
         }
 
@@ -439,9 +430,9 @@ namespace XenoAtom.Graphics.Vk
             }
 
             VkTexture vkSource = Util.AssertSubtype<Texture, VkTexture>(source);
-            _currentStagingInfo!.Resources.Add(vkSource.RefCount);
+            _currentStagingInfo!.Resources.Add(vkSource);
             VkTexture vkDestination = Util.AssertSubtype<Texture, VkTexture>(destination);
-            _currentStagingInfo.Resources.Add(vkDestination.RefCount);
+            _currentStagingInfo.Resources.Add(vkDestination);
             VkImageAspectFlags aspectFlags = ((source.Usage & TextureUsage.DepthStencil) == TextureUsage.DepthStencil)
                 ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
                 : VK_IMAGE_ASPECT_COLOR_BIT;
@@ -526,11 +517,11 @@ namespace XenoAtom.Graphics.Vk
             Util.EnsureArrayMinimumSize(ref _clearValues, clearValueCount + 1); // Leave an extra space for the depth value (tracked separately).
             Util.ClearArray(_validColorClearValues);
             Util.EnsureArrayMinimumSize(ref _validColorClearValues, clearValueCount);
-            _currentStagingInfo!.Resources.Add(vkFB.RefCount);
+            _currentStagingInfo!.Resources.Add(vkFB);
 
             if (fb is VkSwapchainFramebuffer scFB)
             {
-                _currentStagingInfo.Resources.Add(scFB.Swapchain.RefCount);
+                _currentStagingInfo.Resources.Add(scFB.Swapchain);
             }
         }
 
@@ -661,7 +652,7 @@ namespace XenoAtom.Graphics.Vk
             XenoAtom.Interop.vulkan.VkBuffer deviceBuffer = vkBuffer.DeviceBuffer;
             VkDeviceSize offset64 = offset;
             vkCmdBindVertexBuffers(_cb, index, 1, &deviceBuffer, &offset64);
-            _currentStagingInfo!.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo!.Resources.Add(vkBuffer);
         }
 
         private protected override void SetIndexBufferCore(DeviceBuffer buffer, IndexFormat format, uint offset)
@@ -670,7 +661,7 @@ namespace XenoAtom.Graphics.Vk
 
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(buffer);
             vkCmdBindIndexBuffer(_cb, vkBuffer.DeviceBuffer, offset, VkFormats.VdToVkIndexFormat(format));
-            _currentStagingInfo!.Resources.Add(vkBuffer.RefCount);
+            _currentStagingInfo!.Resources.Add(vkBuffer);
         }
 
         private protected override void SetPipelineCore(Pipeline pipeline)
@@ -695,7 +686,7 @@ namespace XenoAtom.Graphics.Vk
                 _currentComputePipeline = vkPipeline;
             }
 
-            _currentStagingInfo!.Resources.Add(vkPipeline.RefCount);
+            _currentStagingInfo!.Resources.Add(vkPipeline);
         }
 
         private void ClearSets(BoundResourceSetInfo[] boundSets)
@@ -795,9 +786,9 @@ namespace XenoAtom.Graphics.Vk
             EnsureNoRenderPass();
 
             VkBuffer srcVkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(source);
-            _currentStagingInfo!.Resources.Add(srcVkBuffer.RefCount);
+            _currentStagingInfo!.Resources.Add(srcVkBuffer);
             VkBuffer dstVkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(destination);
-            _currentStagingInfo.Resources.Add(dstVkBuffer.RefCount);
+            _currentStagingInfo.Resources.Add(dstVkBuffer);
 
             VkBufferCopy region = new VkBufferCopy
             {
@@ -848,9 +839,9 @@ namespace XenoAtom.Graphics.Vk
                 width, height, depth, layerCount);
 
             VkTexture srcVkTexture = Util.AssertSubtype<Texture, VkTexture>(source);
-            _currentStagingInfo!.Resources.Add(srcVkTexture.RefCount);
+            _currentStagingInfo!.Resources.Add(srcVkTexture);
             VkTexture dstVkTexture = Util.AssertSubtype<Texture, VkTexture>(destination);
-            _currentStagingInfo.Resources.Add(dstVkTexture.RefCount);
+            _currentStagingInfo.Resources.Add(dstVkTexture);
         }
 
         internal static void CopyTextureCore_VkCommandBuffer(
@@ -1156,7 +1147,7 @@ namespace XenoAtom.Graphics.Vk
             EnsureBegin();
             EnsureNoRenderPass();
             VkTexture vkTex = Util.AssertSubtype<Texture, VkTexture>(texture);
-            _currentStagingInfo!.Resources.Add(vkTex.RefCount);
+            _currentStagingInfo!.Resources.Add(vkTex);
 
             uint layerCount = vkTex.ArrayLayers;
             if ((vkTex.Usage & TextureUsage.Cubemap) != 0)
@@ -1263,16 +1254,6 @@ namespace XenoAtom.Graphics.Vk
                 0, null);
         }
 
-        public override string? Name
-        {
-            get => _name;
-            set
-            {
-                _name = value;
-                _gd.SetResourceName(this, value);
-            }
-        }
-
         private VkBuffer GetStagingBuffer(uint size)
         {
             EnsureBegin();
@@ -1292,7 +1273,7 @@ namespace XenoAtom.Graphics.Vk
                 if (ret == null)
                 {
                     ret = (VkBuffer)_gd.ResourceFactory.CreateBuffer(new BufferDescription(size, BufferUsage.Staging));
-                    ret.Name = $"Staging Buffer (CommandList {_name})";
+                    ret.Name = $"Staging Buffer (CommandList {Name})";
                 }
 
                 _currentStagingInfo!.BuffersUsed.Add(ret);
@@ -1334,24 +1315,15 @@ namespace XenoAtom.Graphics.Vk
             func.Invoke(_cb, &label);
         }
 
-        public override void Dispose()
+        internal override void DisposeCore()
         {
-            RefCount.Decrement();
-        }
+            vkDestroyCommandPool(_gd.Device, _pool, null);
 
-        private void DisposeCore()
-        {
-            if (!_destroyed)
+            Debug.Assert(_submittedStagingInfos.Count == 0);
+
+            foreach (VkBuffer buffer in _availableStagingBuffers)
             {
-                _destroyed = true;
-                vkDestroyCommandPool(_gd.Device, _pool, null);
-
-                Debug.Assert(_submittedStagingInfos.Count == 0);
-
-                foreach (VkBuffer buffer in _availableStagingBuffers)
-                {
-                    buffer.Dispose();
-                }
+                buffer.Dispose();
             }
         }
 

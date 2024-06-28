@@ -6,10 +6,14 @@ namespace XenoAtom.Graphics
     /// A device resource used to store arbitrary image data in a specific format.
     /// See <see cref="TextureDescription"/>.
     /// </summary>
-    public abstract class Texture : IDeviceResource, MappableResource, IDisposable, BindableResource
+    public abstract class Texture : GraphicsObject, MappableResource, BindableResource
     {
         private readonly object _fullTextureViewLock = new();
         private TextureView? _fullTextureView;
+
+        internal Texture(GraphicsDevice device) : base(device)
+        {
+        }
 
         /// <summary>
         /// Calculates the subresource index, given a mipmap level and array layer.
@@ -60,15 +64,6 @@ namespace XenoAtom.Graphics
         /// then this instance is a multipsample texture.
         /// </summary>
         public abstract TextureSampleCount SampleCount { get; }
-        /// <summary>
-        /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
-        /// tools.
-        /// </summary>
-        public abstract string? Name { get; set; }
-        /// <summary>
-        /// A bool indicating whether this instance has been disposed.
-        /// </summary>
-        public abstract bool IsDisposed { get; }
 
         internal TextureView GetFullTextureView(GraphicsDevice gd)
         {
@@ -88,19 +83,12 @@ namespace XenoAtom.Graphics
             return gd.ResourceFactory.CreateTextureView(this);
         }
 
-        /// <summary>
-        /// Frees unmanaged device resources controlled by this instance.
-        /// </summary>
-        public virtual void Dispose()
+        internal void DisposeTextureView()
         {
             lock (_fullTextureViewLock)
             {
                 _fullTextureView?.Dispose();
             }
-
-            DisposeCore();
         }
-
-        private protected abstract void DisposeCore();
     }
 }

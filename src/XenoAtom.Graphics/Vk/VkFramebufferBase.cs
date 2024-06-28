@@ -1,35 +1,28 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using static XenoAtom.Interop.vulkan;
 
 namespace XenoAtom.Graphics.Vk
 {
     internal abstract class VkFramebufferBase : Framebuffer
     {
+        internal VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
+
         public VkFramebufferBase(
+            VkGraphicsDevice gd,
             FramebufferAttachmentDescription? depthTexture,
             IReadOnlyList<FramebufferAttachmentDescription> colorTextures)
-            : base(depthTexture, colorTextures)
+            : base(gd, depthTexture, colorTextures)
         {
-            RefCount = new ResourceRefCount(DisposeCore);
         }
 
-        public VkFramebufferBase()
+        public VkFramebufferBase(VkGraphicsDevice device) : base(device)
         {
-            RefCount = new ResourceRefCount(DisposeCore);
         }
-
-        public ResourceRefCount RefCount { get; }
 
         public abstract uint RenderableWidth { get; }
 
         public abstract uint RenderableHeight { get; }
-
-        public override void Dispose()
-        {
-            RefCount.Decrement();
-        }
-
-        protected abstract void DisposeCore();
 
         public abstract XenoAtom.Interop.vulkan.VkFramebuffer CurrentFramebuffer { get; }
         public abstract VkRenderPass RenderPassNoClear_Init { get; }

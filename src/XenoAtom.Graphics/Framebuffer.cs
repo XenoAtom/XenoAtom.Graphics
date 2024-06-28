@@ -8,7 +8,7 @@ namespace XenoAtom.Graphics
     /// A device resource used to control which color and depth textures are rendered to.
     /// See <see cref="FramebufferDescription"/>.
     /// </summary>
-    public abstract class Framebuffer : IDeviceResource, IDisposable
+    public abstract class Framebuffer : GraphicsObject
     {
         private readonly FramebufferAttachment[] _colorTargets = [];
 
@@ -38,13 +38,14 @@ namespace XenoAtom.Graphics
         /// </summary>
         public virtual uint Height { get; }
 
-        internal Framebuffer()
+        internal Framebuffer(GraphicsDevice device) : base(device)
         {
         }
 
         internal Framebuffer(
+            GraphicsDevice device,
             FramebufferAttachmentDescription? depthTargetDesc,
-            IReadOnlyList<FramebufferAttachmentDescription> colorTargetDescs)
+            IReadOnlyList<FramebufferAttachmentDescription> colorTargetDescs) : base(device)
         {
             FramebufferAttachment? depthTarget = null;
             if (depthTargetDesc != null)
@@ -92,21 +93,5 @@ namespace XenoAtom.Graphics
 
             OutputDescription = OutputDescription.CreateFromFramebuffer(this);
         }
-
-        /// <summary>
-        /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
-        /// tools.
-        /// </summary>
-        public abstract string? Name { get; set; }
-
-        /// <summary>
-        /// A bool indicating whether this instance has been disposed.
-        /// </summary>
-        public abstract bool IsDisposed { get; }
-
-        /// <summary>
-        /// Frees unmanaged device resources controlled by this instance.
-        /// </summary>
-        public abstract void Dispose();
     }
 }

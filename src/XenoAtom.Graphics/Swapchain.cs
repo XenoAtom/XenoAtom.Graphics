@@ -6,8 +6,12 @@ namespace XenoAtom.Graphics
     /// A device resource providing the ability to present rendered images to a visible surface.
     /// See <see cref="SwapchainDescription"/>.
     /// </summary>
-    public abstract class Swapchain : IDeviceResource, IDisposable
+    public abstract class Swapchain : GraphicsObject
     {
+        internal Swapchain(GraphicsDevice device) : base(device)
+        {
+        }
+
         /// <summary>
         /// Gets a <see cref="Framebuffer"/> representing the render targets of this instance.
         /// </summary>
@@ -23,18 +27,5 @@ namespace XenoAtom.Graphics
         /// rate.
         /// </summary>
         public abstract bool SyncToVerticalBlank { get; set; }
-        /// <summary>
-        /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
-        /// tools.
-        /// </summary>
-        public abstract string? Name { get; set; }
-        /// <summary>
-        /// A bool indicating whether this instance has been disposed.
-        /// </summary>
-        public abstract bool IsDisposed { get; }
-        /// <summary>
-        /// Frees unmanaged device resources controlled by this instance.
-        /// </summary>
-        public abstract void Dispose();
     }
 }

@@ -1,28 +1,22 @@
 using static XenoAtom.Interop.vulkan;
 using static XenoAtom.Graphics.Vk.VulkanUtil;
+using System.Runtime.CompilerServices;
 
 
 namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkTextureView : TextureView
     {
-        private readonly VkGraphicsDevice _gd;
+        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
         private readonly VkImageView _imageView;
-        private bool _destroyed;
-        private string? _name;
 
         public VkImageView ImageView => _imageView;
 
         public new VkTexture Target => (VkTexture)base.Target;
 
-        public ResourceRefCount RefCount { get; }
-
-        public override bool IsDisposed => _destroyed;
-
         public VkTextureView(VkGraphicsDevice gd, ref TextureViewDescription description)
-            : base(ref description)
+            : base(gd, ref description)
         {
-            _gd = gd;
             VkImageViewCreateInfo imageViewCI = new VkImageViewCreateInfo();
             VkTexture tex = Util.AssertSubtype<Texture, VkTexture>(description.Target);
             imageViewCI.image = tex.OptimalDeviceImage;
@@ -73,31 +67,11 @@ namespace XenoAtom.Graphics.Vk
             }
 
             vkCreateImageView(_gd.Device, imageViewCI, null, out _imageView);
-            RefCount = new ResourceRefCount(DisposeCore);
         }
 
-        public override string? Name
+        internal override void DisposeCore()
         {
-            get => _name;
-            set
-            {
-                _name = value;
-                _gd.SetResourceName(this, value);
-            }
-        }
-
-        public override void Dispose()
-        {
-            RefCount.Decrement();
-        }
-
-        private void DisposeCore()
-        {
-            if (!_destroyed)
-            {
-                _destroyed = true;
-                vkDestroyImageView(_gd.Device, ImageView, null);
-            }
+            vkDestroyImageView(_gd.Device, ImageView, null);
         }
     }
 }

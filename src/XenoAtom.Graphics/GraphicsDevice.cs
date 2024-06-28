@@ -17,7 +17,6 @@ namespace XenoAtom.Graphics
 
         internal GraphicsDevice()
         {
-
         }
 
         /// <summary>
@@ -1222,5 +1221,6 @@ namespace XenoAtom.Graphics
             return new MTL.MTLGraphicsDevice(options, swapchainDesc);
         }
 #endif
+        internal abstract void SetResourceName(GraphicsObject graphicsObject, string? value);
     }
 }

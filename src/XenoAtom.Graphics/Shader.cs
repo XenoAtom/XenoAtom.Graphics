@@ -7,9 +7,9 @@ namespace XenoAtom.Graphics
     /// A device resource encapsulating a single shader module.
     /// See <see cref="ShaderDescription"/>.
     /// </summary>
-    public abstract class Shader : IDeviceResource, IDisposable
+    public abstract class Shader : GraphicsObject
     {
-        internal Shader(ShaderStages stage, ReadOnlyMemoryUtf8 entryPoint)
+        internal Shader(GraphicsDevice device, ShaderStages stage, ReadOnlyMemoryUtf8 entryPoint) : base(device)
         {
             Stage = stage;
             EntryPoint = entryPoint;
@@ -24,21 +24,5 @@ namespace XenoAtom.Graphics
         /// The name of the entry point function.
         /// </summary>
         public ReadOnlyMemoryUtf8 EntryPoint { get; }
-
-        /// <summary>
-        /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
-        /// tools.
-        /// </summary>
-        public abstract string? Name { get; set; }
-
-        /// <summary>
-        /// A bool indicating whether this instance has been disposed.
-        /// </summary>
-        public abstract bool IsDisposed { get; }
-
-        /// <summary>
-        /// Frees unmanaged device resources controlled by this instance.
-        /// </summary>
-        public abstract void Dispose();
     }
 }

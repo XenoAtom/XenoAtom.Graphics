@@ -23,7 +23,7 @@ namespace XenoAtom.Graphics
     /// <see cref="GraphicsDevice"/>, they must be reset and commands must be issued again.
     /// See <see cref="CommandListDescription"/>.
     /// </summary>
-    public abstract class CommandList : IDeviceResource, IDisposable
+    public abstract class CommandList : GraphicsObject
     {
         private readonly GraphicsDeviceFeatures _features;
         private readonly uint _uniformBufferAlignment;
@@ -39,10 +39,11 @@ namespace XenoAtom.Graphics
 #endif
 
         internal CommandList(
+            GraphicsDevice device,
             ref CommandListDescription description,
             GraphicsDeviceFeatures features,
             uint uniformAlignment,
-            uint structuredAlignment)
+            uint structuredAlignment) : base(device)
         {
             _features = features;
             _uniformBufferAlignment = uniformAlignment;
@@ -1218,22 +1219,6 @@ namespace XenoAtom.Graphics
         /// <param name="name">The name of the marker. This is an opaque identifier used for display by graphics debuggers.</param>
         /// <param name="color">An optional color used for the marker.</param>
         public abstract void InsertDebugMarker(ReadOnlySpanUtf8 name, in RgbaFloat color = default);
-
-        /// <summary>
-        /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
-        /// tools.
-        /// </summary>
-        public abstract string? Name { get; set; }
-
-        /// <summary>
-        /// A bool indicating whether this instance has been disposed.
-        /// </summary>
-        public abstract bool IsDisposed { get; }
-
-        /// <summary>
-        /// Frees unmanaged device resources controlled by this instance.
-        /// </summary>
-        public abstract void Dispose();
 
         [Conditional("VALIDATE_USAGE")]
         private void ValidateIndexBuffer(uint indexCount)

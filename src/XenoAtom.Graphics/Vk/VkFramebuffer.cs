@@ -4,19 +4,17 @@ using static XenoAtom.Interop.vulkan;
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace XenoAtom.Graphics.Vk
 {
     internal sealed unsafe class VkFramebuffer : VkFramebufferBase
     {
-        private readonly VkGraphicsDevice _gd;
         private readonly XenoAtom.Interop.vulkan.VkFramebuffer _deviceFramebuffer;
         private readonly VkRenderPass _renderPassNoClearLoad;
         private readonly VkRenderPass _renderPassNoClear;
         private readonly VkRenderPass _renderPassClear;
         private readonly List<VkImageView> _attachmentViews = new List<VkImageView>();
-        private bool _destroyed;
-        private string? _name;
 
         public override XenoAtom.Interop.vulkan.VkFramebuffer CurrentFramebuffer => _deviceFramebuffer;
         public override VkRenderPass RenderPassNoClear_Init => _renderPassNoClear;
@@ -28,13 +26,9 @@ namespace XenoAtom.Graphics.Vk
 
         public override uint AttachmentCount { get; }
 
-        public override bool IsDisposed => _destroyed;
-
         public VkFramebuffer(VkGraphicsDevice gd, ref FramebufferDescription description, bool isPresented)
-            : base(description.DepthTarget, description.ColorTargets)
+            : base(gd, description.DepthTarget, description.ColorTargets)
         {
-            _gd = gd;
-
             VkRenderPassCreateInfo renderPassCI = new VkRenderPassCreateInfo();
 
             StackList<VkAttachmentDescription> attachments = new StackList<VkAttachmentDescription>();
@@ -306,30 +300,15 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        public override string? Name
+        internal override void DisposeCore()
         {
-            get => _name;
-            set
+            vkDestroyFramebuffer(_gd.Device, _deviceFramebuffer, null);
+            vkDestroyRenderPass(_gd.Device, _renderPassNoClear, null);
+            vkDestroyRenderPass(_gd.Device, _renderPassNoClearLoad, null);
+            vkDestroyRenderPass(_gd.Device, _renderPassClear, null);
+            foreach (VkImageView view in _attachmentViews)
             {
-                _name = value;
-                _gd.SetResourceName(this, value);
-            }
-        }
-
-        protected override void DisposeCore()
-        {
-            if (!_destroyed)
-            {
-                vkDestroyFramebuffer(_gd.Device, _deviceFramebuffer, null);
-                vkDestroyRenderPass(_gd.Device, _renderPassNoClear, null);
-                vkDestroyRenderPass(_gd.Device, _renderPassNoClearLoad, null);
-                vkDestroyRenderPass(_gd.Device, _renderPassClear, null);
-                foreach (VkImageView view in _attachmentViews)
-                {
-                    vkDestroyImageView(_gd.Device, view, null);
-                }
-
-                _destroyed = true;
+                vkDestroyImageView(_gd.Device, view, null);
             }
         }
     }

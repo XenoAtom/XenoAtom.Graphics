@@ -3,18 +3,18 @@ using static XenoAtom.Interop.vulkan;
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System.Diagnostics;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkTexture : Texture
     {
-        private readonly VkGraphicsDevice _gd;
+        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
         private readonly VkImage _optimalImage;
         private readonly VkMemoryBlock _memoryBlock;
         private readonly XenoAtom.Interop.vulkan.VkBuffer _stagingBuffer;
         private PixelFormat _format; // Static for regular images -- may change for shared staging images
         private readonly uint _actualImageArrayLayers;
-        private bool _destroyed;
 
         // Immutable except for shared staging Textures.
         private uint _width;
@@ -40,8 +40,6 @@ namespace XenoAtom.Graphics.Vk
 
         public override TextureSampleCount SampleCount { get; }
 
-        public override bool IsDisposed => _destroyed;
-
         public VkImage OptimalDeviceImage => _optimalImage;
         public XenoAtom.Interop.vulkan.VkBuffer StagingBuffer => _stagingBuffer;
         public VkMemoryBlock Memory => _memoryBlock;
@@ -50,15 +48,11 @@ namespace XenoAtom.Graphics.Vk
         public VkSampleCountFlags VkSampleCount { get; }
 
         private readonly VkImageLayout[] _imageLayouts = [];
-        private string? _name;
-
-        public ResourceRefCount RefCount { get; }
 
         public bool IsSwapchainTexture { get; }
 
-        internal VkTexture(VkGraphicsDevice gd, ref TextureDescription description)
+        internal VkTexture(VkGraphicsDevice gd, ref TextureDescription description) : base(gd)
         {
-            _gd = gd;
             _width = description.Width;
             _height = description.Height;
             _depth = description.Depth;
@@ -195,7 +189,6 @@ namespace XenoAtom.Graphics.Vk
 
             ClearIfRenderTarget();
             TransitionIfSampled();
-            RefCount = new ResourceRefCount(RefCountedDispose);
         }
 
         // Used to construct Swapchain textures.
@@ -208,10 +201,9 @@ namespace XenoAtom.Graphics.Vk
             VkFormat vkFormat,
             TextureUsage usage,
             TextureSampleCount sampleCount,
-            VkImage existingImage)
+            VkImage existingImage) : base(gd)
         {
             Debug.Assert(width > 0 && height > 0);
-            _gd = gd;
             MipLevels = mipLevels;
             _width = width;
             _height = height;
@@ -228,7 +220,6 @@ namespace XenoAtom.Graphics.Vk
             IsSwapchainTexture = true;
 
             ClearIfRenderTarget();
-            RefCount = new ResourceRefCount(DisposeCore);
         }
 
         private void ClearIfRenderTarget()
@@ -406,16 +397,6 @@ namespace XenoAtom.Graphics.Vk
             return _imageLayouts[CalculateSubresource(mipLevel, arrayLayer)];
         }
 
-        public override string? Name
-        {
-            get => _name;
-            set
-            {
-                _name = value;
-                _gd.SetResourceName(this, value);
-            }
-        }
-
         internal void SetStagingDimensions(uint width, uint height, uint depth, PixelFormat format)
         {
             Debug.Assert(_stagingBuffer != default);
@@ -426,34 +407,24 @@ namespace XenoAtom.Graphics.Vk
             _format = format;
         }
 
-        private protected override void DisposeCore()
+        internal override void DisposeCore()
         {
-            RefCount.Decrement();
-        }
+            DisposeTextureView();
 
-        private void RefCountedDispose()
-        {
-            if (!_destroyed)
+            bool isStaging = (Usage & TextureUsage.Staging) == TextureUsage.Staging;
+            if (isStaging)
             {
-                base.Dispose();
+                //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General, $"(StagingBuffer Texture) VkBuffer Destroyed 0x{_stagingBuffer.Value.Handle:X16}");
+                vkDestroyBuffer(_gd.Device, _stagingBuffer, null);
+            }
+            else
+            {
+                vkDestroyImage(_gd.Device, _optimalImage, null);
+            }
 
-                _destroyed = true;
-
-                bool isStaging = (Usage & TextureUsage.Staging) == TextureUsage.Staging;
-                if (isStaging)
-                {
-                    //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General, $"(StagingBuffer Texture) VkBuffer Destroyed 0x{_stagingBuffer.Value.Handle:X16}");
-                    vkDestroyBuffer(_gd.Device, _stagingBuffer, null);
-                }
-                else
-                {
-                    vkDestroyImage(_gd.Device, _optimalImage, null);
-                }
-
-                if (_memoryBlock.DeviceMemory.Value.Handle != 0)
-                {
-                    _gd.MemoryManager.Free(_memoryBlock);
-                }
+            if (_memoryBlock.DeviceMemory.Value.Handle != 0)
+            {
+                _gd.MemoryManager.Free(_memoryBlock);
             }
         }
 

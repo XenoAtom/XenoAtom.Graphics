@@ -2,25 +2,20 @@ using static XenoAtom.Interop.vulkan;
 
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkShader : Shader
     {
-        private readonly VkGraphicsDevice _gd;
+        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
         private readonly VkShaderModule _shaderModule;
-        private bool _disposed;
-        private string? _name;
 
         public VkShaderModule ShaderModule => _shaderModule;
 
-        public override bool IsDisposed => _disposed;
-
         public VkShader(VkGraphicsDevice gd, ref ShaderDescription description)
-            : base(description.Stage, description.EntryPoint)
+            : base(gd, description.Stage, description.EntryPoint)
         {
-            _gd = gd;
-
             VkShaderModuleCreateInfo shaderModuleCI = new VkShaderModuleCreateInfo();
             fixed (byte* codePtr = description.ShaderBytes)
             {
@@ -31,23 +26,9 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        public override string? Name
+        internal override void DisposeCore()
         {
-            get => _name;
-            set
-            {
-                _name = value;
-                _gd.SetResourceName(this, value);
-            }
-        }
-
-        public override void Dispose()
-        {
-            if (!_disposed)
-            {
-                _disposed = true;
-                vkDestroyShaderModule(_gd.Device, ShaderModule, null);
-            }
+            vkDestroyShaderModule(_gd.Device, ShaderModule, null);
         }
     }
 }

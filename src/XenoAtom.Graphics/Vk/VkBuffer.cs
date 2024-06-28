@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using static XenoAtom.Interop.vulkan;
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 
@@ -6,15 +7,11 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkBuffer : DeviceBuffer
     {
-        private readonly VkGraphicsDevice _gd;
+        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
         private readonly XenoAtom.Interop.vulkan.VkBuffer _deviceBuffer;
         private readonly VkMemoryBlock _memory;
         private readonly VkMemoryRequirements _bufferMemoryRequirements;
-        public ResourceRefCount RefCount { get; }
-        private bool _destroyed;
-        private string? _name;
-        public override bool IsDisposed => _destroyed;
-
+        
         public override uint SizeInBytes { get; }
         public override BufferUsage Usage { get; }
 
@@ -23,9 +20,8 @@ namespace XenoAtom.Graphics.Vk
 
         public VkMemoryRequirements BufferMemoryRequirements => _bufferMemoryRequirements;
 
-        public VkBuffer(VkGraphicsDevice gd, uint sizeInBytes, BufferUsage usage)
+        public VkBuffer(VkGraphicsDevice gd, uint sizeInBytes, BufferUsage usage) : base(gd)
         {
-            _gd = gd;
             SizeInBytes = sizeInBytes;
             Usage = usage;
 
@@ -108,34 +104,13 @@ namespace XenoAtom.Graphics.Vk
             _memory = memoryToken;
             result = vkBindBufferMemory(gd.Device, _deviceBuffer, _memory.DeviceMemory, _memory.Offset);
             CheckResult(result);
-
-            RefCount = new ResourceRefCount(DisposeCore);
         }
 
-        public override string? Name
+        internal override void DisposeCore()
         {
-            get => _name;
-            set
-            {
-                _name = value;
-                _gd.SetResourceName(this, value);
-            }
-        }
-
-        public override void Dispose()
-        {
-            RefCount.Decrement();
-        }
-
-        private void DisposeCore()
-        {
-            if (!_destroyed)
-            {
-                _destroyed = true;
-                //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General,$"VkBuffer Destroyed 0x{_deviceBuffer.Value.Handle:X16}");
-                vkDestroyBuffer(_gd.Device, _deviceBuffer, null);
-                _gd.MemoryManager.Free(Memory);
-            }
+            //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General,$"VkBuffer Destroyed 0x{_deviceBuffer.Value.Handle:X16}");
+            vkDestroyBuffer(_gd.Device, _deviceBuffer, null);
+            _gd.MemoryManager.Free(Memory);
         }
     }
 }

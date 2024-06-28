@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using static XenoAtom.Interop.vulkan;
 
 
@@ -5,20 +6,13 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkSampler : Sampler
     {
-        private readonly VkGraphicsDevice _gd;
+        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
         private readonly XenoAtom.Interop.vulkan.VkSampler _sampler;
-        private bool _disposed;
-        private string? _name;
 
         public XenoAtom.Interop.vulkan.VkSampler DeviceSampler => _sampler;
 
-        public ResourceRefCount RefCount { get; }
-
-        public override bool IsDisposed => _disposed;
-
-        public VkSampler(VkGraphicsDevice gd, ref SamplerDescription description)
+        public VkSampler(VkGraphicsDevice gd, ref SamplerDescription description) : base(gd)
         {
-            _gd = gd;
             VkFormats.GetFilterParams(description.Filter, out VkFilter minFilter, out VkFilter magFilter, out VkSamplerMipmapMode mipmapMode);
 
             VkSamplerCreateInfo samplerCI = new VkSamplerCreateInfo
@@ -42,31 +36,11 @@ namespace XenoAtom.Graphics.Vk
             };
 
             vkCreateSampler(_gd.Device, samplerCI, null, out _sampler);
-            RefCount = new ResourceRefCount(DisposeCore);
         }
 
-        public override string? Name
+        internal override void DisposeCore()
         {
-            get => _name;
-            set
-            {
-                _name = value;
-                _gd.SetResourceName(this, value);
-            }
-        }
-
-        public override void Dispose()
-        {
-            RefCount.Decrement();
-        }
-
-        private void DisposeCore()
-        {
-            if (!_disposed)
-            {
-                vkDestroySampler(_gd.Device, _sampler, null);
-                _disposed = true;
-            }
+            vkDestroySampler(_gd.Device, _sampler, null);
         }
     }
 }

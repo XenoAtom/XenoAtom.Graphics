@@ -7,14 +7,14 @@ namespace XenoAtom.Graphics
     /// to a shader set.
     /// See <see cref="ResourceLayoutDescription"/>.
     /// </summary>
-    public abstract class ResourceLayout : IDeviceResource, IDisposable
+    public abstract class ResourceLayout : GraphicsObject
     {
 #if VALIDATE_USAGE
         internal readonly ResourceLayoutDescription Description;
         internal readonly uint DynamicBufferCount;
 #endif
 
-        internal ResourceLayout(ref ResourceLayoutDescription description)
+        internal ResourceLayout(GraphicsDevice device, ref ResourceLayoutDescription description) : base(device)
         {
 #if VALIDATE_USAGE
             Description = description;
@@ -27,21 +27,5 @@ namespace XenoAtom.Graphics
             }
 #endif
         }
-
-        /// <summary>
-        /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
-        /// tools.
-        /// </summary>
-        public abstract string? Name { get; set; }
-
-        /// <summary>
-        /// A bool indicating whether this instance has been disposed.
-        /// </summary>
-        public abstract bool IsDisposed { get; }
-
-        /// <summary>
-        /// Frees unmanaged device resources controlled by this instance.
-        /// </summary>
-        public abstract void Dispose();
     }
 }

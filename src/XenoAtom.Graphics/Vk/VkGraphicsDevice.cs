@@ -806,7 +806,7 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        internal void SetResourceName(IDeviceResource resource, string? name)
+        internal override void SetResourceName(GraphicsObject resource, string? name)
         {
             if (!_debugUtilsExtensionAvailable)
             {
