@@ -36,7 +36,7 @@ namespace XenoAtom.Graphics.Tests
         private readonly GraphicsDevice _gd;
         private readonly DisposeCollectorResourceFactory _factory;
         private bool _hasWarningOrErrorLogs;
-        
+
         public GraphicsDevice GD => _gd;
         public ResourceFactory RF => _factory;
 
@@ -50,10 +50,15 @@ namespace XenoAtom.Graphics.Tests
 
         private void DebugLogImpl(DebugLogLevel debugLogLevel, DebugLogKind kind, string message)
         {
+            // Skip warning messages related to ICD during the tests
+            if (message.Contains("in ICD") && debugLogLevel == DebugLogLevel.Warning)
+            {
+                return;
+            }
             _hasWarningOrErrorLogs = true;
             _textOutputHelper.WriteLine($"[{debugLogLevel}] {kind} - {message}");
         }
-        
+
         protected DeviceBuffer GetReadback(DeviceBuffer buffer)
         {
             DeviceBuffer readback;
