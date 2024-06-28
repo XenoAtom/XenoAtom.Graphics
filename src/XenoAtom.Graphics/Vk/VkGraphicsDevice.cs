@@ -36,8 +36,6 @@ namespace XenoAtom.Graphics.Vk
         private readonly object _graphicsCommandPoolLock = new object();
         private readonly VkQueue _graphicsQueue;
         private readonly object _graphicsQueueLock = new object();
-        private readonly VkDebugReportCallbackEXT _debugCallbackHandle;
-        private readonly bool _debugMarkerEnabled;
         private readonly ConcurrentDictionary<VkFormat, VkFilter> _filters = new ConcurrentDictionary<VkFormat, VkFilter>();
         private readonly BackendInfoVulkan _vulkanInfo;
         private readonly DebugLogDelegate? _debugLog;
@@ -114,15 +112,8 @@ namespace XenoAtom.Graphics.Vk
         public string DriverInfo => _driverInfo;
         public VkDeviceMemoryManager MemoryManager => _memoryManager;
         public VkDescriptorPoolManager DescriptorPoolManager => _descriptorPoolManager;
-        public PFN_vkCmdDebugMarkerBeginEXT vkCmdDebugMarkerBeginExt => _vkCmdDebugMarkerBeginEXT;
-        public PFN_vkCmdDebugMarkerEndEXT vkCmdDebugMarkerEndExt => _vkCmdDebugMarkerEndEXT;
-        public PFN_vkCmdDebugMarkerInsertEXT vkCmdDebugMarkerInsertExt => _vkCmdDebugMarkerInsertEXT;
         public PFN_vkCreateMetalSurfaceEXT CreateMetalSurfaceEXT => _createMetalSurfaceEXT;
 
-        private readonly PFN_vkDebugMarkerSetObjectNameEXT _vkDebugMarkerSetObjectNameEX;
-        private readonly PFN_vkCmdDebugMarkerBeginEXT _vkCmdDebugMarkerBeginEXT;
-        private readonly PFN_vkCmdDebugMarkerEndEXT _vkCmdDebugMarkerEndEXT;
-        private readonly PFN_vkCmdDebugMarkerInsertEXT _vkCmdDebugMarkerInsertEXT;
         private readonly PFN_vkQueuePresentKHR _vkQueuePresentKHR;
         private readonly PFN_vkCreateMetalSurfaceEXT _createMetalSurfaceEXT;
 
@@ -135,6 +126,21 @@ namespace XenoAtom.Graphics.Vk
         public readonly PFN_vkDestroySwapchainKHR vkDestroySwapchainKHR;
         public readonly PFN_vkDestroySurfaceKHR vkDestroySurfaceKHR;
         public readonly PFN_vkGetSwapchainImagesKHR vkGetSwapchainImagesKHR;
+
+        // Function pointers for VK_EXT_debug_utils
+        private readonly bool _debugUtilsExtensionAvailable;
+        private readonly PFN_vkCreateDebugUtilsMessengerEXT _vkCreateDebugUtilsMessengerExt;
+        private readonly PFN_vkDestroyDebugUtilsMessengerEXT _vkDestroyDebugUtilsMessengerExt;
+        private readonly PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT;
+
+        public readonly PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelExt;
+        public readonly PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelExt;
+        public readonly PFN_vkCmdInsertDebugUtilsLabelEXT vkCmdInsertDebugUtilsLabelExt;
+
+        public readonly PFN_vkQueueBeginDebugUtilsLabelEXT vkQueueBeginDebugUtilsLabelExt;
+        public readonly PFN_vkQueueEndDebugUtilsLabelEXT vkQueueEndDebugUtilsLabelExt;
+        public readonly PFN_vkQueueInsertDebugUtilsLabelEXT vkQueueInsertDebugUtilsLabelExt;
+        private readonly VkDebugUtilsMessengerEXT _debugUtilsMessenger;
 
         private readonly object _submittedFencesLock = new object();
         private readonly ConcurrentQueue<XenoAtom.Interop.vulkan.VkFence> _availableSubmissionFences = new ConcurrentQueue<XenoAtom.Interop.vulkan.VkFence>();
@@ -245,14 +251,14 @@ namespace XenoAtom.Graphics.Vk
                 instanceExtensions.Add((nint)(byte*)requiredExt);
             }
 
-            bool debugReportExtensionAvailable = false;
+            _debugUtilsExtensionAvailable = false;
             bool khronosValidationSupported = false;
             if (options.Debug)
             {
-                if (availableInstanceExtensions.Contains(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
+                if (availableInstanceExtensions.Contains(VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
                 {
-                    debugReportExtensionAvailable = true;
-                    instanceExtensions.Add((nint)(byte*)VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+                    _debugUtilsExtensionAvailable = true;
+                    instanceExtensions.Add((nint)(byte*)VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
                     // Check for validation layers
                     khronosValidationSupported = availableInstanceLayers.Contains(VK_LAYER_KHRONOS_VALIDATION_EXTENSION_NAME);
@@ -271,53 +277,84 @@ namespace XenoAtom.Graphics.Vk
                 instanceCI.ppEnabledLayerNames = (byte**)instanceLayers.Data;
             }
 
+            VkDebugUtilsMessengerCreateInfoEXT debugUtilsCI = new VkDebugUtilsMessengerCreateInfoEXT
+            {
+                pfnUserCallback = (delegate* unmanaged[Stdcall]<VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT, VkDebugUtilsMessengerCallbackDataEXT*, void*, VkBool32>)&DebugCallback,
+                pUserData = (void*)GCHandle.ToIntPtr(_thisGcHandle)
+            };
+
+            if (_debugUtilsExtensionAvailable)
+            {
+                if ((options.DebugLogLevel & DebugLogLevel.Verbose) != 0)
+                {
+                    debugUtilsCI.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
+                }
+
+                if ((options.DebugLogLevel & DebugLogLevel.Info) != 0)
+                {
+                    debugUtilsCI.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+                }
+
+                if ((options.DebugLogLevel & DebugLogLevel.Warning) != 0)
+                {
+                    debugUtilsCI.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+                }
+
+                if ((options.DebugLogLevel & DebugLogLevel.Error) != 0)
+                {
+                    debugUtilsCI.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+                }
+
+                if ((options.DebugLogKind & DebugLogKind.General) != 0)
+                {
+                    debugUtilsCI.messageType |= VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT;
+                }
+
+                if ((options.DebugLogKind & DebugLogKind.Validation) != 0)
+                {
+                    debugUtilsCI.messageType |= VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+                }
+
+                if ((options.DebugLogKind & DebugLogKind.Performance) != 0)
+                {
+                    debugUtilsCI.messageType |= VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+                }
+
+                instanceCI.pNext = &debugUtilsCI;
+            }
+
+            // Create VkInstance
             vkCreateInstance(instanceCI, null, out _instance)
                 .VkCheck("vkCreateInstance failed. It could be that Vulkan is not supported, installed for the minimum required version 1.1 is not supported");
+
+            if (_debugUtilsExtensionAvailable)
+            {
+                _vkCreateDebugUtilsMessengerExt = vkGetInstanceProcAddr<PFN_vkCreateDebugUtilsMessengerEXT>(_instance);
+                if (_vkCreateDebugUtilsMessengerExt.IsNull)
+                {
+                    throw new GraphicsException("Unable to load vkCreateDebugUtilsMessengerEXT");
+                }
+                _vkDestroyDebugUtilsMessengerExt = vkGetInstanceProcAddr<PFN_vkDestroyDebugUtilsMessengerEXT>(_instance);
+                _vkSetDebugUtilsObjectNameEXT = vkGetInstanceProcAddr<PFN_vkSetDebugUtilsObjectNameEXT>(_instance);
+                vkCmdBeginDebugUtilsLabelExt = vkGetInstanceProcAddr<PFN_vkCmdBeginDebugUtilsLabelEXT>(_instance);
+                vkCmdEndDebugUtilsLabelExt = vkGetInstanceProcAddr<PFN_vkCmdEndDebugUtilsLabelEXT>(_instance);
+                vkCmdInsertDebugUtilsLabelExt = vkGetInstanceProcAddr<PFN_vkCmdInsertDebugUtilsLabelEXT>(_instance);
+                vkQueueBeginDebugUtilsLabelExt = vkGetInstanceProcAddr<PFN_vkQueueBeginDebugUtilsLabelEXT>(_instance);
+                vkQueueEndDebugUtilsLabelExt = vkGetInstanceProcAddr<PFN_vkQueueEndDebugUtilsLabelEXT>(_instance);
+                vkQueueInsertDebugUtilsLabelExt = vkGetInstanceProcAddr<PFN_vkQueueInsertDebugUtilsLabelEXT>(_instance);
+
+                VkDebugUtilsMessengerEXT debugMessenger;
+                _vkCreateDebugUtilsMessengerExt.Invoke(_instance, &debugUtilsCI, null, &debugMessenger)
+                    .VkCheck("Unable to create debug messenger");
+                _debugUtilsMessenger = debugMessenger;
+            }
+
 
             if (HasSurfaceExtension(VK_EXT_METAL_SURFACE_EXTENSION_NAME))
             {
                 _createMetalSurfaceEXT = vkGetInstanceProcAddr<PFN_vkCreateMetalSurfaceEXT>(_instance);
             }
 
-            // ---------------------------------------------------------------
-            // Debug Callbacks
-            // ---------------------------------------------------------------
-            if (options.Debug && debugReportExtensionAvailable)
-            {
-                var createFnPtr = vkGetInstanceProcAddr<PFN_vkCreateDebugReportCallbackEXT>(_instance);
-                if (!createFnPtr.IsNull)
-                {
-                    VkDebugReportCallbackCreateInfoEXT debugCallbackCi = new VkDebugReportCallbackCreateInfoEXT
-                    {
-                        pfnCallback = (delegate* unmanaged[Stdcall]<vulkan.VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, ulong, nuint, int, byte*, byte*, void*, vulkan.VkBool32>)&DebugCallback,
-                        pUserData = (void*)GCHandle.ToIntPtr(_thisGcHandle)
-                    };
-
-                    if ((options.DebugLogFlags & DebugLogFlags.Debug) != 0)
-                    {
-                        debugCallbackCi.flags |= VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-                    }
-
-                    if ((options.DebugLogFlags & DebugLogFlags.Info) != 0)
-                    {
-                        debugCallbackCi.flags |= VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
-                    }
-
-                    if ((options.DebugLogFlags & DebugLogFlags.Warning) != 0)
-                    {
-                        debugCallbackCi.flags |= VK_DEBUG_REPORT_WARNING_BIT_EXT;
-                    }
-
-                    if ((options.DebugLogFlags & DebugLogFlags.Error) != 0)
-                    {
-                        debugCallbackCi.flags |= VK_DEBUG_REPORT_ERROR_BIT_EXT;
-                    }
-
-                    createFnPtr.Invoke(_instance, debugCallbackCi, null, out _debugCallbackHandle)
-                        .VkCheck("Unable to setup debug callbacks.");
-                }
-            }
-            
             // ---------------------------------------------------------------
             // Create PhysicalDevice
             // ---------------------------------------------------------------
@@ -435,13 +472,7 @@ namespace XenoAtom.Graphics.Vk
                 for (int property = 0; property < props.Length; property++)
                 {
                     var extensionName = new ReadOnlyMemoryUtf8(properties[property].extensionName);
-                    if (extensionName == VK_EXT_DEBUG_MARKER_EXTENSION_NAME)
-                    {
-                        activeExtensions[activeExtensionCount++] = (nint)(byte*)VK_EXT_DEBUG_MARKER_EXTENSION_NAME;
-                        requiredDeviceExtensions.Remove(extensionName);
-                        _debugMarkerEnabled = true;
-                    }
-                    else if (extensionName == VK_KHR_SWAPCHAIN_EXTENSION_NAME)
+                    if (extensionName == VK_KHR_SWAPCHAIN_EXTENSION_NAME)
                     {
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
                         requiredDeviceExtensions.Remove(extensionName);
@@ -519,16 +550,6 @@ namespace XenoAtom.Graphics.Vk
             _driverName = Encoding.UTF8.GetString(driverProps.driverName, (int)VK_MAX_DRIVER_NAME_SIZE).TrimEnd('\0');
             _driverInfo = Encoding.UTF8.GetString(driverProps.driverInfo, (int)VK_MAX_DRIVER_INFO_SIZE).TrimEnd('\0');
 
-
-            // 
-            if (_debugMarkerEnabled)
-            {
-                _vkDebugMarkerSetObjectNameEX = vkGetDeviceProcAddr<PFN_vkDebugMarkerSetObjectNameEXT>(_device);
-                _vkCmdDebugMarkerBeginEXT = vkGetDeviceProcAddr<PFN_vkCmdDebugMarkerBeginEXT>(_device);
-                _vkCmdDebugMarkerEndEXT = vkGetDeviceProcAddr<PFN_vkCmdDebugMarkerEndEXT>(_device);
-                _vkCmdDebugMarkerInsertEXT = vkGetDeviceProcAddr<PFN_vkCmdDebugMarkerInsertEXT>(_device);
-            }
-
             // VK_KHR_surface
             vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(Instance);
             vkGetPhysicalDeviceSurfaceFormatsKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceFormatsKHR>(Instance);
@@ -564,7 +585,7 @@ namespace XenoAtom.Graphics.Vk
                 independentBlend: _physicalDeviceFeatures.independentBlend,
                 structuredBuffer: true,
                 subsetTextureView: true,
-                commandListDebugMarkers: _debugMarkerEnabled,
+                commandListDebugMarkers: _debugUtilsExtensionAvailable,
                 bufferRangeBinding: true,
                 shaderFloat64: _physicalDeviceFeatures.shaderFloat64);
 
@@ -594,6 +615,12 @@ namespace XenoAtom.Graphics.Vk
         }
 
         public override ResourceFactory ResourceFactory { get; }
+
+
+        public void DebugLog(DebugLogLevel level, DebugLogKind kind, string message)
+        {
+            _debugLog?.Invoke(level, kind, message);
+        }
 
         private protected override void SubmitCommandsCore(CommandList cl, Fence? fence)
         {
@@ -781,7 +808,7 @@ namespace XenoAtom.Graphics.Vk
 
         internal void SetResourceName(IDeviceResource resource, string? name)
         {
-            if (!_debugMarkerEnabled)
+            if (!_debugUtilsExtensionAvailable)
             {
                 return;
             }
@@ -789,70 +816,71 @@ namespace XenoAtom.Graphics.Vk
             switch (resource)
             {
                 case VkBuffer buffer:
-                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, (ulong)buffer.DeviceBuffer.Value.Handle, name);
+                    SetDebugMarkerName(VK_OBJECT_TYPE_BUFFER, (ulong)buffer.DeviceBuffer.Value.Handle, name);
                     break;
                 case VkCommandList commandList:
                     SetDebugMarkerName(
-                        VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
+                        VK_OBJECT_TYPE_COMMAND_BUFFER,
                         (ulong)commandList.CommandBuffer.Value.Handle,
                         $"{name}_CommandBuffer");
                     SetDebugMarkerName(
-                        VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT,
+                        VK_OBJECT_TYPE_COMMAND_POOL,
                         (ulong)commandList.CommandPool.Value.Handle,
                         $"{name}_CommandPool");
                     break;
                 case VkFramebuffer framebuffer:
                     SetDebugMarkerName(
-                        VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT,
+                        VK_OBJECT_TYPE_FRAMEBUFFER,
                         (ulong)framebuffer.CurrentFramebuffer.Value.Handle,
                         name);
                     break;
                 case VkPipeline pipeline:
-                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, (ulong)pipeline.DevicePipeline.Value.Handle, name);
-                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, (ulong)pipeline.PipelineLayout.Value.Handle, name);
+                    SetDebugMarkerName(VK_OBJECT_TYPE_PIPELINE, (ulong)pipeline.DevicePipeline.Value.Handle, name);
+                    SetDebugMarkerName(VK_OBJECT_TYPE_PIPELINE_LAYOUT, (ulong)pipeline.PipelineLayout.Value.Handle, name);
                     break;
                 case VkResourceLayout resourceLayout:
                     SetDebugMarkerName(
-                        VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
+                        VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
                         (ulong)resourceLayout.DescriptorSetLayout.Value.Handle,
                         name);
                     break;
                 case VkResourceSet resourceSet:
-                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (ulong)resourceSet.DescriptorSet.Value.Handle, name);
+                    SetDebugMarkerName(VK_OBJECT_TYPE_DESCRIPTOR_SET, (ulong)resourceSet.DescriptorSet.Value.Handle, name);
                     break;
                 case VkSampler sampler:
-                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, (ulong)sampler.DeviceSampler.Value.Handle, name);
+                    SetDebugMarkerName(VK_OBJECT_TYPE_SAMPLER, (ulong)sampler.DeviceSampler.Value.Handle, name);
                     break;
                 case VkShader shader:
-                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, (ulong)shader.ShaderModule.Value.Handle, name);
+                    SetDebugMarkerName(VK_OBJECT_TYPE_SHADER_MODULE, (ulong)shader.ShaderModule.Value.Handle, name);
                     break;
                 case VkTexture tex:
-                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, (ulong)tex.OptimalDeviceImage.Value.Handle, name);
+                    SetDebugMarkerName(VK_OBJECT_TYPE_IMAGE, (ulong)tex.OptimalDeviceImage.Value.Handle, name);
                     break;
                 case VkTextureView texView:
-                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, (ulong)texView.ImageView.Value.Handle, name);
+                    SetDebugMarkerName(VK_OBJECT_TYPE_IMAGE_VIEW, (ulong)texView.ImageView.Value.Handle, name);
                     break;
                 case VkFence fence:
-                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, (ulong)fence.DeviceFence.Value.Handle, name);
+                    SetDebugMarkerName(VK_OBJECT_TYPE_FENCE, (ulong)fence.DeviceFence.Value.Handle, name);
                     break;
                 case VkSwapchain sc:
-                    SetDebugMarkerName(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, (ulong)sc.DeviceSwapchain.Value.Handle, name);
+                    SetDebugMarkerName(VK_OBJECT_TYPE_SWAPCHAIN_KHR, (ulong)sc.DeviceSwapchain.Value.Handle, name);
                     break;
                 default:
                     break;
             }
         }
 
-        private void SetDebugMarkerName(VkDebugReportObjectTypeEXT type, ulong target, string? name)
+        private void SetDebugMarkerName(VkObjectType objectType, ulong target, string? name)
         {
-            Debug.Assert(_vkDebugMarkerSetObjectNameEX != default);
+            Debug.Assert(_vkSetDebugUtilsObjectNameEXT != default);
 
             name ??= string.Empty;
 
-            var nameInfo = new VkDebugMarkerObjectNameInfoEXT
+            var nameInfo = new VkDebugUtilsObjectNameInfoEXT
             {
-                objectType = type,
-                @object = target
+                objectType = objectType,
+                objectHandle = target,
+
             };
 
             int byteCount = Encoding.UTF8.GetByteCount(name);
@@ -864,7 +892,7 @@ namespace XenoAtom.Graphics.Vk
             utf8Ptr[byteCount] = 0;
 
             nameInfo.pObjectName = utf8Ptr;
-            _vkDebugMarkerSetObjectNameEX.Invoke(_device, &nameInfo)
+            _vkSetDebugUtilsObjectNameEXT.Invoke(_device, &nameInfo)
                 .VkCheck("Unable to set debug marker object name");
         }
 
@@ -875,18 +903,12 @@ namespace XenoAtom.Graphics.Vk
 
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvStdcall)])]
         private static VkBool32 DebugCallback(
-            VkDebugReportFlagsEXT flags,
-            VkDebugReportObjectTypeEXT objectType,
-            ulong @object,
-            nuint location,
-            int messageCode,
-            byte* pLayerPrefix,
-            byte* pMessage,
+            VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+            VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+            VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
             void* pUserData)
         {
-            string message = Util.GetString(pMessage);
-            var debugReportFlags = (VkDebugReportFlagBitsEXT)flags;
-
+            string message = Util.GetString(pCallbackData->pMessage);
 #if DEBUG
             if (Debugger.IsAttached)
             {
@@ -898,35 +920,53 @@ namespace XenoAtom.Graphics.Vk
             var device = (VkGraphicsDevice)gcHandle.Target!;
             if (device._debugLog != null)
             {
-                DebugLogFlags debugLogFlags = DebugLogFlags.None;
+                DebugLogLevel debugLogLevel = DebugLogLevel.None;
 
-                if ((debugReportFlags & VkDebugReportFlagBitsEXT.VK_DEBUG_REPORT_ERROR_BIT_EXT) != 0)
+                if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) != 0)
                 {
-                    debugLogFlags |= DebugLogFlags.Error;
+                    debugLogLevel |= DebugLogLevel.Verbose;
                 }
 
-                if ((debugReportFlags & VkDebugReportFlagBitsEXT.VK_DEBUG_REPORT_WARNING_BIT_EXT) != 0)
+                if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) != 0)
                 {
-                    debugLogFlags |= DebugLogFlags.Warning;
+                    debugLogLevel |= DebugLogLevel.Info;
                 }
 
-                if ((debugReportFlags & VkDebugReportFlagBitsEXT.VK_DEBUG_REPORT_INFORMATION_BIT_EXT) != 0)
+                if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) != 0)
                 {
-                    debugLogFlags |= DebugLogFlags.Info;
+                    debugLogLevel |= DebugLogLevel.Warning;
+                }
+
+                if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0)
+                {
+                    debugLogLevel |= DebugLogLevel.Error;
+                }
+
+                DebugLogKind debugLogKind = DebugLogKind.None;
+
+                if ((messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) != 0)
+                {
+                    debugLogKind |= DebugLogKind.General;
+                }
+
+                if ((messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) != 0)
+                {
+                    debugLogKind |= DebugLogKind.Validation;
+                }
+
+                if ((messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0)
+                {
+                    debugLogKind |= DebugLogKind.Performance;
+                }
+
+                string fullMessage = message;
+                if (pCallbackData->objectCount > 0)
+                {
+                    // Use only the first object
+                    fullMessage = $"({pCallbackData->pObjects[0].objectType}) {message}";
                 }
                 
-                if ((debugReportFlags & VkDebugReportFlagBitsEXT.VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) != 0)
-                {
-                    debugLogFlags |= DebugLogFlags.Performance;
-                }
-                
-                if ((debugReportFlags & VkDebugReportFlagBitsEXT.VK_DEBUG_REPORT_DEBUG_BIT_EXT) != 0)
-                {
-                    debugLogFlags |= DebugLogFlags.Debug;
-                }
-
-                string fullMessage = $"[{debugReportFlags}] ({objectType}) {message}";
-                device._debugLog(debugLogFlags, fullMessage);
+                device._debugLog(debugLogLevel, debugLogKind, fullMessage);
             }
             
             return 0;
@@ -1028,11 +1068,6 @@ namespace XenoAtom.Graphics.Vk
             }
 
             _mainSwapchain?.Dispose();
-            if (_debugCallbackHandle != default)
-            {
-                PFN_vkDestroyDebugReportCallbackEXT destroyFuncPtr = vkGetInstanceProcAddr<PFN_vkDestroyDebugReportCallbackEXT>(_instance);
-                destroyFuncPtr.Invoke(_instance, _debugCallbackHandle, null);
-            }
 
             _descriptorPoolManager.DestroyAll();
             vkDestroyCommandPool(_device, _graphicsCommandPool, null);
@@ -1063,6 +1098,12 @@ namespace XenoAtom.Graphics.Vk
             vkDeviceWaitIdle(_device)
                 .VkCheck("Unable to wait for idle on device");
             vkDestroyDevice(_device, null);
+
+            if (_debugUtilsMessenger != default && !_vkDestroyDebugUtilsMessengerExt.IsNull)
+            {
+                _vkDestroyDebugUtilsMessengerExt.Invoke(_instance, _debugUtilsMessenger, null);
+            }
+
             vkDestroyInstance(_instance, null);
 
             var thisGcHandle = _thisGcHandle;

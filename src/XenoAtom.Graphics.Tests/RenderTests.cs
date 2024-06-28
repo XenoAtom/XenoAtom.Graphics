@@ -990,21 +990,21 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void BindTextureAcrossMultipleDrawCalls()
         {
-            Texture target1 = RF.CreateTexture(TextureDescription.Texture2D(
+            using Texture target1 = RF.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            Texture target2 = RF.CreateTexture(TextureDescription.Texture2D(
+            using Texture target2 = RF.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget | TextureUsage.Sampled));
-            TextureView textureView = RF.CreateTextureView(target2);
+            using TextureView textureView = RF.CreateTextureView(target2);
 
-            Texture staging1 = RF.CreateTexture(TextureDescription.Texture2D(
+            using Texture staging1 = RF.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
-            Texture staging2 = RF.CreateTexture(TextureDescription.Texture2D(
+            using Texture staging2 = RF.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
-            Texture staging3 = RF.CreateTexture(TextureDescription.Texture2D(
+            using Texture staging3 = RF.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
 
-            Framebuffer framebuffer1 = RF.CreateFramebuffer(new FramebufferDescription(null, target1));
-            Framebuffer framebuffer2 = RF.CreateFramebuffer(new FramebufferDescription(null, target2));
+            using Framebuffer framebuffer1 = RF.CreateFramebuffer(new FramebufferDescription(null, target1));
+            using Framebuffer framebuffer2 = RF.CreateFramebuffer(new FramebufferDescription(null, target2));
 
             // This shader doesn't really matter, just as long as it is different to the first
             // and third render pass and also doesn't use any texture bindings
@@ -1023,7 +1023,7 @@ namespace XenoAtom.Graphics.Tests
                 },
                 TestShaders.LoadVertexFragment(RF, "VertexLayoutTestShader"));
 
-            DeviceBuffer vertexBuffer = RF.CreateBuffer(new BufferDescription(
+            using DeviceBuffer vertexBuffer = RF.CreateBuffer(new BufferDescription(
                 (uint)Unsafe.SizeOf<TestVertex>() * 3,
                 BufferUsage.VertexBuffer));
             GD.UpdateBuffer(vertexBuffer, 0, new[] {
@@ -1037,13 +1037,13 @@ namespace XenoAtom.Graphics.Tests
             for (int i = 0; i < colors.Length; i++) { colors[i] = RgbaFloat.Pink; }
             GD.UpdateTexture(target2, colors, 0, 0, 0, target2.Width, target2.Height, 1, 0, 0);
 
-            ResourceLayout textureLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            using ResourceLayout textureLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("Tex", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                 new ResourceLayoutElementDescription("Smp", ResourceKind.Sampler, ShaderStages.Fragment)));
 
-            ResourceSet textureSet = RF.CreateResourceSet(new ResourceSetDescription(textureLayout, textureView, GD.PointSampler));
+            using ResourceSet textureSet = RF.CreateResourceSet(new ResourceSetDescription(textureLayout, textureView, GD.PointSampler));
 
-            Pipeline texturePipeline = RF.CreateGraphicsPipeline(new GraphicsPipelineDescription(
+            using Pipeline texturePipeline = RF.CreateGraphicsPipeline(new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
                 DepthStencilStateDescription.Disabled,
                 RasterizerStateDescription.CullNone,
@@ -1051,7 +1051,7 @@ namespace XenoAtom.Graphics.Tests
                 textureShaderSet,
                 textureLayout,
                 framebuffer1.OutputDescription));
-            Pipeline quadPipeline = RF.CreateGraphicsPipeline(new GraphicsPipelineDescription(
+            using Pipeline quadPipeline = RF.CreateGraphicsPipeline(new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
                 DepthStencilStateDescription.Disabled,
                 RasterizerStateDescription.CullNone,
@@ -1060,7 +1060,7 @@ namespace XenoAtom.Graphics.Tests
                 Array.Empty<ResourceLayout>(),
                 framebuffer2.OutputDescription));
 
-            CommandList cl = RF.CreateCommandList();
+            using CommandList cl = RF.CreateCommandList();
 
             cl.Begin();
             cl.SetFramebuffer(framebuffer1);

@@ -158,6 +158,7 @@ namespace XenoAtom.Graphics.Vk
                 bufferCI.size = stagingSize;
                 VkResult result = vkCreateBuffer(_gd.Device, bufferCI, null, out _stagingBuffer);
                 CheckResult(result);
+                //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General, $"(StagingBuffer Texture) VkBuffer Created 0x{_stagingBuffer.Value.Handle:X16}");
 
                 VkMemoryRequirements bufferMemReqs;
                 bool prefersDedicatedAllocation;
@@ -441,6 +442,7 @@ namespace XenoAtom.Graphics.Vk
                 bool isStaging = (Usage & TextureUsage.Staging) == TextureUsage.Staging;
                 if (isStaging)
                 {
+                    //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General, $"(StagingBuffer Texture) VkBuffer Destroyed 0x{_stagingBuffer.Value.Handle:X16}");
                     vkDestroyBuffer(_gd.Device, _stagingBuffer, null);
                 }
                 else

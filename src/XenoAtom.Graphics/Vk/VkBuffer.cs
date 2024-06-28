@@ -59,6 +59,7 @@ namespace XenoAtom.Graphics.Vk
             };
             VkResult result = vkCreateBuffer(gd.Device, bufferCI, null, out _deviceBuffer);
             CheckResult(result);
+            //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General, $"VkBuffer Created 0x{_deviceBuffer.Value.Handle:X16}");
 
             bool prefersDedicatedAllocation;
             var memReqInfo2 = new VkBufferMemoryRequirementsInfo2
@@ -131,6 +132,7 @@ namespace XenoAtom.Graphics.Vk
             if (!_destroyed)
             {
                 _destroyed = true;
+                //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General,$"VkBuffer Destroyed 0x{_deviceBuffer.Value.Handle:X16}");
                 vkDestroyBuffer(_gd.Device, _deviceBuffer, null);
                 _gd.MemoryManager.Free(Memory);
             }

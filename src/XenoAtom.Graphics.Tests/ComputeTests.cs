@@ -96,20 +96,18 @@ namespace XenoAtom.Graphics.Tests
         /// <summary>
         /// Returns the number of texels in the texture that DO NOT match the fill value.
         /// </summary>
-        private static int CountTexelsNotFilledAtDepth<TexelType>(GraphicsDevice device, Texture texture, TexelType fillValue, uint depth)
+        private int CountTexelsNotFilledAtDepth<TexelType>(GraphicsDevice device, Texture texture, TexelType fillValue, uint depth)
             where TexelType : unmanaged
         {
-            ResourceFactory factory = device.ResourceFactory;
-
             // We need to create a staging texture and copy into it.
             TextureDescription description = new TextureDescription(texture.Width, texture.Height, depth: 1,
                 texture.MipLevels, texture.ArrayLayers,
                 texture.Format, TextureUsage.Staging,
                 texture.Type, texture.SampleCount);
 
-            Texture staging = factory.CreateTexture(ref description);
+            using Texture staging = RF.CreateTexture(ref description);
 
-            using CommandList cl = factory.CreateCommandList();
+            using CommandList cl = RF.CreateCommandList();
             cl.Begin();
 
             cl.CopyTexture(texture,

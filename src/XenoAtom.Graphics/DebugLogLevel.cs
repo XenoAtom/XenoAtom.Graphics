@@ -11,7 +11,7 @@ namespace XenoAtom.Graphics
     /// Flags used to log messages from the graphics backend.
     /// </summary>
     [Flags]
-    public enum DebugLogFlags
+    public enum DebugLogLevel
     {
         /// <summary>
         /// No debug log.
@@ -19,9 +19,9 @@ namespace XenoAtom.Graphics
         None = 0,
 
         /// <summary>
-        /// Log messages that are useful for debugging.
+        /// Log messages with verbose level.
         /// </summary>
-        Debug = 1 << 0,
+        Verbose = 1 << 0,
 
         /// <summary>
         /// Log messages that are useful for diagnosing problems.
@@ -37,69 +37,85 @@ namespace XenoAtom.Graphics
         /// Log messages that are useful for diagnosing problems.
         /// </summary>
         Error = 1 << 3,
-
-        /// <summary>
-        /// Log messages that are useful for diagnosing problems.
-        /// </summary>
-        Performance = 1 << 4,
     }
 
-    /// <summary>
-    /// Extensions for <see cref="DebugLogFlags"/>.
-    /// </summary>
-    public static class DebugLogFlagsExtensions
+    [Flags]
+    public enum DebugLogKind
     {
         /// <summary>
-        /// Converts a <see cref="DebugLogFlags"/> to a string.
+        /// No selection.
         /// </summary>
-        /// <param name="flags">The flags</param>
+        None = 0,
+
+        /// <summary>
+        /// Specifies that some general event has occurred. This is typically a non-specification, non-performance event.
+        /// </summary>
+        General = 1 << 0,
+
+        /// <summary>
+        /// Specifies that something has occurred during validation against the Vulkan specification that may indicate invalid behavior.
+        /// </summary>
+        Validation = 1 << 1,
+
+        /// <summary>
+        /// Specifies a potentially non-optimal use of Vulkan
+        /// </summary>
+        Performance = 1 << 2,
+
+        /// <summary>
+        /// All debug log kinds.
+        /// </summary>
+        All = General | Validation | Performance
+    }
+    
+    /// <summary>
+    /// Extensions for <see cref="DebugLogLevel"/>.
+    /// </summary>
+    public static class DebugLogLevelExtensions
+    {
+        /// <summary>
+        /// Converts a <see cref="DebugLogLevel"/> to a string.
+        /// </summary>
+        /// <param name="debugLogLevel">The flags</param>
         /// <returns>A string representation.</returns>
-        public static string ToText(this DebugLogFlags flags)
+        public static string ToText(this DebugLogLevel debugLogLevel)
         {
-            switch (flags)
+            switch (debugLogLevel)
             {
-                case DebugLogFlags.None:
+                case DebugLogLevel.None:
                     return "None";
-                case DebugLogFlags.Debug:
-                    return "Debug";
-                case DebugLogFlags.Info:
+                case DebugLogLevel.Verbose:
+                    return "Verbose";
+                case DebugLogLevel.Info:
                     return "Info";
-                case DebugLogFlags.Warning:
+                case DebugLogLevel.Warning:
                     return "Warning";
-                case DebugLogFlags.Error:
+                case DebugLogLevel.Error:
                     return "Error";
-                case DebugLogFlags.Performance:
-                    return "Performance";
                 default:
                 {
                     var builder = new StringBuilder();
-                    if ((flags & DebugLogFlags.Debug) != 0)
+                    if ((debugLogLevel & DebugLogLevel.Verbose) != 0)
                     {
-                        builder.Append("Debug");
+                        builder.Append("Verbose");
                     }
 
-                    if ((flags & DebugLogFlags.Info) != 0)
+                    if ((debugLogLevel & DebugLogLevel.Info) != 0)
                     {
                         if (builder.Length > 0) builder.Append(" | ");
                         builder.Append("Info");
                     }
 
-                    if ((flags & DebugLogFlags.Warning) != 0)
+                    if ((debugLogLevel & DebugLogLevel.Warning) != 0)
                     {
                         if (builder.Length > 0) builder.Append(" | ");
                         builder.Append("Warning");
                     }
 
-                    if ((flags & DebugLogFlags.Error) != 0)
+                    if ((debugLogLevel & DebugLogLevel.Error) != 0)
                     {
                         if (builder.Length > 0) builder.Append(" | ");
                         builder.Append("Error");
-                    }
-
-                    if ((flags & DebugLogFlags.Performance) != 0)
-                    {
-                        if (builder.Length > 0) builder.Append(" | ");
-                        builder.Append("Performance");
                     }
 
                     return builder.ToString();
@@ -111,7 +127,7 @@ namespace XenoAtom.Graphics
     /// <summary>
     /// A delegate used to log messages from the graphics backend.
     /// </summary>
-    /// <param name="flags">The kind of debug.</param>
+    /// <param name="debugLogLevel">The kind of debug.</param>
     /// <param name="message">The message.</param>
-    public delegate void DebugLogDelegate(DebugLogFlags flags, string message);
+    public delegate void DebugLogDelegate(DebugLogLevel debugLogLevel, DebugLogKind debugLogKind, string message);
 }

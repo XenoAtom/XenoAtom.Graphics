@@ -19,10 +19,15 @@ namespace XenoAtom.Graphics
         public DebugLogDelegate DebugLog;
 
         /// <summary>
-        /// Flags used to log messages from the graphics backend. Default is <see cref="Graphics.DebugLogFlags.Error"/> and <see cref="Graphics.DebugLogFlags.Warning"/>.
+        /// Flags used to log messages from the graphics backend. Default is <see cref="DebugLogLevel.Error"/> and <see cref="DebugLogLevel.Warning"/>.
         /// </summary>
-        public DebugLogFlags DebugLogFlags;
+        public DebugLogLevel DebugLogLevel;
 
+        /// <summary>
+        /// Indicates the kind of debug messages that should be logged. Default is <see cref="DebugLogKind.General | DebugLogKind.Validation"/>.
+        /// </summary>
+        public DebugLogKind DebugLogKind;
+        
         /// <summary>
         /// Indicates whether the Graphicsdevice will include a "main" Swapchain. If this value is true, then the GraphicsDevice
         /// must be created with one of the overloads that provides Swapchain source information.
@@ -68,7 +73,8 @@ namespace XenoAtom.Graphics
         {
             Debug = debug;
             DebugLog = LogToConsole;
-            DebugLogFlags = DebugLogFlags.Warning | DebugLogFlags.Error;
+            DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
+            DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
         }
 
         /// <summary>
@@ -84,7 +90,8 @@ namespace XenoAtom.Graphics
         {
             Debug = debug;
             DebugLog = LogToConsole;
-            DebugLogFlags = DebugLogFlags.Warning | DebugLogFlags.Error;
+            DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
+            DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -108,7 +115,8 @@ namespace XenoAtom.Graphics
         {
             Debug = debug;
             DebugLog = LogToConsole;
-            DebugLogFlags = DebugLogFlags.Warning | DebugLogFlags.Error;
+            DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
+            DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -136,7 +144,8 @@ namespace XenoAtom.Graphics
         {
             Debug = debug;
             DebugLog = LogToConsole;
-            DebugLogFlags = DebugLogFlags.Warning | DebugLogFlags.Error;
+            DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
+            DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -168,7 +177,8 @@ namespace XenoAtom.Graphics
         {
             Debug = debug;
             DebugLog = LogToConsole;
-            DebugLogFlags = DebugLogFlags.Warning | DebugLogFlags.Error;
+            DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
+            DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -206,7 +216,8 @@ namespace XenoAtom.Graphics
         {
             Debug = debug;
             DebugLog = LogToConsole;
-            DebugLogFlags = DebugLogFlags.Warning | DebugLogFlags.Error;
+            DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
+            DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -216,6 +227,6 @@ namespace XenoAtom.Graphics
             SwapchainSrgbFormat = swapchainSrgbFormat;
         }
 
-        private static readonly DebugLogDelegate LogToConsole = static (kind, message) => Console.WriteLine($"[{kind.ToText()}] {message}");
+        private static readonly DebugLogDelegate LogToConsole = static (level, kind, message) => Console.WriteLine($"[{level.ToText()}] {kind} - {message}");
     }
 }

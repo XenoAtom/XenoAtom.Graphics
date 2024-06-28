@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Text;
+using XenoAtom.Interop;
 
 namespace XenoAtom.Graphics.Vk
 {
@@ -1299,52 +1300,38 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        private protected override void PushDebugGroupCore(string name)
+        public override void PushDebugGroup(ReadOnlySpanUtf8 name, in RgbaFloat color = default)
         {
-            var func = _gd.vkCmdDebugMarkerBeginExt;
-            if (func == null) { return; }
+            var func = _gd.vkCmdBeginDebugUtilsLabelExt;
+            if (func == default) { return; }
 
-            VkDebugMarkerMarkerInfoEXT markerInfo = new VkDebugMarkerMarkerInfoEXT();
-
-            int byteCount = Encoding.UTF8.GetByteCount(name);
-            byte* utf8Ptr = stackalloc byte[byteCount + 1];
-            fixed (char* namePtr = name)
+            var label = new VkDebugUtilsLabelEXT
             {
-                Encoding.UTF8.GetBytes(namePtr, name.Length, utf8Ptr, byteCount);
-            }
-            utf8Ptr[byteCount] = 0;
-
-            markerInfo.pMarkerName = utf8Ptr;
-
-            func.Invoke(_cb, &markerInfo);
+                pLabelName = (byte*)name
+            };
+            *(RgbaFloat*)label.color = color;
+            func.Invoke(_cb, &label);
         }
 
-        private protected override void PopDebugGroupCore()
+        public override void PopDebugGroup()
         {
-            var func = _gd.vkCmdDebugMarkerEndExt;
-            if (func == null) { return; }
+            var func = _gd.vkCmdEndDebugUtilsLabelExt;
+            if (func == default) { return; }
 
             func.Invoke(_cb);
         }
 
-        private protected override void InsertDebugMarkerCore(string name)
+        public override void InsertDebugMarker(ReadOnlySpanUtf8 name, in RgbaFloat color = default)
         {
-            var func = _gd.vkCmdDebugMarkerInsertExt;
-            if (func == null) { return; }
+            var func = _gd.vkCmdInsertDebugUtilsLabelExt;
+            if (func == default) { return; }
 
-            VkDebugMarkerMarkerInfoEXT markerInfo = new VkDebugMarkerMarkerInfoEXT();
-
-            int byteCount = Encoding.UTF8.GetByteCount(name);
-            byte* utf8Ptr = stackalloc byte[byteCount + 1];
-            fixed (char* namePtr = name)
+            var label = new VkDebugUtilsLabelEXT
             {
-                Encoding.UTF8.GetBytes(namePtr, name.Length, utf8Ptr, byteCount);
-            }
-            utf8Ptr[byteCount] = 0;
-
-            markerInfo.pMarkerName = utf8Ptr;
-
-            func.Invoke(_cb, &markerInfo);
+                pLabelName = (byte*)name
+            };
+            *(RgbaFloat*)label.color = color;
+            func.Invoke(_cb, &label);
         }
 
         public override void Dispose()

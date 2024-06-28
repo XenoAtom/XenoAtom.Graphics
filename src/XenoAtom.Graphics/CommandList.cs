@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
+using XenoAtom.Interop;
 
 namespace XenoAtom.Graphics
 {
@@ -1168,35 +1170,54 @@ namespace XenoAtom.Graphics
         /// <see cref="PopDebugGroup"/>.
         /// </summary>
         /// <param name="name">The name of the group. This is an opaque identifier used for display by graphics debuggers.</param>
-        public void PushDebugGroup(string name)
+        /// <param name="color">An optional color used for the marker.</param>
+        public void PushDebugGroup(string name, in RgbaFloat color = default)
         {
-            PushDebugGroupCore(name);
+            var utf8Count = Encoding.UTF8.GetByteCount(name);
+            Span<byte> utf8Buffer = stackalloc byte[utf8Count + 1];
+            Encoding.UTF8.GetBytes(name, utf8Buffer);
+            utf8Buffer[utf8Count] = 0;
+            PushDebugGroup((ReadOnlySpan<byte>)utf8Buffer, color);
         }
-
-        private protected abstract void PushDebugGroupCore(string name);
 
         /// <summary>
-        /// Pops the current debug group. This method must only be called after <see cref="PushDebugGroup(string)"/> has been
+        /// Pushes a debug group at the current position in the <see cref="CommandList"/>. This allows subsequent commands to be
+        /// categorized and filtered when viewed in external debugging tools. This method can be called multiple times in order
+        /// to create nested debug groupings. Each call to PushDebugGroup must be followed by a matching call to
+        /// <see cref="PopDebugGroup"/>.
+        /// </summary>
+        /// <param name="name">The name of the group. This is an opaque identifier used for display by graphics debuggers.</param>
+        /// <param name="color">An optional color used for the marker.</param>
+        public abstract void PushDebugGroup(ReadOnlySpanUtf8 name, in RgbaFloat color = default);
+
+        /// <summary>
+        /// Pops the current debug group. This method must only be called after <see cref="PushDebugGroup(string,in XenoAtom.Graphics.RgbaFloat)"/> has been
         /// called on this instance.
         /// </summary>
-        public void PopDebugGroup()
-        {
-            PopDebugGroupCore();
-        }
+        public abstract void PopDebugGroup();
 
-        private protected abstract void PopDebugGroupCore();
+        /// <summary>
+        /// Inserts a debug marker into the CommandList at the current position. This is used by graphics debuggers to identify
+        /// points of interest in a command stream.
+        /// </summary>
+        /// <param name="color">An optional color used for the marker.</param>
+        /// <param name="name">The name of the marker. This is an opaque identifier used for display by graphics debuggers.</param>
+        public void InsertDebugMarker(string name, in RgbaFloat color = default)
+        {
+            var utf8Count = Encoding.UTF8.GetByteCount(name);
+            Span<byte> utf8Buffer = stackalloc byte[utf8Count + 1];
+            Encoding.UTF8.GetBytes(name, utf8Buffer);
+            utf8Buffer[utf8Count] = 0;
+            InsertDebugMarker((ReadOnlySpan<byte>)utf8Buffer, color);
+        }
 
         /// <summary>
         /// Inserts a debug marker into the CommandList at the current position. This is used by graphics debuggers to identify
         /// points of interest in a command stream.
         /// </summary>
         /// <param name="name">The name of the marker. This is an opaque identifier used for display by graphics debuggers.</param>
-        public void InsertDebugMarker(string name)
-        {
-            InsertDebugMarkerCore(name);
-        }
-
-        private protected abstract void InsertDebugMarkerCore(string name);
+        /// <param name="color">An optional color used for the marker.</param>
+        public abstract void InsertDebugMarker(ReadOnlySpanUtf8 name, in RgbaFloat color = default);
 
         /// <summary>
         /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
