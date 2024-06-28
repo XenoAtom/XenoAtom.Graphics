@@ -1,21 +1,20 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
     /// <summary>
     /// A <see cref="Pipeline"/> component describing the blend behavior for an individual color attachment.
     /// </summary>
-    public struct BlendAttachmentDescription : IEquatable<BlendAttachmentDescription>
+    public record struct BlendAttachmentDescription
     {
         /// <summary>
         /// Controls whether blending is enabled for the color attachment.
         /// </summary>
         public bool BlendEnabled;
         /// <summary>
-        /// Controls which components of the color will be written to the framebuffer.
-        /// If <c>null</c>, the mask will be set to <see cref="XenoAtom.Graphics.ColorWriteMask.All"/>.
+        /// Controls which components of the color will be written to the framebuffer. The default is <see cref="ColorWriteMask.All"/>.
         /// </summary>
-        public ColorWriteMask? ColorWriteMask;
+        public ColorWriteMask ColorWriteMask;
         /// <summary>
         /// Controls the source color's influence on the blend result.
         /// </summary>
@@ -40,6 +39,13 @@ namespace XenoAtom.Graphics
         /// Controls the function used to combine the source and destination alpha factors.
         /// </summary>
         public BlendFunction AlphaFunction;
+
+
+        public BlendAttachmentDescription()
+        {
+            ColorWriteMask = ColorWriteMask.All;
+        }
+
 
         /// <summary>
         /// Constructs a new <see cref="BlendAttachmentDescription"/>.
@@ -67,7 +73,7 @@ namespace XenoAtom.Graphics
             SourceAlphaFactor = sourceAlphaFactor;
             DestinationAlphaFactor = destinationAlphaFactor;
             AlphaFunction = alphaFunction;
-            ColorWriteMask = null;
+            ColorWriteMask = ColorWriteMask.All;
         }
 
         /// <summary>
@@ -113,7 +119,7 @@ namespace XenoAtom.Graphics
         ///     DestinationAlphaFactor = BlendFactor.Zero
         ///     AlphaFunction = BlendFunction.Add
         /// </summary>
-        public static readonly BlendAttachmentDescription OverrideBlend = new BlendAttachmentDescription
+        public static readonly BlendAttachmentDescription OverrideBlend = new()
         {
             BlendEnabled = true,
             SourceColorFactor = BlendFactor.One,
@@ -136,7 +142,7 @@ namespace XenoAtom.Graphics
         ///     DestinationAlphaFactor = BlendFactor.InverseSourceAlpha
         ///     AlphaFunction = BlendFunction.Add
         /// </summary>
-        public static readonly BlendAttachmentDescription AlphaBlend = new BlendAttachmentDescription
+        public static readonly BlendAttachmentDescription AlphaBlend = new()
         {
             BlendEnabled = true,
             SourceColorFactor = BlendFactor.SourceAlpha,
@@ -159,7 +165,7 @@ namespace XenoAtom.Graphics
         ///     DestinationAlphaFactor = BlendFactor.One
         ///     AlphaFunction = BlendFunction.Add
         /// </summary>
-        public static readonly BlendAttachmentDescription AdditiveBlend = new BlendAttachmentDescription
+        public static readonly BlendAttachmentDescription AdditiveBlend = new()
         {
             BlendEnabled = true,
             SourceColorFactor = BlendFactor.SourceAlpha,
@@ -182,7 +188,7 @@ namespace XenoAtom.Graphics
         ///     DestinationAlphaFactor = BlendFactor.Zero
         ///     AlphaFunction = BlendFunction.Add
         /// </summary>
-        public static readonly BlendAttachmentDescription Disabled = new BlendAttachmentDescription
+        public static readonly BlendAttachmentDescription Disabled = new()
         {
             BlendEnabled = false,
             SourceColorFactor = BlendFactor.One,
@@ -192,37 +198,5 @@ namespace XenoAtom.Graphics
             DestinationAlphaFactor = BlendFactor.Zero,
             AlphaFunction = BlendFunction.Add,
         };
-
-        /// <summary>
-        /// Element-wise equality.
-        /// </summary>
-        /// <param name="other">The instance to compare to.</param>
-        /// <returns>True if all elements and all array elements are equal; false otherswise.</returns>
-        public bool Equals(BlendAttachmentDescription other)
-        {
-            return BlendEnabled.Equals(other.BlendEnabled)
-                && ColorWriteMask.Equals(other.ColorWriteMask)
-                && SourceColorFactor == other.SourceColorFactor
-                && DestinationColorFactor == other.DestinationColorFactor && ColorFunction == other.ColorFunction
-                && SourceAlphaFactor == other.SourceAlphaFactor && DestinationAlphaFactor == other.DestinationAlphaFactor
-                && AlphaFunction == other.AlphaFunction;
-        }
-
-        /// <summary>
-        /// Returns the hash code for this instance.
-        /// </summary>
-        /// <returns>A 32-bit signed integer that is the hash code for this instance.</returns>
-        public override int GetHashCode()
-        {
-            return HashHelper.Combine(
-                BlendEnabled.GetHashCode(),
-                ColorWriteMask.GetHashCode(),
-                (int)SourceColorFactor,
-                (int)DestinationColorFactor,
-                (int)ColorFunction,
-                (int)SourceAlphaFactor,
-                (int)DestinationAlphaFactor,
-                (int)AlphaFunction);
-        }
     }
 }
