@@ -3,7 +3,7 @@ using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
-    public abstract class DisposalTestBase<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
+    public abstract class DisposalTestBase : GraphicsDeviceTestBase
     {
         protected DisposalTestBase(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {
@@ -12,7 +12,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Dispose_Buffer()
         {
-            DeviceBuffer b = RF.CreateBuffer(new BufferDescription(256, BufferUsage.VertexBuffer));
+            DeviceBuffer b = GD.CreateBuffer(new BufferDescription(256, BufferUsage.VertexBuffer));
             b.Dispose();
             Assert.True(b.IsDisposed);
         }
@@ -20,8 +20,8 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Dispose_Texture()
         {
-            Texture t = RF.CreateTexture(TextureDescription.Texture2D(1, 1, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Sampled));
-            TextureView tv = RF.CreateTextureView(t);
+            Texture t = GD.CreateTexture(TextureDescription.Texture2D(1, 1, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Sampled));
+            TextureView tv = GD.CreateTextureView(t);
             GD.WaitForIdle(); // Required currently by Vulkan backend.
             tv.Dispose();
             Assert.True(tv.IsDisposed);
@@ -33,8 +33,8 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Dispose_Framebuffer()
         {
-            Texture t = RF.CreateTexture(TextureDescription.Texture2D(1, 1, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            Framebuffer fb = RF.CreateFramebuffer(new FramebufferDescription(null, t));
+            Texture t = GD.CreateTexture(TextureDescription.Texture2D(1, 1, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
+            Framebuffer fb = GD.CreateFramebuffer(new FramebufferDescription(null, t));
             GD.WaitForIdle(); // Required currently by Vulkan backend.
             fb.Dispose();
             Assert.True(fb.IsDisposed);
@@ -46,7 +46,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Dispose_CommandList()
         {
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Dispose();
             Assert.True(cl.IsDisposed);
         }
@@ -54,7 +54,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Dispose_Sampler()
         {
-            Sampler s = RF.CreateSampler(SamplerDescription.Point);
+            Sampler s = GD.CreateSampler(SamplerDescription.Point);
             s.Dispose();
             Assert.True(s.IsDisposed);
         }
@@ -62,7 +62,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Dispose_Pipeline()
         {
-            Shader[] shaders = TestShaders.LoadVertexFragment(RF, "UIntVertexAttribs");
+            Shader[] shaders = TestShaders.LoadVertexFragment(GD, "UIntVertexAttribs");
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 new VertexLayoutDescription[]
                 {
@@ -72,7 +72,7 @@ namespace XenoAtom.Graphics.Tests
                 },
                 shaders);
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InfoBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex),
                 new ResourceLayoutElementDescription("Ortho", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
 
@@ -84,7 +84,7 @@ namespace XenoAtom.Graphics.Tests
                 shaderSet,
                 layout,
                 new OutputDescription(null, new OutputAttachmentDescription(PixelFormat.R32_G32_B32_A32_Float)));
-            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
             pipeline.Dispose();
             Assert.True(pipeline.IsDisposed);
             Assert.False(shaders[0].IsDisposed);
@@ -103,14 +103,14 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Dispose_ResourceSet()
         {
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InfoBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex),
                 new ResourceLayoutElementDescription("Ortho", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
 
-            DeviceBuffer ub0 = RF.CreateBuffer(new BufferDescription(256, BufferUsage.UniformBuffer));
-            DeviceBuffer ub1 = RF.CreateBuffer(new BufferDescription(256, BufferUsage.UniformBuffer));
+            DeviceBuffer ub0 = GD.CreateBuffer(new BufferDescription(256, BufferUsage.UniformBuffer));
+            DeviceBuffer ub1 = GD.CreateBuffer(new BufferDescription(256, BufferUsage.UniformBuffer));
 
-            ResourceSet rs = RF.CreateResourceSet(new ResourceSetDescription(layout, ub0, ub1));
+            ResourceSet rs = GD.CreateResourceSet(new ResourceSetDescription(layout, ub0, ub1));
             rs.Dispose();
             Assert.True(rs.IsDisposed);
             Assert.False(ub0.IsDisposed);
@@ -128,7 +128,7 @@ namespace XenoAtom.Graphics.Tests
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanDisposalTests : DisposalTestBase<VulkanDeviceCreator>
+    public class VulkanDisposalTests : DisposalTestBase
     {
         public VulkanDisposalTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {

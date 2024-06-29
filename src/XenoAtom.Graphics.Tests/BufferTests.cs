@@ -7,7 +7,7 @@ using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
-    public abstract class BufferTestBase<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
+    public abstract class BufferTestBase : GraphicsDeviceTestBase
     {
         protected BufferTestBase(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {
@@ -19,7 +19,7 @@ namespace XenoAtom.Graphics.Tests
             uint expectedSize = 64;
             BufferUsage expectedUsage = BufferUsage.Dynamic | BufferUsage.UniformBuffer;
 
-            DeviceBuffer buffer = RF.CreateBuffer(new BufferDescription(expectedSize, expectedUsage));
+            DeviceBuffer buffer = GD.CreateBuffer(new BufferDescription(expectedSize, expectedUsage));
 
             Assert.Equal(expectedUsage, buffer.Usage);
             Assert.Equal(expectedSize, buffer.SizeInBytes);
@@ -127,7 +127,7 @@ namespace XenoAtom.Graphics.Tests
 
             DeviceBuffer dst = CreateBuffer(1024, BufferUsage.Staging);
 
-            CommandList copyCL = RF.CreateCommandList();
+            CommandList copyCL = GD.CreateCommandList();
             copyCL.Begin();
             copyCL.CopyBuffer(src, 0, dst, 0, src.SizeInBytes);
             copyCL.End();
@@ -154,10 +154,10 @@ namespace XenoAtom.Graphics.Tests
             for (int chainLength = 2; chainLength <= 10; chainLength += 4)
             {
                 DeviceBuffer[] dsts = Enumerable.Range(0, chainLength)
-                    .Select(i => RF.CreateBuffer(new BufferDescription(1024, BufferUsage.UniformBuffer)))
+                    .Select(i => GD.CreateBuffer(new BufferDescription(1024, BufferUsage.UniformBuffer)))
                     .ToArray();
 
-                CommandList copyCL = RF.CreateCommandList();
+                CommandList copyCL = GD.CreateCommandList();
                 copyCL.Begin();
                 copyCL.CopyBuffer(src, 0, dsts[0], 0, src.SizeInBytes);
                 for (int i = 0; i < chainLength - 1; i++)
@@ -193,7 +193,7 @@ namespace XenoAtom.Graphics.Tests
                 return; // TODO
             }
 
-            DeviceBuffer buffer = RF.CreateBuffer(new BufferDescription(1024, BufferUsage.Staging));
+            DeviceBuffer buffer = GD.CreateBuffer(new BufferDescription(1024, BufferUsage.Staging));
             MappedResourceView<int> view = GD.Map<int>(buffer, MapMode.ReadWrite);
             int[] data = Enumerable.Range(0, 256).Select(i => 2 * i).ToArray();
             Assert.Throws<GraphicsException>(() => GD.UpdateBuffer(buffer, 0, data));
@@ -202,7 +202,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Map_MultipleTimes_Succeeds()
         {
-            DeviceBuffer buffer = RF.CreateBuffer(new BufferDescription(1024, BufferUsage.Staging));
+            DeviceBuffer buffer = GD.CreateBuffer(new BufferDescription(1024, BufferUsage.Staging));
             MappedResource map = GD.Map(buffer, MapMode.ReadWrite);
             IntPtr dataPtr = map.Data;
             map = GD.Map(buffer, MapMode.ReadWrite);
@@ -227,7 +227,7 @@ namespace XenoAtom.Graphics.Tests
                 return; // TODO
             }
 
-            DeviceBuffer buffer = RF.CreateBuffer(new BufferDescription(1024, BufferUsage.Staging));
+            DeviceBuffer buffer = GD.CreateBuffer(new BufferDescription(1024, BufferUsage.Staging));
             MappedResource map = GD.Map(buffer, MapMode.Read);
             Assert.Throws<GraphicsException>(() => GD.Map(buffer, MapMode.Write));
         }
@@ -235,15 +235,15 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public unsafe void UnusualSize()
         {
-            DeviceBuffer src = RF.CreateBuffer(
+            DeviceBuffer src = GD.CreateBuffer(
                 new BufferDescription(208, BufferUsage.UniformBuffer));
-            DeviceBuffer dst = RF.CreateBuffer(
+            DeviceBuffer dst = GD.CreateBuffer(
                 new BufferDescription(208, BufferUsage.Staging));
 
             byte[] data = Enumerable.Range(0, 208).Select(i => (byte)(i * 150)).ToArray();
             GD.UpdateBuffer(src, 0, data);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyBuffer(src, 0, dst, 0, src.SizeInBytes);
             cl.End();
@@ -259,21 +259,21 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Update_Dynamic_NonZeroOffset()
         {
-            DeviceBuffer dynamic = RF.CreateBuffer(
+            DeviceBuffer dynamic = GD.CreateBuffer(
                 new BufferDescription(1024, BufferUsage.Dynamic | BufferUsage.UniformBuffer));
 
             byte[] initialData = Enumerable.Range(0, 1024).Select(i => (byte)i).ToArray();
             GD.UpdateBuffer(dynamic, 0, initialData);
 
             byte[] replacementData = Enumerable.Repeat((byte)255, 512).ToArray();
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.UpdateBuffer(dynamic, 512, replacementData);
             cl.End();
             GD.SubmitCommands(cl);
             GD.WaitForIdle();
 
-            DeviceBuffer dst = RF.CreateBuffer(
+            DeviceBuffer dst = GD.CreateBuffer(
                 new BufferDescription(1024, BufferUsage.Staging));
 
             cl.Begin();
@@ -297,7 +297,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Dynamic_MapRead_Fails()
         {
-            DeviceBuffer dynamic = RF.CreateBuffer(
+            DeviceBuffer dynamic = GD.CreateBuffer(
                 new BufferDescription(1024, BufferUsage.Dynamic | BufferUsage.UniformBuffer));
             Assert.Throws<GraphicsException>(() => GD.Map(dynamic, MapMode.Read));
             Assert.Throws<GraphicsException>(() => GD.Map(dynamic, MapMode.ReadWrite));
@@ -306,11 +306,11 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void CommandList_Update_Staging()
         {
-            DeviceBuffer staging = RF.CreateBuffer(
+            DeviceBuffer staging = GD.CreateBuffer(
                 new BufferDescription(1024, BufferUsage.Staging));
             byte[] data = Enumerable.Range(0, 1024).Select(i => (byte)i).ToArray();
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.UpdateBuffer(staging, 0, data);
             cl.End();
@@ -356,7 +356,7 @@ namespace XenoAtom.Graphics.Tests
             byte[] data = Enumerable.Range(0, (int)srcBufferSize).Select(i => (byte)i).ToArray();
             GD.UpdateBuffer(src, 0, data);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyBuffer(src, srcCopyOffset, dst, dstCopyOffset, copySize);
             cl.End();
@@ -384,7 +384,7 @@ namespace XenoAtom.Graphics.Tests
         {
             DeviceBuffer buffer = CreateBuffer(bufferSize, usage);
             byte[] data = Enumerable.Range(0, (int)dataSize).Select(i => (byte)i).ToArray();
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.UpdateBuffer(buffer, offset, data);
             cl.End();
@@ -429,7 +429,7 @@ namespace XenoAtom.Graphics.Tests
         public void UpdateUniform_Offset_CommandList(BufferUsage usage)
         {
             DeviceBuffer buffer = CreateBuffer(128, usage);
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             Matrix4x4 mat1 = new Matrix4x4(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
             cl.UpdateBuffer(buffer, 0, ref mat1);
@@ -476,7 +476,7 @@ namespace XenoAtom.Graphics.Tests
                 description.StructureByteStride = 16;
             }
 
-            DeviceBuffer buffer = RF.CreateBuffer(description);
+            DeviceBuffer buffer = GD.CreateBuffer(description);
             GD.UpdateBuffer(buffer, 0, new Vector4[4]);
             GD.WaitForIdle();
         }
@@ -504,7 +504,7 @@ namespace XenoAtom.Graphics.Tests
             GD.UpdateBuffer(src, 0, initialDataSrc);
             GD.UpdateBuffer(dst, 0, initialDataDst);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyBuffer(src, 0, dst, 0, 0);
             cl.End();
@@ -547,7 +547,7 @@ namespace XenoAtom.Graphics.Tests
 
             if (useCommandListUpdate)
             {
-                CommandList cl = RF.CreateCommandList();
+                CommandList cl = GD.CreateCommandList();
                 cl.Begin();
                 fixed (byte* dataPtr = otherData)
                 {
@@ -579,12 +579,12 @@ namespace XenoAtom.Graphics.Tests
 
         private DeviceBuffer CreateBuffer(uint size, BufferUsage usage)
         {
-            return RF.CreateBuffer(new BufferDescription(size, usage));
+            return GD.CreateBuffer(new BufferDescription(size, usage));
         }
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanBufferTests : BufferTestBase<VulkanDeviceCreator>
+    public class VulkanBufferTests : BufferTestBase
     {
         public VulkanBufferTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {

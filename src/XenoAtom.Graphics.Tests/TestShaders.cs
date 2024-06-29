@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using System.IO;
 
 namespace XenoAtom.Graphics.Tests
 {
     internal static class TestShaders
     {
-        public static Shader[] LoadVertexFragment(ResourceFactory factory, string setName)
+        public static Shader[] LoadVertexFragment(GraphicsDevice device, string setName)
         {
-            return factory.CreateFromSpirv(
+            return device.CreateFromSpirv(
                 new ShaderDescription(ShaderStages.Vertex, File.ReadAllBytes(GetPath(setName, ShaderStages.Vertex)), "main"u8),
                 new ShaderDescription(ShaderStages.Fragment, File.ReadAllBytes(GetPath(setName, ShaderStages.Fragment)), "main"u8),
                 new CrossCompileOptions(false, false, new SpecializationConstant[]
@@ -16,9 +16,9 @@ namespace XenoAtom.Graphics.Tests
                 }));
         }
 
-        public static Shader LoadCompute(ResourceFactory factory, string setName)
+        public static Shader LoadCompute(GraphicsDevice device, string setName)
         {
-            return factory.CreateFromSpirv(
+            return device.CreateFromSpirv(
                 new ShaderDescription(ShaderStages.Compute, File.ReadAllBytes(GetPath(setName, ShaderStages.Compute)), "main"u8),
                 new CrossCompileOptions(false, false, new SpecializationConstant[]
                 {

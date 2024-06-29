@@ -10,7 +10,7 @@ namespace XenoAtom.Graphics
     /// <summary>
     /// Represents an abstract graphics device, capable of creating device resources and executing commands.
     /// </summary>
-    public abstract class GraphicsDevice : GraphicsObject
+    public abstract partial class GraphicsDevice : GraphicsObject
     {
         private readonly object _deferredDisposalLock = new();
         private readonly List<IDisposable> _disposables = new();
@@ -48,12 +48,6 @@ namespace XenoAtom.Graphics
         /// If false, clip space Y values instead increase from bottom (-1) to top (1).
         /// </summary>
         public abstract bool IsClipSpaceYInverted { get; }
-
-        /// <summary>
-        /// Gets the <see cref="ResourceFactory"/> controlled by this instance.
-        /// </summary>
-        public abstract ResourceFactory ResourceFactory { get; }
-
 
         /// <summary>
         /// Gets a <see cref="GraphicsDeviceFeatures"/> which enumerates the optional features supported by this instance.

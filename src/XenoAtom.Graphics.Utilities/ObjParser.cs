@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -591,17 +591,17 @@ namespace XenoAtom.Graphics.Utilities
             MaterialName = materialName;
         }
 
-        public DeviceBuffer CreateVertexBuffer(ResourceFactory factory, CommandList cl)
+        public DeviceBuffer CreateVertexBuffer(GraphicsDevice device, CommandList cl)
         {
-            DeviceBuffer vb = factory.CreateBuffer(
+            DeviceBuffer vb = device.CreateBuffer(
                 new BufferDescription((uint)(Vertices.Length * VertexPositionNormalTexture.SizeInBytes), BufferUsage.VertexBuffer));
             cl.UpdateBuffer(vb, 0, Vertices);
             return vb;
         }
 
-        public DeviceBuffer CreateIndexBuffer(ResourceFactory factory, CommandList cl, out int indexCount)
+        public DeviceBuffer CreateIndexBuffer(GraphicsDevice device, CommandList cl, out int indexCount)
         {
-            DeviceBuffer ib = factory.CreateBuffer(new BufferDescription((uint)(Indices.Length * sizeof(int)), BufferUsage.IndexBuffer));
+            DeviceBuffer ib = device.CreateBuffer(new BufferDescription((uint)(Indices.Length * sizeof(int)), BufferUsage.IndexBuffer));
             cl.UpdateBuffer(ib, 0, Indices);
             indexCount = Indices.Length;
             return ib;

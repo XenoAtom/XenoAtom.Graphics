@@ -10,7 +10,7 @@ using XenoAtom.Interop;
 
 namespace XenoAtom.Graphics.Vk
 {
-    internal sealed unsafe class VkGraphicsDevice : GraphicsDevice
+    internal sealed unsafe partial class VkGraphicsDevice : GraphicsDevice
     {
         private readonly VkPhysicalDevice _physicalDevice;
         private readonly VkInstance _instance;
@@ -21,6 +21,7 @@ namespace XenoAtom.Graphics.Vk
         private readonly VkCommandPool _graphicsCommandPool;
         private readonly object _graphicsCommandPoolLock = new object();
         private readonly VkQueue _graphicsQueue;
+        private readonly Action<GraphicsObject>? _onResourceCreated;
 
         public readonly object GraphicsQueueLock = new object();
 
@@ -115,6 +116,7 @@ namespace XenoAtom.Graphics.Vk
             _instance = Manager.Instance;
             _isDebugActivated = Manager.IsDebugActivated;
             _vkSetDebugUtilsObjectNameEXT = Manager._vkSetDebugUtilsObjectNameEXT;
+            _onResourceCreated = options.OnResourceCreated;
 
             // ---------------------------------------------------------------
             // Get QueueFamilyIndices
@@ -279,8 +281,6 @@ namespace XenoAtom.Graphics.Vk
                 bufferRangeBinding: true,
                 shaderFloat64: physicalDeviceFeatures.shaderFloat64);
 
-            ResourceFactory = new VkResourceFactory(this);
-
             _descriptorPoolManager = new VkDescriptorPoolManager(this);
             CreateGraphicsCommandPool(out _graphicsCommandPool);
             for (int i = 0; i < SharedCommandPoolCount; i++)
@@ -290,15 +290,13 @@ namespace XenoAtom.Graphics.Vk
 
             _vulkanInfo = new BackendInfoVulkan(this);
 
-            PointSampler = ResourceFactory.CreateSampler(SamplerDescription.Point);
-            LinearSampler = ResourceFactory.CreateSampler(SamplerDescription.Linear);
+            PointSampler = CreateSampler(SamplerDescription.Point);
+            LinearSampler = CreateSampler(SamplerDescription.Linear);
             if (Features.SamplerAnisotropy)
             {
-                AnisotropicSampler4x = ResourceFactory.CreateSampler(SamplerDescription.Aniso4x);
+                AnisotropicSampler4x = CreateSampler(SamplerDescription.Aniso4x);
             }
         }
-
-        public override ResourceFactory ResourceFactory { get; }
 
         private protected override void SubmitCommandsCore(CommandList cl, Fence? fence)
         {
@@ -890,7 +888,7 @@ namespace XenoAtom.Graphics.Vk
 
             uint texWidth = Math.Max(256, width);
             uint texHeight = Math.Max(256, height);
-            VkTexture newTex = (VkTexture)ResourceFactory.CreateTexture(TextureDescription.Texture3D(
+            VkTexture newTex = (VkTexture)CreateTexture(TextureDescription.Texture3D(
                 texWidth, texHeight, depth, 1, format, TextureUsage.Staging));
             newTex.SetStagingDimensions(width, height, depth, format);
 
@@ -913,7 +911,7 @@ namespace XenoAtom.Graphics.Vk
             }
 
             uint newBufferSize = Math.Max(MinStagingBufferSize, size);
-            VkBuffer newBuffer = (VkBuffer)ResourceFactory.CreateBuffer(
+            VkBuffer newBuffer = (VkBuffer)CreateBuffer(
                 new BufferDescription(newBufferSize, BufferUsage.Staging));
             return newBuffer;
         }

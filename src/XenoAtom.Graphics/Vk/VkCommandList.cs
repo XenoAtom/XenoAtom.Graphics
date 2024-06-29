@@ -1302,7 +1302,7 @@ namespace XenoAtom.Graphics.Vk
                 }
                 if (ret == null)
                 {
-                    ret = (VkBuffer)_gd.ResourceFactory.CreateBuffer(new BufferDescription(size, BufferUsage.Staging));
+                    ret = (VkBuffer)_gd.CreateBuffer(new BufferDescription(size, BufferUsage.Staging));
                     ret.Name = $"Staging Buffer (CommandList {Name})";
                 }
 

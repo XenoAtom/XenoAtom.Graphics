@@ -4,19 +4,19 @@ using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
-    public abstract class ResourceSetTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
+    public abstract class ResourceSetTests : GraphicsDeviceTestBase
     {
         [Fact]
         public void ResourceSet_BufferInsteadOfTextureView_Fails()
         {
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("TV0", ResourceKind.TextureReadOnly, ShaderStages.Vertex)));
 
-            DeviceBuffer ub = RF.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
+            DeviceBuffer ub = GD.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
 
             Assert.Throws<GraphicsException>(() =>
             {
-                ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout,
+                ResourceSet set = GD.CreateResourceSet(new ResourceSetDescription(layout,
                     ub));
             });
         }
@@ -24,80 +24,80 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void ResourceSet_IncorrectTextureUsage_Fails()
         {
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("TV0", ResourceKind.TextureReadWrite, ShaderStages.Vertex)));
 
-            Texture t = RF.CreateTexture(TextureDescription.Texture2D(64, 64, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
-            TextureView tv = RF.CreateTextureView(t);
+            Texture t = GD.CreateTexture(TextureDescription.Texture2D(64, 64, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
+            TextureView tv = GD.CreateTextureView(t);
 
             Assert.Throws<GraphicsException>(() =>
             {
-                ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout, tv));
+                ResourceSet set = GD.CreateResourceSet(new ResourceSetDescription(layout, tv));
             });
         }
 
         [Fact]
         public void ResourceSet_IncorrectBufferUsage_Fails()
         {
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("RWB0", ResourceKind.StructuredBufferReadWrite, ShaderStages.Vertex)));
 
-            DeviceBuffer readOnlyBuffer = RF.CreateBuffer(new BufferDescription(1024, BufferUsage.UniformBuffer));
+            DeviceBuffer readOnlyBuffer = GD.CreateBuffer(new BufferDescription(1024, BufferUsage.UniformBuffer));
 
             Assert.Throws<GraphicsException>(() =>
             {
-                ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout, readOnlyBuffer));
+                ResourceSet set = GD.CreateResourceSet(new ResourceSetDescription(layout, readOnlyBuffer));
             });
         }
 
         [Fact]
         public void ResourceSet_TooFewOrTooManyElements_Fails()
         {
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("UB0", ResourceKind.UniformBuffer, ShaderStages.Vertex),
                 new ResourceLayoutElementDescription("UB1", ResourceKind.UniformBuffer, ShaderStages.Vertex),
                 new ResourceLayoutElementDescription("UB2", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
 
-            DeviceBuffer ub = RF.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
+            DeviceBuffer ub = GD.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
 
             Assert.Throws<GraphicsException>(() =>
             {
-                RF.CreateResourceSet(new ResourceSetDescription(layout, ub));
+                GD.CreateResourceSet(new ResourceSetDescription(layout, ub));
             });
 
             Assert.Throws<GraphicsException>(() =>
             {
-                RF.CreateResourceSet(new ResourceSetDescription(layout, ub, ub));
+                GD.CreateResourceSet(new ResourceSetDescription(layout, ub, ub));
             });
 
             Assert.Throws<GraphicsException>(() =>
             {
-                RF.CreateResourceSet(new ResourceSetDescription(layout, ub, ub, ub, ub));
+                GD.CreateResourceSet(new ResourceSetDescription(layout, ub, ub, ub, ub));
             });
 
             Assert.Throws<GraphicsException>(() =>
             {
-                RF.CreateResourceSet(new ResourceSetDescription(layout, ub, ub, ub, ub, ub));
+                GD.CreateResourceSet(new ResourceSetDescription(layout, ub, ub, ub, ub, ub));
             });
         }
 
         [Fact]
         public void ResourceSet_InvalidUniformOffset_Fails()
         {
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("UB0", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
 
-            DeviceBuffer buffer = RF.CreateBuffer(new BufferDescription(1024, BufferUsage.UniformBuffer));
+            DeviceBuffer buffer = GD.CreateBuffer(new BufferDescription(1024, BufferUsage.UniformBuffer));
 
             Assert.Throws<GraphicsException>(() =>
             {
-                RF.CreateResourceSet(new ResourceSetDescription(layout,
+                GD.CreateResourceSet(new ResourceSetDescription(layout,
                     new DeviceBufferRange(buffer, GD.UniformBufferMinOffsetAlignment - 1, 256)));
             });
 
             Assert.Throws<GraphicsException>(() =>
             {
-                RF.CreateResourceSet(new ResourceSetDescription(layout,
+                GD.CreateResourceSet(new ResourceSetDescription(layout,
                     new DeviceBufferRange(buffer, GD.UniformBufferMinOffsetAlignment + 1, 256)));
             });
         }
@@ -105,14 +105,14 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void ResourceSet_NoPipelineBound_Fails()
         {
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("UB0", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
-            DeviceBuffer ub = RF.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
+            DeviceBuffer ub = GD.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
 
 
-            ResourceSet rs = RF.CreateResourceSet(new ResourceSetDescription(layout, ub));
+            ResourceSet rs = GD.CreateResourceSet(new ResourceSetDescription(layout, ub));
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(0, rs));
             cl.End();
@@ -121,8 +121,8 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void ResourceSet_InvalidSlot_Fails()
         {
-            DeviceBuffer infoBuffer = RF.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
-            DeviceBuffer orthoBuffer = RF.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
+            DeviceBuffer infoBuffer = GD.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
+            DeviceBuffer orthoBuffer = GD.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
 
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 new VertexLayoutDescription[]
@@ -131,13 +131,13 @@ namespace XenoAtom.Graphics.Tests
                         new VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
                         new VertexElementDescription("Color_UInt", VertexElementSemantic.TextureCoordinate, VertexElementFormat.UInt4))
                 },
-                TestShaders.LoadVertexFragment(RF, "UIntVertexAttribs"));
+                TestShaders.LoadVertexFragment(GD, "UIntVertexAttribs"));
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InfoBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex),
                 new ResourceLayoutElementDescription("Ortho", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
 
-            ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout, infoBuffer, orthoBuffer));
+            ResourceSet set = GD.CreateResourceSet(new ResourceSetDescription(layout, infoBuffer, orthoBuffer));
 
             GraphicsPipelineDescription gpd = new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
@@ -148,9 +148,9 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 new OutputDescription(null, new OutputAttachmentDescription(PixelFormat.B8_G8_R8_A8_UNorm)));
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetPipeline(pipeline);
             Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(1, set));
@@ -162,8 +162,8 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void ResourceSet_IncompatibleSet_Fails()
         {
-            DeviceBuffer infoBuffer = RF.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
-            DeviceBuffer orthoBuffer = RF.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
+            DeviceBuffer infoBuffer = GD.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
+            DeviceBuffer orthoBuffer = GD.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
 
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 new VertexLayoutDescription[]
@@ -172,25 +172,25 @@ namespace XenoAtom.Graphics.Tests
                         new VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
                         new VertexElementDescription("Color_UInt", VertexElementSemantic.TextureCoordinate, VertexElementFormat.UInt4))
                 },
-                TestShaders.LoadVertexFragment(RF, "UIntVertexAttribs"));
+                TestShaders.LoadVertexFragment(GD, "UIntVertexAttribs"));
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InfoBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex),
                 new ResourceLayoutElementDescription("Ortho", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
 
-            ResourceLayout layout2 = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout2 = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InfoBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex),
                 new ResourceLayoutElementDescription("Tex", ResourceKind.TextureReadOnly, ShaderStages.Fragment)));
 
-            ResourceLayout layout3 = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout3 = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InfoBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
 
-            Texture tex = RF.CreateTexture(TextureDescription.Texture2D(16, 16, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Sampled));
-            TextureView texView = RF.CreateTextureView(tex);
+            Texture tex = GD.CreateTexture(TextureDescription.Texture2D(16, 16, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Sampled));
+            TextureView texView = GD.CreateTextureView(tex);
 
-            ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout, infoBuffer, orthoBuffer));
-            ResourceSet set2 = RF.CreateResourceSet(new ResourceSetDescription(layout2, infoBuffer, texView));
-            ResourceSet set3 = RF.CreateResourceSet(new ResourceSetDescription(layout3, infoBuffer));
+            ResourceSet set = GD.CreateResourceSet(new ResourceSetDescription(layout, infoBuffer, orthoBuffer));
+            ResourceSet set2 = GD.CreateResourceSet(new ResourceSetDescription(layout2, infoBuffer, texView));
+            ResourceSet set3 = GD.CreateResourceSet(new ResourceSetDescription(layout3, infoBuffer));
 
             GraphicsPipelineDescription gpd = new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
@@ -201,9 +201,9 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 new OutputDescription(null, new OutputAttachmentDescription(PixelFormat.B8_G8_R8_A8_UNorm)));
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetPipeline(pipeline);
             cl.SetGraphicsResourceSet(0, set);
@@ -218,7 +218,7 @@ namespace XenoAtom.Graphics.Tests
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanResourceSetTests : ResourceSetTests<VulkanDeviceCreator>
+    public class VulkanResourceSetTests : ResourceSetTests
     {
         public VulkanResourceSetTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {

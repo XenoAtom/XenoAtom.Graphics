@@ -10,7 +10,7 @@ namespace XenoAtom.Graphics.Tests
 {
     public static class TestUtils
     {
-        public static GraphicsDevice CreateVulkanDevice(DebugLogDelegate log)
+        public static GraphicsDevice CreateVulkanDevice(DebugLogDelegate log, Action<GraphicsObject> resourcesCreated)
         {
             var manager = GraphicsManager.Create(new GraphicsManagerOptions(true)
             {
@@ -21,25 +21,27 @@ namespace XenoAtom.Graphics.Tests
 
 
             var adapter = manager.Adapters[0];
-            return adapter.CreateDevice();
+            return adapter.CreateDevice(new GraphicsDeviceOptions()
+            {
+                OnResourceCreated = resourcesCreated
+            });
         }
     }
 
-    public abstract class GraphicsDeviceTestBase<T> : IDisposable where T : GraphicsDeviceCreator
+    public abstract class GraphicsDeviceTestBase : IDisposable
     {
         private readonly ITestOutputHelper _textOutputHelper;
         private readonly GraphicsDevice _gd;
-        private readonly DisposeCollectorResourceFactory _factory;
+        private readonly DisposeCollector _disposeCollector;
         private bool _hasWarningOrErrorLogs;
 
         public GraphicsDevice GD => _gd;
-        public ResourceFactory RF => _factory;
 
         public GraphicsDeviceTestBase(ITestOutputHelper textOutputHelper)
         {
             _textOutputHelper = textOutputHelper;
-            Activator.CreateInstance<T>().CreateGraphicsDevice(out _gd, DebugLogImpl);
-            _factory = new DisposeCollectorResourceFactory(_gd.ResourceFactory);
+            _disposeCollector = new DisposeCollector();
+            _gd = TestUtils.CreateVulkanDevice(DebugLogImpl, o => _disposeCollector.Add(o));
         }
 
 
@@ -63,8 +65,8 @@ namespace XenoAtom.Graphics.Tests
             }
             else
             {
-                readback = RF.CreateBuffer(new BufferDescription(buffer.SizeInBytes, BufferUsage.Staging));
-                CommandList cl = RF.CreateCommandList();
+                readback = GD.CreateBuffer(new BufferDescription(buffer.SizeInBytes, BufferUsage.Staging));
+                CommandList cl = GD.CreateCommandList();
                 cl.Begin();
                 cl.CopyBuffer(buffer, 0, readback, 0, buffer.SizeInBytes);
                 cl.End();
@@ -93,8 +95,8 @@ namespace XenoAtom.Graphics.Tests
                     texture.MipLevels, layers,
                     texture.Format,
                     TextureUsage.Staging, texture.Type);
-                Texture readback = RF.CreateTexture(desc);
-                CommandList cl = RF.CreateCommandList();
+                Texture readback = GD.CreateTexture(desc);
+                CommandList cl = GD.CreateCommandList();
                 cl.Begin();
                 cl.CopyTexture(texture, readback);
                 cl.End();
@@ -107,26 +109,13 @@ namespace XenoAtom.Graphics.Tests
         public void Dispose()
         {
             GD.WaitForIdle();
-            _factory.DisposeCollector.DisposeAll();
+            _disposeCollector.DisposeAll();
             GD.Dispose();
 
             var manager = GD.Adapter.Manager;
             manager.Dispose();
             
             Assert.False(_hasWarningOrErrorLogs);
-        }
-    }
-
-    public interface GraphicsDeviceCreator
-    {
-        void CreateGraphicsDevice(out GraphicsDevice gd, DebugLogDelegate log);
-    }
-
-    public class VulkanDeviceCreator : GraphicsDeviceCreator
-    {
-        public void CreateGraphicsDevice(out GraphicsDevice gd, DebugLogDelegate log)
-        {
-            gd = TestUtils.CreateVulkanDevice(log);
         }
     }
 }

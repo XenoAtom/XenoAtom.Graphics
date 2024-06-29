@@ -4,7 +4,7 @@ using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
-    public abstract class FramebufferTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
+    public abstract class FramebufferTests : GraphicsDeviceTestBase
     {
         protected FramebufferTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {
@@ -13,11 +13,11 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void NoDepthTarget_ClearAllColors_Succeeds()
         {
-            Texture colorTarget = RF.CreateTexture(
+            Texture colorTarget = GD.CreateTexture(
                 TextureDescription.Texture2D(1024, 1024, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            Framebuffer fb = RF.CreateFramebuffer(new FramebufferDescription(null, colorTarget));
+            Framebuffer fb = GD.CreateFramebuffer(new FramebufferDescription(null, colorTarget));
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetFramebuffer(fb);
             cl.ClearColorTarget(0, RgbaFloat.Red);
@@ -25,7 +25,7 @@ namespace XenoAtom.Graphics.Tests
             GD.SubmitCommands(cl);
             GD.WaitForIdle();
 
-            Texture staging = RF.CreateTexture(
+            Texture staging = GD.CreateTexture(
                 TextureDescription.Texture2D(1024, 1024, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
 
             cl.Begin();
@@ -48,11 +48,11 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void NoDepthTarget_ClearDepth_Fails()
         {
-            Texture colorTarget = RF.CreateTexture(
+            Texture colorTarget = GD.CreateTexture(
                 TextureDescription.Texture2D(1024, 1024, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            Framebuffer fb = RF.CreateFramebuffer(new FramebufferDescription(null, colorTarget));
+            Framebuffer fb = GD.CreateFramebuffer(new FramebufferDescription(null, colorTarget));
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetFramebuffer(fb);
             Assert.Throws<GraphicsException>(() => cl.ClearDepthStencil(1f));
@@ -61,11 +61,11 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void NoColorTarget_ClearColor_Fails()
         {
-            Texture depthTarget = RF.CreateTexture(
+            Texture depthTarget = GD.CreateTexture(
                 TextureDescription.Texture2D(1024, 1024, 1, 1, PixelFormat.R16_UNorm, TextureUsage.DepthStencil));
-            Framebuffer fb = RF.CreateFramebuffer(new FramebufferDescription(depthTarget));
+            Framebuffer fb = GD.CreateFramebuffer(new FramebufferDescription(depthTarget));
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetFramebuffer(fb);
             Assert.Throws<GraphicsException>(() => cl.ClearColorTarget(0, RgbaFloat.Red));
@@ -76,11 +76,11 @@ namespace XenoAtom.Graphics.Tests
         {
             TextureDescription desc = TextureDescription.Texture2D(
                 1024, 1024, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget);
-            Texture colorTarget0 = RF.CreateTexture(desc);
-            Texture colorTarget1 = RF.CreateTexture(desc);
-            Framebuffer fb = RF.CreateFramebuffer(new FramebufferDescription(null, colorTarget0, colorTarget1));
+            Texture colorTarget0 = GD.CreateTexture(desc);
+            Texture colorTarget1 = GD.CreateTexture(desc);
+            Framebuffer fb = GD.CreateFramebuffer(new FramebufferDescription(null, colorTarget0, colorTarget1));
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetFramebuffer(fb);
             cl.ClearColorTarget(0, RgbaFloat.Red);
@@ -92,17 +92,17 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void NonZeroMipLevel_ClearColor_Succeeds()
         {
-            Texture testTex = RF.CreateTexture(
+            Texture testTex = GD.CreateTexture(
                 TextureDescription.Texture2D(1024, 1024, 11, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
 
             Framebuffer[] framebuffers = new Framebuffer[11];
             for (uint level = 0; level < 11; level++)
             {
-                framebuffers[level] = RF.CreateFramebuffer(
+                framebuffers[level] = GD.CreateFramebuffer(
                     new FramebufferDescription(null, new[] { new FramebufferAttachmentDescription(testTex, 0, level) }));
             }
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             for (uint level = 0; level < 11; level++)
             {
@@ -113,7 +113,7 @@ namespace XenoAtom.Graphics.Tests
             GD.SubmitCommands(cl);
             GD.WaitForIdle();
 
-            Texture readback = RF.CreateTexture(
+            Texture readback = GD.CreateTexture(
                 TextureDescription.Texture2D(1024, 1024, 11, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
             cl.Begin();
             cl.CopyTexture(testTex, readback);
@@ -139,7 +139,7 @@ namespace XenoAtom.Graphics.Tests
         }
     }
 
-    public abstract class SwapchainFramebufferTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
+    public abstract class SwapchainFramebufferTests : GraphicsDeviceTestBase
     {
         protected SwapchainFramebufferTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {
@@ -148,7 +148,7 @@ namespace XenoAtom.Graphics.Tests
         //[Fact]
         //public void ClearSwapchainFramebuffer_Succeeds()
         //{
-        //    CommandList cl = RF.CreateCommandList();
+        //    CommandList cl = GD.CreateCommandList();
         //    cl.Begin();
         //    cl.SetFramebuffer(GD.SwapchainFramebuffer);
         //    cl.ClearColorTarget(0, RgbaFloat.Red);
@@ -158,7 +158,7 @@ namespace XenoAtom.Graphics.Tests
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanFramebufferTests : FramebufferTests<VulkanDeviceCreator>
+    public class VulkanFramebufferTests : FramebufferTests
     {
         public VulkanFramebufferTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {

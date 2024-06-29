@@ -8,13 +8,13 @@ using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
-    public abstract class PipelineTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
+    public abstract class PipelineTests : GraphicsDeviceTestBase
     {
         [Fact]
         public void CreatePipelines_DifferentInstanceStepRate_Succeeds()
         {
-            Texture colorTex = RF.CreateTexture(TextureDescription.Texture2D(1, 1, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.RenderTarget));
-            Framebuffer framebuffer = RF.CreateFramebuffer(new FramebufferDescription(null, colorTex));
+            Texture colorTex = GD.CreateTexture(TextureDescription.Texture2D(1, 1, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.RenderTarget));
+            Framebuffer framebuffer = GD.CreateFramebuffer(new FramebufferDescription(null, colorTex));
 
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 new VertexLayoutDescription[]
@@ -25,9 +25,9 @@ namespace XenoAtom.Graphics.Tests
                         new VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
                         new VertexElementDescription("Color_UInt", VertexElementSemantic.TextureCoordinate, VertexElementFormat.UInt4))
                 },
-                TestShaders.LoadVertexFragment(RF, "UIntVertexAttribs"));
+                TestShaders.LoadVertexFragment(GD, "UIntVertexAttribs"));
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InfoBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex),
                 new ResourceLayoutElementDescription("Ortho", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
 
@@ -40,14 +40,14 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline1 = RF.CreateGraphicsPipeline(gpd);
-            Pipeline pipeline2 = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline1 = GD.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline2 = GD.CreateGraphicsPipeline(gpd);
 
             gpd.ShaderSet.VertexLayouts[0].InstanceStepRate = 4;
-            Pipeline pipeline3 = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline3 = GD.CreateGraphicsPipeline(gpd);
 
             gpd.ShaderSet.VertexLayouts[0].InstanceStepRate = 5;
-            Pipeline pipeline4 = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline4 = GD.CreateGraphicsPipeline(gpd);
         }
 
         protected PipelineTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
@@ -56,7 +56,7 @@ namespace XenoAtom.Graphics.Tests
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanPipelineTests : PipelineTests<VulkanDeviceCreator>
+    public class VulkanPipelineTests : PipelineTests
     {
         public VulkanPipelineTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {

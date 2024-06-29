@@ -45,6 +45,11 @@ namespace XenoAtom.Graphics
         public bool SwapchainSrgbFormat;
 
         /// <summary>
+        /// A callback that receive objects that have been created. This can be used to track the lifetime of objects created by <see cref="GraphicsDevice"/>.
+        /// </summary>
+        public Action<GraphicsObject>? OnResourceCreated;
+
+        /// <summary>
         /// Gets or sets Vulkan device specific options.
         /// </summary>
         public VulkanDeviceOptions VulkanDeviceOptions;

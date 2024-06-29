@@ -41,20 +41,20 @@ namespace XenoAtom.Graphics.Tests
         public Vector4 D_V4;
     }
 
-    public abstract class RenderTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
+    public abstract class RenderTests : GraphicsDeviceTestBase
     {
         [Fact]
         public void Points_WithUIntColor()
         {
-            Texture target = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture target = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            Texture staging = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture staging = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
 
-            Framebuffer framebuffer = RF.CreateFramebuffer(new FramebufferDescription(null, target));
+            Framebuffer framebuffer = GD.CreateFramebuffer(new FramebufferDescription(null, target));
 
-            DeviceBuffer infoBuffer = RF.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
-            DeviceBuffer orthoBuffer = RF.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
+            DeviceBuffer infoBuffer = GD.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
+            DeviceBuffer orthoBuffer = GD.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
             Matrix4x4 orthoMatrix = Matrix4x4.CreateOrthographicOffCenter(
                 0,
                 framebuffer.Width,
@@ -71,13 +71,13 @@ namespace XenoAtom.Graphics.Tests
                         new VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
                         new VertexElementDescription("Color_UInt", VertexElementSemantic.TextureCoordinate, VertexElementFormat.UInt4))
                 },
-                TestShaders.LoadVertexFragment(RF, "UIntVertexAttribs"));
+                TestShaders.LoadVertexFragment(GD, "UIntVertexAttribs"));
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InfoBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex),
                 new ResourceLayoutElementDescription("Ortho", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
 
-            ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout, infoBuffer, orthoBuffer));
+            ResourceSet set = GD.CreateResourceSet(new ResourceSetDescription(layout, infoBuffer, orthoBuffer));
 
             GraphicsPipelineDescription gpd = new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
@@ -88,7 +88,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
             uint colorNormalizationFactor = 2500;
 
@@ -136,12 +136,12 @@ namespace XenoAtom.Graphics.Tests
                 },
             };
 
-            DeviceBuffer vb = RF.CreateBuffer(
+            DeviceBuffer vb = GD.CreateBuffer(
                 new BufferDescription((uint)(Unsafe.SizeOf<UIntVertexAttribsVertex>() * vertices.Length), BufferUsage.VertexBuffer));
             GD.UpdateBuffer(vb, 0, vertices);
             GD.UpdateBuffer(infoBuffer, 0, new UIntVertexAttribsInfo { ColorNormalizationFactor = colorNormalizationFactor });
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
 
             cl.Begin();
             cl.SetFramebuffer(framebuffer);
@@ -181,14 +181,14 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Points_WithUShortNormColor()
         {
-            Texture target = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture target = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            Texture staging = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture staging = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
 
-            Framebuffer framebuffer = RF.CreateFramebuffer(new FramebufferDescription(null, target));
+            Framebuffer framebuffer = GD.CreateFramebuffer(new FramebufferDescription(null, target));
 
-            DeviceBuffer orthoBuffer = RF.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
+            DeviceBuffer orthoBuffer = GD.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
             Matrix4x4 orthoMatrix = Matrix4x4.CreateOrthographicOffCenter(
                 0,
                 framebuffer.Width,
@@ -205,12 +205,12 @@ namespace XenoAtom.Graphics.Tests
                         new VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
                         new VertexElementDescription("Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.UShort4_Norm))
                 },
-                TestShaders.LoadVertexFragment(RF, "U16NormVertexAttribs"));
+                TestShaders.LoadVertexFragment(GD, "U16NormVertexAttribs"));
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("Ortho", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
 
-            ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout, orthoBuffer));
+            ResourceSet set = GD.CreateResourceSet(new ResourceSetDescription(layout, orthoBuffer));
 
             GraphicsPipelineDescription gpd = new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
@@ -221,7 +221,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
             VertexCPU_UShortNorm[] vertices = new VertexCPU_UShortNorm[]
             {
@@ -255,11 +255,11 @@ namespace XenoAtom.Graphics.Tests
                 },
             };
 
-            DeviceBuffer vb = RF.CreateBuffer(
+            DeviceBuffer vb = GD.CreateBuffer(
                 new BufferDescription((uint)(Unsafe.SizeOf<VertexCPU_UShortNorm>() * vertices.Length), BufferUsage.VertexBuffer));
             GD.UpdateBuffer(vb, 0, vertices);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
 
             cl.Begin();
             cl.SetFramebuffer(framebuffer);
@@ -323,15 +323,15 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Points_WithUShortColor()
         {
-            Texture target = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture target = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            Texture staging = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture staging = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
 
-            Framebuffer framebuffer = RF.CreateFramebuffer(new FramebufferDescription(null, target));
+            Framebuffer framebuffer = GD.CreateFramebuffer(new FramebufferDescription(null, target));
 
-            DeviceBuffer infoBuffer = RF.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
-            DeviceBuffer orthoBuffer = RF.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
+            DeviceBuffer infoBuffer = GD.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
+            DeviceBuffer orthoBuffer = GD.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
             Matrix4x4 orthoMatrix = Matrix4x4.CreateOrthographicOffCenter(
                 0,
                 framebuffer.Width,
@@ -348,13 +348,13 @@ namespace XenoAtom.Graphics.Tests
                         new VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
                         new VertexElementDescription("Color_UInt", VertexElementSemantic.TextureCoordinate, VertexElementFormat.UShort4))
                 },
-                TestShaders.LoadVertexFragment(RF, "U16VertexAttribs"));
+                TestShaders.LoadVertexFragment(GD, "U16VertexAttribs"));
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InfoBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex),
                 new ResourceLayoutElementDescription("Ortho", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
 
-            ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout, infoBuffer, orthoBuffer));
+            ResourceSet set = GD.CreateResourceSet(new ResourceSetDescription(layout, infoBuffer, orthoBuffer));
 
             GraphicsPipelineDescription gpd = new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
@@ -365,7 +365,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
             uint colorNormalizationFactor = 2500;
 
@@ -401,12 +401,12 @@ namespace XenoAtom.Graphics.Tests
                 },
             };
 
-            DeviceBuffer vb = RF.CreateBuffer(
+            DeviceBuffer vb = GD.CreateBuffer(
                 new BufferDescription((uint)(Unsafe.SizeOf<UIntVertexAttribsVertex>() * vertices.Length), BufferUsage.VertexBuffer));
             GD.UpdateBuffer(vb, 0, vertices);
             GD.UpdateBuffer(infoBuffer, 0, new UIntVertexAttribsInfo { ColorNormalizationFactor = colorNormalizationFactor });
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
 
             cl.Begin();
             cl.SetFramebuffer(framebuffer);
@@ -446,15 +446,15 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Points_WithFloat16Color()
         {
-            Texture target = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture target = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            Texture staging = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture staging = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
 
-            Framebuffer framebuffer = RF.CreateFramebuffer(new FramebufferDescription(null, target));
+            Framebuffer framebuffer = GD.CreateFramebuffer(new FramebufferDescription(null, target));
 
-            DeviceBuffer infoBuffer = RF.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
-            DeviceBuffer orthoBuffer = RF.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
+            DeviceBuffer infoBuffer = GD.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
+            DeviceBuffer orthoBuffer = GD.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
             Matrix4x4 orthoMatrix = Matrix4x4.CreateOrthographicOffCenter(
                 0,
                 framebuffer.Width,
@@ -471,13 +471,13 @@ namespace XenoAtom.Graphics.Tests
                         new VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2),
                         new VertexElementDescription("Color_Half", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Half4))
                 },
-                TestShaders.LoadVertexFragment(RF, "F16VertexAttribs"));
+                TestShaders.LoadVertexFragment(GD, "F16VertexAttribs"));
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InfoBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex),
                 new ResourceLayoutElementDescription("OrthoBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
 
-            ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout, infoBuffer, orthoBuffer));
+            ResourceSet set = GD.CreateResourceSet(new ResourceSetDescription(layout, infoBuffer, orthoBuffer));
 
             GraphicsPipelineDescription gpd = new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
@@ -488,7 +488,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
             uint colorNormalizationFactor = 2500;
 
@@ -555,12 +555,12 @@ namespace XenoAtom.Graphics.Tests
                     1),
             };
 
-            DeviceBuffer vb = RF.CreateBuffer(
+            DeviceBuffer vb = GD.CreateBuffer(
                 new BufferDescription((uint)(Unsafe.SizeOf<UIntVertexAttribsVertex>() * vertices.Length), BufferUsage.VertexBuffer));
             GD.UpdateBuffer(vb, 0, vertices);
             GD.UpdateBuffer(infoBuffer, 0, new UIntVertexAttribsInfo { ColorNormalizationFactor = colorNormalizationFactor });
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
 
             cl.Begin();
             cl.SetFramebuffer(framebuffer);
@@ -603,14 +603,14 @@ namespace XenoAtom.Graphics.Tests
             // at a time after a ResourceSet containing a texture has been bound. The OpenGL
             // backend was caching texture state improperly, resulting in wrong textures being sampled.
 
-            Texture target = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture target = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            Texture staging = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture staging = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
 
-            Framebuffer framebuffer = RF.CreateFramebuffer(new FramebufferDescription(null, target));
+            Framebuffer framebuffer = GD.CreateFramebuffer(new FramebufferDescription(null, target));
 
-            DeviceBuffer orthoBuffer = RF.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
+            DeviceBuffer orthoBuffer = GD.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
             Matrix4x4 orthoMatrix = Matrix4x4.CreateOrthographicOffCenter(
                 0,
                 framebuffer.Width,
@@ -620,13 +620,13 @@ namespace XenoAtom.Graphics.Tests
                 1);
             GD.UpdateBuffer(orthoBuffer, 0, ref orthoMatrix);
 
-            Texture sampledTexture = RF.CreateTexture(
+            Texture sampledTexture = GD.CreateTexture(
                 TextureDescription.Texture2D(1, 1, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Sampled));
 
             RgbaFloat white = RgbaFloat.White;
             GD.UpdateTexture(sampledTexture, (IntPtr)(&white), (uint)Unsafe.SizeOf<RgbaFloat>(), 0, 0, 0, 1, 1, 1, 0, 0);
 
-            Texture shouldntBeSampledTexture = RF.CreateTexture(
+            Texture shouldntBeSampledTexture = GD.CreateTexture(
                 TextureDescription.Texture2D(1, 1, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Sampled));
 
             ShaderSetDescription shaderSet = new ShaderSetDescription(
@@ -635,9 +635,9 @@ namespace XenoAtom.Graphics.Tests
                     new VertexLayoutDescription(
                         new VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2))
                 },
-                TestShaders.LoadVertexFragment(RF, "TexturedPoints"));
+                TestShaders.LoadVertexFragment(GD, "TexturedPoints"));
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("Ortho", ResourceKind.UniformBuffer, ShaderStages.Vertex),
                 new ResourceLayoutElementDescription("Tex", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                 new ResourceLayoutElementDescription("Smp", ResourceKind.Sampler, ShaderStages.Fragment)));
@@ -645,12 +645,12 @@ namespace XenoAtom.Graphics.Tests
             ResourceSet set;
             if (useTextureView)
             {
-                TextureView view = RF.CreateTextureView(sampledTexture);
-                set = RF.CreateResourceSet(new ResourceSetDescription(layout, orthoBuffer, view, GD.PointSampler));
+                TextureView view = GD.CreateTextureView(sampledTexture);
+                set = GD.CreateResourceSet(new ResourceSetDescription(layout, orthoBuffer, view, GD.PointSampler));
             }
             else
             {
-                set = RF.CreateResourceSet(new ResourceSetDescription(layout, orthoBuffer, sampledTexture, GD.PointSampler));
+                set = GD.CreateResourceSet(new ResourceSetDescription(layout, orthoBuffer, sampledTexture, GD.PointSampler));
             }
 
             GraphicsPipelineDescription gpd = new GraphicsPipelineDescription(
@@ -662,7 +662,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
             Vector2[] vertices = new Vector2[]
             {
@@ -672,11 +672,11 @@ namespace XenoAtom.Graphics.Tests
                 new Vector2(3.5f, 25.5f),
             };
 
-            DeviceBuffer vb = RF.CreateBuffer(
+            DeviceBuffer vb = GD.CreateBuffer(
                 new BufferDescription((uint)(Unsafe.SizeOf<Vector2>() * vertices.Length), BufferUsage.VertexBuffer));
             GD.UpdateBuffer(vb, 0, vertices);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
 
             for (int i = 0; i < 2; i++)
             {
@@ -734,42 +734,42 @@ namespace XenoAtom.Graphics.Tests
 
             uint width = 512;
             uint height = 512;
-            Texture output = RF.CreateTexture(
+            Texture output = GD.CreateTexture(
                 TextureDescription.Texture2D(width, height, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            Framebuffer framebuffer = RF.CreateFramebuffer(new FramebufferDescription(null, output));
+            Framebuffer framebuffer = GD.CreateFramebuffer(new FramebufferDescription(null, output));
 
             uint vertexSize = (uint)Unsafe.SizeOf<ColoredVertex>();
-            DeviceBuffer buffer = RF.CreateBuffer(new BufferDescription(
+            DeviceBuffer buffer = GD.CreateBuffer(new BufferDescription(
                 vertexSize * 4,
                 BufferUsage.StructuredBufferReadWrite,
                 vertexSize,
                 true));
 
-            ResourceLayout computeLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout computeLayout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("OutputVertices", ResourceKind.StructuredBufferReadWrite, ShaderStages.Compute)));
-            ResourceSet computeSet = RF.CreateResourceSet(new ResourceSetDescription(computeLayout, buffer));
+            ResourceSet computeSet = GD.CreateResourceSet(new ResourceSetDescription(computeLayout, buffer));
 
-            Pipeline computePipeline = RF.CreateComputePipeline(new ComputePipelineDescription(
-                TestShaders.LoadCompute(RF, "ComputeColoredQuadGenerator"),
+            Pipeline computePipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
+                TestShaders.LoadCompute(GD, "ComputeColoredQuadGenerator"),
                 computeLayout,
                 1, 1, 1));
 
-            ResourceLayout graphicsLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout graphicsLayout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InputVertices", ResourceKind.StructuredBufferReadOnly, ShaderStages.Vertex)));
-            ResourceSet graphicsSet = RF.CreateResourceSet(new ResourceSetDescription(graphicsLayout, buffer));
+            ResourceSet graphicsSet = GD.CreateResourceSet(new ResourceSetDescription(graphicsLayout, buffer));
 
-            Pipeline graphicsPipeline = RF.CreateGraphicsPipeline(new GraphicsPipelineDescription(
+            Pipeline graphicsPipeline = GD.CreateGraphicsPipeline(new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
                 DepthStencilStateDescription.Disabled,
                 RasterizerStateDescription.Default,
                 PrimitiveTopology.TriangleStrip,
                 new ShaderSetDescription(
                     Array.Empty<VertexLayoutDescription>(),
-                    TestShaders.LoadVertexFragment(RF, "ColoredQuadRenderer")),
+                    TestShaders.LoadVertexFragment(GD, "ColoredQuadRenderer")),
                 graphicsLayout,
                 framebuffer.OutputDescription));
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetPipeline(computePipeline);
             cl.SetComputeResourceSet(0, computeSet);
@@ -806,37 +806,37 @@ namespace XenoAtom.Graphics.Tests
                 1,
                 PixelFormat.R32_G32_B32_A32_Float,
                 TextureUsage.Sampled | TextureUsage.Storage);
-            Texture computeOutput = RF.CreateTexture(texDesc);
+            Texture computeOutput = GD.CreateTexture(texDesc);
             texDesc.Usage = TextureUsage.RenderTarget;
-            Texture finalOutput = RF.CreateTexture(texDesc);
-            Framebuffer framebuffer = RF.CreateFramebuffer(new FramebufferDescription(null, finalOutput));
+            Texture finalOutput = GD.CreateTexture(texDesc);
+            Framebuffer framebuffer = GD.CreateFramebuffer(new FramebufferDescription(null, finalOutput));
 
-            ResourceLayout computeLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout computeLayout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("ComputeOutput", ResourceKind.TextureReadWrite, ShaderStages.Compute)));
-            ResourceSet computeSet = RF.CreateResourceSet(new ResourceSetDescription(computeLayout, computeOutput));
+            ResourceSet computeSet = GD.CreateResourceSet(new ResourceSetDescription(computeLayout, computeOutput));
 
-            Pipeline computePipeline = RF.CreateComputePipeline(new ComputePipelineDescription(
-                TestShaders.LoadCompute(RF, "ComputeTextureGenerator"),
+            Pipeline computePipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
+                TestShaders.LoadCompute(GD, "ComputeTextureGenerator"),
                 computeLayout,
                 4, 1, 1));
 
-            ResourceLayout graphicsLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout graphicsLayout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("Input", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                 new ResourceLayoutElementDescription("InputSampler", ResourceKind.Sampler, ShaderStages.Fragment)));
-            ResourceSet graphicsSet = RF.CreateResourceSet(new ResourceSetDescription(graphicsLayout, computeOutput, GD.PointSampler));
+            ResourceSet graphicsSet = GD.CreateResourceSet(new ResourceSetDescription(graphicsLayout, computeOutput, GD.PointSampler));
 
-            Pipeline graphicsPipeline = RF.CreateGraphicsPipeline(new GraphicsPipelineDescription(
+            Pipeline graphicsPipeline = GD.CreateGraphicsPipeline(new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
                 DepthStencilStateDescription.Disabled,
                 RasterizerStateDescription.CullNone,
                 PrimitiveTopology.TriangleStrip,
                 new ShaderSetDescription(
                     Array.Empty<VertexLayoutDescription>(),
-                    TestShaders.LoadVertexFragment(RF, "FullScreenBlit")),
+                    TestShaders.LoadVertexFragment(GD, "FullScreenBlit")),
                 graphicsLayout,
                 framebuffer.OutputDescription));
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetPipeline(computePipeline);
             cl.SetComputeResourceSet(0, computeSet);
@@ -874,18 +874,18 @@ namespace XenoAtom.Graphics.Tests
                 ArrayLayers,
                 PixelFormat.R8_G8_B8_A8_UNorm,
                 TextureUsage.Sampled | TextureUsage.Storage);
-            Texture computeOutput = RF.CreateTexture(texDesc);
+            Texture computeOutput = GD.CreateTexture(texDesc);
 
-            ResourceLayout computeLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout computeLayout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("ComputeOutput", ResourceKind.TextureReadWrite, ShaderStages.Compute)));
-            ResourceSet computeSet = RF.CreateResourceSet(new ResourceSetDescription(computeLayout, computeOutput));
+            ResourceSet computeSet = GD.CreateResourceSet(new ResourceSetDescription(computeLayout, computeOutput));
 
-            Pipeline computePipeline = RF.CreateComputePipeline(new ComputePipelineDescription(
-                TestShaders.LoadCompute(RF, "ComputeImage2DArrayGenerator"),
+            Pipeline computePipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
+                TestShaders.LoadCompute(GD, "ComputeImage2DArrayGenerator"),
                 computeLayout,
                 32, 32, 1));
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetPipeline(computePipeline);
             cl.SetComputeResourceSet(0, computeSet);
@@ -928,30 +928,30 @@ namespace XenoAtom.Graphics.Tests
         {
             if (!GD.Features.Texture1D) { return; }
 
-            Texture target = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture target = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            Texture staging = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture staging = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
 
-            Framebuffer framebuffer = RF.CreateFramebuffer(new FramebufferDescription(null, target));
+            Framebuffer framebuffer = GD.CreateFramebuffer(new FramebufferDescription(null, target));
 
             string SetName = arrayTexture ? "FullScreenTriSampleTextureArray" : "FullScreenTriSampleTexture";
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 Array.Empty<VertexLayoutDescription>(),
-                TestShaders.LoadVertexFragment(RF, SetName));
+                TestShaders.LoadVertexFragment(GD, SetName));
 
             uint layers = arrayTexture ? 10u : 1u;
-            Texture tex1D = RF.CreateTexture(
+            Texture tex1D = GD.CreateTexture(
                 TextureDescription.Texture1D(128, 1, layers, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Sampled));
             RgbaFloat[] colors = new RgbaFloat[tex1D.Width];
             for (int i = 0; i < colors.Length; i++) { colors[i] = RgbaFloat.Pink; }
             GD.UpdateTexture(tex1D, colors, 0, 0, 0, tex1D.Width, 1, 1, 0, 0);
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("Tex", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                 new ResourceLayoutElementDescription("Smp", ResourceKind.Sampler, ShaderStages.Fragment)));
 
-            ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout, tex1D, GD.PointSampler));
+            ResourceSet set = GD.CreateResourceSet(new ResourceSetDescription(layout, tex1D, GD.PointSampler));
 
             GraphicsPipelineDescription gpd = new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
@@ -962,9 +962,9 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
 
             cl.Begin();
             cl.SetFramebuffer(framebuffer);
@@ -990,27 +990,27 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void BindTextureAcrossMultipleDrawCalls()
         {
-            using Texture target1 = RF.CreateTexture(TextureDescription.Texture2D(
+            using Texture target1 = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            using Texture target2 = RF.CreateTexture(TextureDescription.Texture2D(
+            using Texture target2 = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget | TextureUsage.Sampled));
-            using TextureView textureView = RF.CreateTextureView(target2);
+            using TextureView textureView = GD.CreateTextureView(target2);
 
-            using Texture staging1 = RF.CreateTexture(TextureDescription.Texture2D(
+            using Texture staging1 = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
-            using Texture staging2 = RF.CreateTexture(TextureDescription.Texture2D(
+            using Texture staging2 = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
-            using Texture staging3 = RF.CreateTexture(TextureDescription.Texture2D(
+            using Texture staging3 = GD.CreateTexture(TextureDescription.Texture2D(
                 50, 50, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
 
-            using Framebuffer framebuffer1 = RF.CreateFramebuffer(new FramebufferDescription(null, target1));
-            using Framebuffer framebuffer2 = RF.CreateFramebuffer(new FramebufferDescription(null, target2));
+            using Framebuffer framebuffer1 = GD.CreateFramebuffer(new FramebufferDescription(null, target1));
+            using Framebuffer framebuffer2 = GD.CreateFramebuffer(new FramebufferDescription(null, target2));
 
             // This shader doesn't really matter, just as long as it is different to the first
             // and third render pass and also doesn't use any texture bindings
             ShaderSetDescription textureShaderSet = new ShaderSetDescription(
                 Array.Empty<VertexLayoutDescription>(),
-                TestShaders.LoadVertexFragment(RF, "FullScreenTriSampleTexture2D"));
+                TestShaders.LoadVertexFragment(GD, "FullScreenTriSampleTexture2D"));
             ShaderSetDescription quadShaderSet = new ShaderSetDescription(
                 new VertexLayoutDescription[]
                 {
@@ -1021,9 +1021,9 @@ namespace XenoAtom.Graphics.Tests
                         new VertexElementDescription("D_V4", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4)
                     )
                 },
-                TestShaders.LoadVertexFragment(RF, "VertexLayoutTestShader"));
+                TestShaders.LoadVertexFragment(GD, "VertexLayoutTestShader"));
 
-            using DeviceBuffer vertexBuffer = RF.CreateBuffer(new BufferDescription(
+            using DeviceBuffer vertexBuffer = GD.CreateBuffer(new BufferDescription(
                 (uint)Unsafe.SizeOf<TestVertex>() * 3,
                 BufferUsage.VertexBuffer));
             GD.UpdateBuffer(vertexBuffer, 0, new[] {
@@ -1037,13 +1037,13 @@ namespace XenoAtom.Graphics.Tests
             for (int i = 0; i < colors.Length; i++) { colors[i] = RgbaFloat.Pink; }
             GD.UpdateTexture(target2, colors, 0, 0, 0, target2.Width, target2.Height, 1, 0, 0);
 
-            using ResourceLayout textureLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            using ResourceLayout textureLayout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("Tex", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                 new ResourceLayoutElementDescription("Smp", ResourceKind.Sampler, ShaderStages.Fragment)));
 
-            using ResourceSet textureSet = RF.CreateResourceSet(new ResourceSetDescription(textureLayout, textureView, GD.PointSampler));
+            using ResourceSet textureSet = GD.CreateResourceSet(new ResourceSetDescription(textureLayout, textureView, GD.PointSampler));
 
-            using Pipeline texturePipeline = RF.CreateGraphicsPipeline(new GraphicsPipelineDescription(
+            using Pipeline texturePipeline = GD.CreateGraphicsPipeline(new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
                 DepthStencilStateDescription.Disabled,
                 RasterizerStateDescription.CullNone,
@@ -1051,7 +1051,7 @@ namespace XenoAtom.Graphics.Tests
                 textureShaderSet,
                 textureLayout,
                 framebuffer1.OutputDescription));
-            using Pipeline quadPipeline = RF.CreateGraphicsPipeline(new GraphicsPipelineDescription(
+            using Pipeline quadPipeline = GD.CreateGraphicsPipeline(new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
                 DepthStencilStateDescription.Disabled,
                 RasterizerStateDescription.CullNone,
@@ -1060,7 +1060,7 @@ namespace XenoAtom.Graphics.Tests
                 Array.Empty<ResourceLayout>(),
                 framebuffer2.OutputDescription));
 
-            using CommandList cl = RF.CreateCommandList();
+            using CommandList cl = GD.CreateCommandList();
 
             cl.Begin();
             cl.SetFramebuffer(framebuffer1);
@@ -1114,9 +1114,9 @@ namespace XenoAtom.Graphics.Tests
         [InlineData(32, 31)]
         public void FramebufferArrayLayer(uint layerCount, uint targetLayer)
         {
-            Texture target = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture target = GD.CreateTexture(TextureDescription.Texture2D(
                 16, 16, 1, layerCount, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            Framebuffer framebuffer = RF.CreateFramebuffer(
+            Framebuffer framebuffer = GD.CreateFramebuffer(
                 new FramebufferDescription(
                     null,
                     new[] { new FramebufferAttachmentDescription(target, targetLayer) }));
@@ -1124,19 +1124,19 @@ namespace XenoAtom.Graphics.Tests
             string setName = "FullScreenTriSampleTexture2D";
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 Array.Empty<VertexLayoutDescription>(),
-                TestShaders.LoadVertexFragment(RF, setName));
+                TestShaders.LoadVertexFragment(GD, setName));
 
-            Texture tex2D = RF.CreateTexture(
+            Texture tex2D = GD.CreateTexture(
                 TextureDescription.Texture2D(128, 128, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Sampled));
             RgbaFloat[] colors = new RgbaFloat[tex2D.Width * tex2D.Height];
             for (int i = 0; i < colors.Length; i++) { colors[i] = RgbaFloat.Pink; }
             GD.UpdateTexture(tex2D, colors, 0, 0, 0, tex2D.Width, 1, 1, 0, 0);
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("Tex", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                 new ResourceLayoutElementDescription("Smp", ResourceKind.Sampler, ShaderStages.Fragment)));
 
-            ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout, tex2D, GD.PointSampler));
+            ResourceSet set = GD.CreateResourceSet(new ResourceSetDescription(layout, tex2D, GD.PointSampler));
 
             GraphicsPipelineDescription gpd = new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
@@ -1147,9 +1147,9 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
 
             cl.Begin();
             cl.SetFramebuffer(framebuffer);
@@ -1181,12 +1181,12 @@ namespace XenoAtom.Graphics.Tests
         [InlineData(4, 2, 5)]
         public void RenderToCubemapFace(uint layerCount, uint targetLayer, uint targetFace)
         {
-            Texture target = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture target = GD.CreateTexture(TextureDescription.Texture2D(
                 16, 16,
                 1, layerCount,
                 PixelFormat.R32_G32_B32_A32_Float,
                 TextureUsage.RenderTarget | TextureUsage.Cubemap));
-            Framebuffer framebuffer = RF.CreateFramebuffer(
+            Framebuffer framebuffer = GD.CreateFramebuffer(
                 new FramebufferDescription(
                     null,
                     new[] { new FramebufferAttachmentDescription(target, (targetLayer * 6) + targetFace) }));
@@ -1194,19 +1194,19 @@ namespace XenoAtom.Graphics.Tests
             string setName = "FullScreenTriSampleTexture2D";
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 Array.Empty<VertexLayoutDescription>(),
-                TestShaders.LoadVertexFragment(RF, setName));
+                TestShaders.LoadVertexFragment(GD, setName));
 
-            Texture tex2D = RF.CreateTexture(
+            Texture tex2D = GD.CreateTexture(
                 TextureDescription.Texture2D(128, 128, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Sampled));
             RgbaFloat[] colors = new RgbaFloat[tex2D.Width * tex2D.Height];
             for (int i = 0; i < colors.Length; i++) { colors[i] = RgbaFloat.Pink; }
             GD.UpdateTexture(tex2D, colors, 0, 0, 0, tex2D.Width, 1, 1, 0, 0);
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("Tex", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
                 new ResourceLayoutElementDescription("Smp", ResourceKind.Sampler, ShaderStages.Fragment)));
 
-            ResourceSet set = RF.CreateResourceSet(new ResourceSetDescription(layout, tex2D, GD.PointSampler));
+            ResourceSet set = GD.CreateResourceSet(new ResourceSetDescription(layout, tex2D, GD.PointSampler));
 
             GraphicsPipelineDescription gpd = new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
@@ -1217,9 +1217,9 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
 
             cl.Begin();
             cl.SetFramebuffer(framebuffer);
@@ -1245,21 +1245,21 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void WriteFragmentDepth()
         {
-            Texture depthTarget = RF.CreateTexture(
+            Texture depthTarget = GD.CreateTexture(
                 TextureDescription.Texture2D(64, 64, 1, 1, PixelFormat.R32_Float, TextureUsage.DepthStencil | TextureUsage.Sampled));
-            Framebuffer framebuffer = RF.CreateFramebuffer(new FramebufferDescription(depthTarget));
+            Framebuffer framebuffer = GD.CreateFramebuffer(new FramebufferDescription(depthTarget));
 
             string setName = "FullScreenWriteDepth";
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 Array.Empty<VertexLayoutDescription>(),
-                TestShaders.LoadVertexFragment(RF, setName));
+                TestShaders.LoadVertexFragment(GD, setName));
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("FramebufferInfo", ResourceKind.UniformBuffer, ShaderStages.Fragment)));
 
-            DeviceBuffer ub = RF.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
+            DeviceBuffer ub = GD.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
             GD.UpdateBuffer(ub, 0, new Vector4(depthTarget.Width, depthTarget.Height, 0, 0));
-            ResourceSet rs = RF.CreateResourceSet(new ResourceSetDescription(layout, ub));
+            ResourceSet rs = GD.CreateResourceSet(new ResourceSetDescription(layout, ub));
 
             GraphicsPipelineDescription gpd = new GraphicsPipelineDescription(
                 BlendStateDescription.SingleOverrideBlend,
@@ -1270,9 +1270,9 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
 
             cl.Begin();
             cl.SetFramebuffer(framebuffer);
@@ -1308,9 +1308,9 @@ namespace XenoAtom.Graphics.Tests
         {
             const uint width = 512;
             const uint height = 512;
-            using var output = RF.CreateTexture(
+            using var output = GD.CreateTexture(
                 TextureDescription.Texture2D(width, height, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            using var framebuffer = RF.CreateFramebuffer(new FramebufferDescription(null, output));
+            using var framebuffer = GD.CreateFramebuffer(new FramebufferDescription(null, output));
 
             var yMod = GD.IsClipSpaceYInverted ? -1.0f : 1.0f;
             var vertices = new[]
@@ -1321,16 +1321,16 @@ namespace XenoAtom.Graphics.Tests
                 new ColoredVertex { Position = new Vector2(1, -1 * yMod), Color = Vector4.One }
             };
             uint vertexSize = (uint)Unsafe.SizeOf<ColoredVertex>();
-            using var buffer = RF.CreateBuffer(new BufferDescription(
+            using var buffer = GD.CreateBuffer(new BufferDescription(
                 vertexSize * (uint)vertices.Length,
                 BufferUsage.StructuredBufferReadOnly,
                 vertexSize,
                 true));
             GD.UpdateBuffer(buffer, 0, vertices);
 
-            using var graphicsLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            using var graphicsLayout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InputVertices", ResourceKind.StructuredBufferReadOnly, ShaderStages.Vertex)));
-            using var graphicsSet = RF.CreateResourceSet(new ResourceSetDescription(graphicsLayout, buffer));
+            using var graphicsSet = GD.CreateResourceSet(new ResourceSetDescription(graphicsLayout, buffer));
 
             var blendDesc = new BlendStateDescription
             {
@@ -1356,12 +1356,12 @@ namespace XenoAtom.Graphics.Tests
                 PrimitiveTopology.TriangleStrip,
                 new ShaderSetDescription(
                     Array.Empty<VertexLayoutDescription>(),
-                    TestShaders.LoadVertexFragment(RF, "ColoredQuadRenderer")),
+                    TestShaders.LoadVertexFragment(GD, "ColoredQuadRenderer")),
                 graphicsLayout,
                 framebuffer.OutputDescription);
 
-            using (var pipeline1 = RF.CreateGraphicsPipeline(pipelineDesc))
-            using (var cl = RF.CreateCommandList())
+            using (var pipeline1 = GD.CreateGraphicsPipeline(pipelineDesc))
+            using (var cl = GD.CreateCommandList())
             {
                 cl.Begin();
                 cl.SetFramebuffer(framebuffer);
@@ -1390,8 +1390,8 @@ namespace XenoAtom.Graphics.Tests
             blendDesc.AttachmentStates[0].DestinationAlphaFactor = BlendFactor.InverseBlendFactor;
             pipelineDesc.BlendState = blendDesc;
 
-            using (var pipeline2 = RF.CreateGraphicsPipeline(pipelineDesc))
-            using (var cl = RF.CreateCommandList())
+            using (var pipeline2 = GD.CreateGraphicsPipeline(pipelineDesc))
+            using (var cl = GD.CreateCommandList())
             {
                 cl.Begin();
                 cl.SetFramebuffer(framebuffer);
@@ -1418,9 +1418,9 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void UseColorWriteMask()
         {
-            Texture output = RF.CreateTexture(
+            Texture output = GD.CreateTexture(
                 TextureDescription.Texture2D(64, 64, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            using var framebuffer = RF.CreateFramebuffer(new FramebufferDescription(null, output));
+            using var framebuffer = GD.CreateFramebuffer(new FramebufferDescription(null, output));
 
             var yMod = GD.IsClipSpaceYInverted ? -1.0f : 1.0f;
             var vertices = new[]
@@ -1431,16 +1431,16 @@ namespace XenoAtom.Graphics.Tests
                 new ColoredVertex { Position = new Vector2(1, -1 * yMod), Color = Vector4.One }
             };
             uint vertexSize = (uint)Unsafe.SizeOf<ColoredVertex>();
-            using var buffer = RF.CreateBuffer(new BufferDescription(
+            using var buffer = GD.CreateBuffer(new BufferDescription(
                 vertexSize * (uint)vertices.Length,
                 BufferUsage.StructuredBufferReadOnly,
                 vertexSize,
                 true));
             GD.UpdateBuffer(buffer, 0, vertices);
 
-            using var graphicsLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            using var graphicsLayout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InputVertices", ResourceKind.StructuredBufferReadOnly, ShaderStages.Vertex)));
-            using var graphicsSet = RF.CreateResourceSet(new ResourceSetDescription(graphicsLayout, buffer));
+            using var graphicsSet = GD.CreateResourceSet(new ResourceSetDescription(graphicsLayout, buffer));
 
             var blendDesc = new BlendStateDescription
             {
@@ -1466,12 +1466,12 @@ namespace XenoAtom.Graphics.Tests
                 PrimitiveTopology.TriangleStrip,
                 new ShaderSetDescription(
                     Array.Empty<VertexLayoutDescription>(),
-                    TestShaders.LoadVertexFragment(RF, "ColoredQuadRenderer")),
+                    TestShaders.LoadVertexFragment(GD, "ColoredQuadRenderer")),
                 graphicsLayout,
                 framebuffer.OutputDescription);
 
-            using (var pipeline1 = RF.CreateGraphicsPipeline(pipelineDesc))
-            using (var cl = RF.CreateCommandList())
+            using (var pipeline1 = GD.CreateGraphicsPipeline(pipelineDesc))
+            using (var cl = GD.CreateCommandList())
             {
                 cl.Begin();
                 cl.SetFramebuffer(framebuffer);
@@ -1501,8 +1501,8 @@ namespace XenoAtom.Graphics.Tests
                 blendDesc.AttachmentStates[0].ColorWriteMask = mask;
                 pipelineDesc.BlendState = blendDesc;
 
-                using (var maskedPipeline = RF.CreateGraphicsPipeline(pipelineDesc))
-                using (var cl = RF.CreateCommandList())
+                using (var maskedPipeline = GD.CreateGraphicsPipeline(pipelineDesc))
+                using (var cl = GD.CreateCommandList())
                 {
                     cl.Begin();
                     cl.SetFramebuffer(framebuffer);
@@ -1537,7 +1537,7 @@ namespace XenoAtom.Graphics.Tests
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanRenderTests : RenderTests<VulkanDeviceCreator>
+    public class VulkanRenderTests : RenderTests
     {
         public VulkanRenderTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {

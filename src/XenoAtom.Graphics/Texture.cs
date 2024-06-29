@@ -80,7 +80,7 @@ namespace XenoAtom.Graphics
 
         private protected virtual TextureView CreateFullTextureView(GraphicsDevice gd)
         {
-            return gd.ResourceFactory.CreateTextureView(this);
+            return gd.CreateTextureView(this);
         }
 
         internal void DisposeTextureView()

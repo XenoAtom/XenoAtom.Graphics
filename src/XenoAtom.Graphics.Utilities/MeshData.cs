@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace XenoAtom.Graphics.Utilities
@@ -12,16 +12,19 @@ namespace XenoAtom.Graphics.Utilities
         /// <summary>
         /// Constructs a <see cref="VertexBuffer"/> from this <see cref="MeshData"/>.
         /// </summary>
-        /// <param name="factory">The <see cref="ResourceFactory"/> to use for device resource creation.</param>
+        /// <param name="device"></param>
+        /// <param name="cl"></param>
         /// <returns></returns>
-        DeviceBuffer CreateVertexBuffer(ResourceFactory factory, CommandList cl);
+        DeviceBuffer CreateVertexBuffer(GraphicsDevice device, CommandList cl);
 
         /// <summary>
         /// Constructs a <see cref="IndexBuffer"/> from this <see cref="MeshData"/>.
         /// </summary>
-        /// <param name="factory">The <see cref="ResourceFactory"/> to use for device resource creation.</param>
+        /// <param name="device"></param>
+        /// <param name="cl"></param>
+        /// <param name="indexCount"></param>
         /// <returns></returns>
-        DeviceBuffer CreateIndexBuffer(ResourceFactory factory, CommandList cl, out int indexCount);
+        DeviceBuffer CreateIndexBuffer(GraphicsDevice device, CommandList cl, out int indexCount);
 
         /// <summary>
         /// Gets a centered <see cref="BoundingSphere"/> which completely encapsulates the vertices of this mesh.

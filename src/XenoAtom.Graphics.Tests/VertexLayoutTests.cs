@@ -5,7 +5,7 @@ using Xunit.Abstractions;
 namespace XenoAtom.Graphics.Tests
 {
 
-    public abstract class VertexLayoutTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
+    public abstract class VertexLayoutTests : GraphicsDeviceTestBase
     {
         [Theory]
         [InlineData(0, 0, 0, 0, -1, true)]
@@ -19,9 +19,9 @@ namespace XenoAtom.Graphics.Tests
         [InlineData(0, 12, 28, 35, -1, false)]
         public void ExplicitOffsets(uint firstOffset, uint secondOffset, uint thirdOffset, uint fourthOffset, int stride, bool succeeds)
         {
-            Texture outTex = RF.CreateTexture(
+            Texture outTex = GD.CreateTexture(
                 TextureDescription.Texture2D(1, 1, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
-            Framebuffer fb = RF.CreateFramebuffer(new FramebufferDescription(null, outTex));
+            Framebuffer fb = GD.CreateFramebuffer(new FramebufferDescription(null, outTex));
 
             VertexLayoutDescription vertexLayoutDesc = new VertexLayoutDescription(
                 new VertexElementDescription("A_V3", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3, firstOffset),
@@ -39,11 +39,11 @@ namespace XenoAtom.Graphics.Tests
                 {
                     vertexLayoutDesc
                 },
-                TestShaders.LoadVertexFragment(RF, "VertexLayoutTestShader"));
+                TestShaders.LoadVertexFragment(GD, "VertexLayoutTestShader"));
 
             try
             {
-                RF.CreateGraphicsPipeline(new GraphicsPipelineDescription(
+                GD.CreateGraphicsPipeline(new GraphicsPipelineDescription(
                     BlendStateDescription.SingleOverrideBlend,
                     DepthStencilStateDescription.Disabled,
                     RasterizerStateDescription.Default,
@@ -61,7 +61,7 @@ namespace XenoAtom.Graphics.Tests
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanVertexLayoutTests : VertexLayoutTests<VulkanDeviceCreator>
+    public class VulkanVertexLayoutTests : VertexLayoutTests
     {
         public VulkanVertexLayoutTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {

@@ -3,7 +3,7 @@ using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
-    public abstract class SwapchainTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
+    public abstract class SwapchainTests : GraphicsDeviceTestBase
     {
         /*
         [Theory]
@@ -18,7 +18,7 @@ namespace XenoAtom.Graphics.Tests
             //Sdl2Window window = new Sdl2Window("SwapchainTestWindow", 0, 0, 100, 100, SDL_WindowFlags.Hidden, false);
             //SwapchainSource source = VeldridStartup.GetSwapchainSource(window);
             //SwapchainDescription swapchainDesc = new SwapchainDescription(source, 100, 100, depthFormat, syncToVerticalBlank);
-            //Swapchain swapchain = RF.CreateSwapchain(ref swapchainDesc);
+            //Swapchain swapchain = GD.CreateSwapchain(ref swapchainDesc);
 
             //if (depthFormat == null)
             //{
@@ -40,7 +40,7 @@ namespace XenoAtom.Graphics.Tests
         }
     }
 
-    public abstract class MainSwapchainTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
+    public abstract class MainSwapchainTests : GraphicsDeviceTestBase
     {
         protected MainSwapchainTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {
@@ -73,7 +73,7 @@ namespace XenoAtom.Graphics.Tests
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanSwapchainTests : SwapchainTests<VulkanDeviceCreator>
+    public class VulkanSwapchainTests : SwapchainTests
     {
         public VulkanSwapchainTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {

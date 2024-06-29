@@ -27,7 +27,7 @@ namespace XenoAtom.Graphics.Tests
     }
 
 
-    public abstract class ComputeTests<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
+    public abstract class ComputeTests : GraphicsDeviceTestBase
     {
         protected ComputeTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {
@@ -39,20 +39,20 @@ namespace XenoAtom.Graphics.Tests
             const float FillValue = 42.42f;
             const uint OutputTextureSize = 32;
 
-            using Shader computeShader = TestShaders.LoadCompute(RF, "ComputeShader3dTexture");
-            using ResourceLayout computeLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            using Shader computeShader = TestShaders.LoadCompute(GD, "ComputeShader3dTexture");
+            using ResourceLayout computeLayout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("TextureToFill", ResourceKind.TextureReadWrite, ShaderStages.Compute),
                 new ResourceLayoutElementDescription("FillValueBuffer", ResourceKind.UniformBuffer, ShaderStages.Compute)));
 
-            using Pipeline computePipeline = RF.CreateComputePipeline(new ComputePipelineDescription(
+            using Pipeline computePipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
                 computeShader,
                 computeLayout,
                 16, 16, 1));
 
-            using DeviceBuffer fillValueBuffer = RF.CreateBuffer(new BufferDescription((uint)Marshal.SizeOf<FillValueStruct>(), BufferUsage.UniformBuffer));
+            using DeviceBuffer fillValueBuffer = GD.CreateBuffer(new BufferDescription((uint)Marshal.SizeOf<FillValueStruct>(), BufferUsage.UniformBuffer));
 
             // Create our output texture.
-            using Texture computeTargetTexture = RF.CreateTexture(TextureDescription.Texture3D(
+            using Texture computeTargetTexture = GD.CreateTexture(TextureDescription.Texture3D(
                 OutputTextureSize,
                 OutputTextureSize,
                 OutputTextureSize,
@@ -60,14 +60,14 @@ namespace XenoAtom.Graphics.Tests
                 PixelFormat.R32_G32_B32_A32_Float,
                 TextureUsage.Sampled | TextureUsage.Storage));
 
-            using TextureView computeTargetTextureView = RF.CreateTextureView(computeTargetTexture);
+            using TextureView computeTargetTextureView = GD.CreateTextureView(computeTargetTexture);
 
-            using ResourceSet computeResourceSet = RF.CreateResourceSet(new ResourceSetDescription(
+            using ResourceSet computeResourceSet = GD.CreateResourceSet(new ResourceSetDescription(
                 computeLayout,
                 computeTargetTextureView,
                 fillValueBuffer));
 
-            using CommandList cl = RF.CreateCommandList();
+            using CommandList cl = GD.CreateCommandList();
             cl.Begin();
 
             cl.UpdateBuffer(fillValueBuffer, 0, new FillValueStruct(FillValue));
@@ -100,12 +100,12 @@ namespace XenoAtom.Graphics.Tests
             where TexelType : unmanaged
         {
             // We need to create a staging texture and copy into it.
-            using Texture staging = RF.CreateTexture(new(texture.Width, texture.Height, depth: 1,
+            using Texture staging = GD.CreateTexture(new(texture.Width, texture.Height, depth: 1,
                 texture.MipLevels, texture.ArrayLayers,
                 texture.Format, TextureUsage.Staging,
                 texture.Type, texture.SampleCount));
 
-            using CommandList cl = RF.CreateCommandList();
+            using CommandList cl = GD.CreateCommandList();
             cl.Begin();
 
             cl.CopyTexture(texture,
@@ -161,16 +161,16 @@ namespace XenoAtom.Graphics.Tests
         {
             Skip.IfNot(GD.Features.ComputeShader);
 
-            ResourceLayout layout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("Params", ResourceKind.UniformBuffer, ShaderStages.Compute),
                 new ResourceLayoutElementDescription("Source", ResourceKind.StructuredBufferReadWrite, ShaderStages.Compute),
                 new ResourceLayoutElementDescription("Destination", ResourceKind.StructuredBufferReadWrite, ShaderStages.Compute)));
 
             uint width = 1024;
             uint height = 1024;
-            DeviceBuffer paramsBuffer = RF.CreateBuffer(new BufferDescription((uint)Unsafe.SizeOf<BasicComputeTestParams>(), BufferUsage.UniformBuffer));
-            DeviceBuffer sourceBuffer = RF.CreateBuffer(new BufferDescription(width * height * 4, BufferUsage.StructuredBufferReadWrite, 4, true));
-            DeviceBuffer destinationBuffer = RF.CreateBuffer(new BufferDescription(width * height * 4, BufferUsage.StructuredBufferReadWrite, 4, true));
+            DeviceBuffer paramsBuffer = GD.CreateBuffer(new BufferDescription((uint)Unsafe.SizeOf<BasicComputeTestParams>(), BufferUsage.UniformBuffer));
+            DeviceBuffer sourceBuffer = GD.CreateBuffer(new BufferDescription(width * height * 4, BufferUsage.StructuredBufferReadWrite, 4, true));
+            DeviceBuffer destinationBuffer = GD.CreateBuffer(new BufferDescription(width * height * 4, BufferUsage.StructuredBufferReadWrite, 4, true));
 
             GD.UpdateBuffer(paramsBuffer, 0, new BasicComputeTestParams { Width = width, Height = height });
 
@@ -183,14 +183,14 @@ namespace XenoAtom.Graphics.Tests
                 }
             GD.UpdateBuffer(sourceBuffer, 0, sourceData);
 
-            ResourceSet rs = RF.CreateResourceSet(new ResourceSetDescription(layout, paramsBuffer, sourceBuffer, destinationBuffer));
+            ResourceSet rs = GD.CreateResourceSet(new ResourceSetDescription(layout, paramsBuffer, sourceBuffer, destinationBuffer));
 
-            Pipeline pipeline = RF.CreateComputePipeline(new ComputePipelineDescription(
-                TestShaders.LoadCompute(RF, "BasicComputeTest"),
+            Pipeline pipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
+                TestShaders.LoadCompute(GD, "BasicComputeTest"),
                 layout,
                 16, 16, 1));
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetPipeline(pipeline);
             cl.SetComputeResourceSet(0, rs);
@@ -230,7 +230,7 @@ namespace XenoAtom.Graphics.Tests
                 1,
                 PixelFormat.R8_G8_B8_A8_UNorm,
                 TextureUsage.Sampled | TextureUsage.Storage | TextureUsage.Cubemap);
-            Texture computeOutput = RF.CreateTexture(texDesc);
+            Texture computeOutput = GD.CreateTexture(texDesc);
 
             Vector4[] faceColors = new Vector4[] {
                 new Vector4(0 * 42),
@@ -241,16 +241,16 @@ namespace XenoAtom.Graphics.Tests
                 new Vector4(5 * 42)
             };
 
-            ResourceLayout computeLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout computeLayout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("ComputeOutput", ResourceKind.TextureReadWrite, ShaderStages.Compute)));
-            ResourceSet computeSet = RF.CreateResourceSet(new ResourceSetDescription(computeLayout, computeOutput));
+            ResourceSet computeSet = GD.CreateResourceSet(new ResourceSetDescription(computeLayout, computeOutput));
 
-            Pipeline computePipeline = RF.CreateComputePipeline(new ComputePipelineDescription(
-                TestShaders.LoadCompute(RF, "ComputeCubemapGenerator"),
+            Pipeline computePipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
+                TestShaders.LoadCompute(GD, "ComputeCubemapGenerator"),
                 computeLayout,
                 32, 32, 1));
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetPipeline(computePipeline);
             cl.SetComputeResourceSet(0, computeSet);
@@ -296,9 +296,9 @@ namespace XenoAtom.Graphics.Tests
                 1,
                 PixelFormat.R8_G8_B8_A8_UNorm,
                 TextureUsage.Sampled | TextureUsage.Storage | TextureUsage.Cubemap);
-            Texture computeOutput = RF.CreateTexture(texDesc);
+            Texture computeOutput = GD.CreateTexture(texDesc);
 
-            TextureView computeOutputMipLevel = RF.CreateTextureView(new TextureViewDescription(computeOutput, BoundMipLevel, 1, 0, 1));
+            TextureView computeOutputMipLevel = GD.CreateTextureView(new TextureViewDescription(computeOutput, BoundMipLevel, 1, 0, 1));
 
             Vector4[] faceColors = new Vector4[] {
                 new Vector4(0 * 42),
@@ -309,12 +309,12 @@ namespace XenoAtom.Graphics.Tests
                 new Vector4(5 * 42)
             };
 
-            ResourceLayout computeLayout = RF.CreateResourceLayout(new ResourceLayoutDescription(
+            ResourceLayout computeLayout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("ComputeOutput", ResourceKind.TextureReadWrite, ShaderStages.Compute)));
-            ResourceSet computeSet = RF.CreateResourceSet(new ResourceSetDescription(computeLayout, computeOutputMipLevel));
+            ResourceSet computeSet = GD.CreateResourceSet(new ResourceSetDescription(computeLayout, computeOutputMipLevel));
 
-            Pipeline computePipeline = RF.CreateComputePipeline(new ComputePipelineDescription(
-                TestShaders.LoadCompute(RF, "ComputeCubemapGenerator"),
+            Pipeline computePipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
+                TestShaders.LoadCompute(GD, "ComputeCubemapGenerator"),
                 computeLayout,
                 32, 32, 1));
 
@@ -338,7 +338,7 @@ namespace XenoAtom.Graphics.Tests
                 }
             }
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetPipeline(computePipeline);
             cl.SetComputeResourceSet(0, computeSet);
@@ -382,9 +382,9 @@ namespace XenoAtom.Graphics.Tests
             uint totalSrcAlignment = GD.StructuredBufferMinOffsetAlignment * (srcSetMultiple + srcBindingMultiple);
             uint totalDstAlignment = GD.StructuredBufferMinOffsetAlignment * (dstSetMultiple + dstBindingMultiple);
 
-            DeviceBuffer copySrc = RF.CreateBuffer(
+            DeviceBuffer copySrc = GD.CreateBuffer(
                 new BufferDescription(totalSrcAlignment + dataSize, BufferUsage.StructuredBufferReadOnly, sizeof(uint), true));
-            DeviceBuffer copyDst = RF.CreateBuffer(
+            DeviceBuffer copyDst = GD.CreateBuffer(
                 new BufferDescription(totalDstAlignment + dataSize, BufferUsage.StructuredBufferReadWrite, sizeof(uint), true));
 
             ResourceLayout[] layouts;
@@ -397,7 +397,7 @@ namespace XenoAtom.Graphics.Tests
             {
                 layouts = new[]
                 {
-                    RF.CreateResourceLayout(new ResourceLayoutDescription(
+                    GD.CreateResourceLayout(new ResourceLayoutDescription(
                         new ResourceLayoutElementDescription(
                             "CopySrc",
                             ResourceKind.StructuredBufferReadOnly,
@@ -411,20 +411,20 @@ namespace XenoAtom.Graphics.Tests
                 };
                 sets = new[]
                 {
-                    RF.CreateResourceSet(new ResourceSetDescription(layouts[0], srcRange, dstRange))
+                    GD.CreateResourceSet(new ResourceSetDescription(layouts[0], srcRange, dstRange))
                 };
             }
             else
             {
                 layouts = new[]
                 {
-                    RF.CreateResourceLayout(new ResourceLayoutDescription(
+                    GD.CreateResourceLayout(new ResourceLayoutDescription(
                         new ResourceLayoutElementDescription(
                             "CopySrc",
                             ResourceKind.StructuredBufferReadOnly,
                             ShaderStages.Compute,
                             ResourceLayoutElementOptions.DynamicBinding))),
-                    RF.CreateResourceLayout(new ResourceLayoutDescription(
+                    GD.CreateResourceLayout(new ResourceLayoutDescription(
                         new ResourceLayoutElementDescription(
                             "CopyDst",
                             ResourceKind.StructuredBufferReadWrite,
@@ -433,20 +433,20 @@ namespace XenoAtom.Graphics.Tests
                 };
                 sets = new[]
                 {
-                    RF.CreateResourceSet(new ResourceSetDescription(layouts[0], srcRange)),
-                    RF.CreateResourceSet(new ResourceSetDescription(layouts[1], dstRange)),
+                    GD.CreateResourceSet(new ResourceSetDescription(layouts[0], srcRange)),
+                    GD.CreateResourceSet(new ResourceSetDescription(layouts[1], dstRange)),
                 };
             }
 
-            Pipeline pipeline = RF.CreateComputePipeline(new ComputePipelineDescription(
-                TestShaders.LoadCompute(RF, combinedLayout ? "FillBuffer" : "FillBuffer_SeparateLayout"),
+            Pipeline pipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
+                TestShaders.LoadCompute(GD, combinedLayout ? "FillBuffer" : "FillBuffer_SeparateLayout"),
                 layouts,
                 1, 1, 1));
 
             uint[] srcData = Enumerable.Range(0, (int)copySrc.SizeInBytes / sizeof(uint)).Select(i => (uint)i).ToArray();
             GD.UpdateBuffer(copySrc, 0, srcData);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetPipeline(pipeline);
             if (combinedLayout)
@@ -501,7 +501,7 @@ namespace XenoAtom.Graphics.Tests
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanComputeTests : ComputeTests<VulkanDeviceCreator>
+    public class VulkanComputeTests : ComputeTests
     {
         public VulkanComputeTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {

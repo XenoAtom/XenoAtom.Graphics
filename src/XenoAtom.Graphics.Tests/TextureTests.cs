@@ -7,12 +7,12 @@ using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
-    public abstract class TextureTestBase<T> : GraphicsDeviceTestBase<T> where T : GraphicsDeviceCreator
+    public abstract class TextureTestBase : GraphicsDeviceTestBase
     {
         [Fact]
         public void Map_Succeeds()
         {
-            Texture texture = RF.CreateTexture(
+            Texture texture = GD.CreateTexture(
                 TextureDescription.Texture2D(1024, 1024, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Staging));
 
             MappedResource map = GD.Map(texture, MapMode.ReadWrite, 0);
@@ -22,7 +22,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Map_Succeeds_R32_G32_B32_A32_UInt()
         {
-            Texture texture = RF.CreateTexture(
+            Texture texture = GD.CreateTexture(
                 TextureDescription.Texture2D(1024, 1024, 1, 1, PixelFormat.R32_G32_B32_A32_UInt, TextureUsage.Staging));
 
             MappedResource map = GD.Map(texture, MapMode.ReadWrite, 0);
@@ -34,7 +34,7 @@ namespace XenoAtom.Graphics.Tests
         [InlineData(true)]
         public unsafe void Update_ThenMapRead_Succeeds_R32Float(bool useArrayOverload)
         {
-            Texture texture = RF.CreateTexture(
+            Texture texture = GD.CreateTexture(
                 TextureDescription.Texture2D(1024, 1024, 1, 1, PixelFormat.R32_Float, TextureUsage.Staging));
 
             float[] data = Enumerable.Range(0, 1024 * 1024).Select(i => (float)i).ToArray();
@@ -69,7 +69,7 @@ namespace XenoAtom.Graphics.Tests
         [InlineData(true)]
         public unsafe void Update_ThenMapRead_SingleMip_Succeeds_R16UNorm(bool useArrayOverload)
         {
-            Texture texture = RF.CreateTexture(
+            Texture texture = GD.CreateTexture(
                 TextureDescription.Texture2D(1024, 1024, 3, 1, PixelFormat.R16_UNorm, TextureUsage.Staging));
 
             ushort[] data = Enumerable.Range(0, 256 * 256).Select(i => (ushort)i).ToArray();
@@ -105,8 +105,8 @@ namespace XenoAtom.Graphics.Tests
         {
             TextureDescription desc = TextureDescription.Texture2D(
                 1024, 1024, 3, 1, PixelFormat.R16_UNorm, TextureUsage.Staging);
-            Texture src = RF.CreateTexture(desc);
-            Texture dst = RF.CreateTexture(desc);
+            Texture src = GD.CreateTexture(desc);
+            Texture dst = GD.CreateTexture(desc);
 
             ushort[] data = Enumerable.Range(0, 256 * 256).Select(i => (ushort)i).ToArray();
 
@@ -115,7 +115,7 @@ namespace XenoAtom.Graphics.Tests
                 GD.UpdateTexture(src, (IntPtr)dataPtr, 256 * 256 * sizeof(ushort), 0, 0, 0, 256, 256, 1, 2, 0);
             }
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyTexture(src, dst, 2, 0);
             cl.End();
@@ -146,7 +146,7 @@ namespace XenoAtom.Graphics.Tests
 
             TextureDescription texDesc = TextureDescription.Texture2D(
                 TexSize, TexSize, MipLevels, ArrayLayers, PixelFormat.R8_UNorm, TextureUsage.Storage | TextureUsage.Sampled);
-            Texture tex = RF.CreateTexture(texDesc);
+            Texture tex = GD.CreateTexture(texDesc);
 
             for (uint mip = 0; mip < MipLevels; mip++)
             {
@@ -158,7 +158,7 @@ namespace XenoAtom.Graphics.Tests
                 }
             }
 
-            var textureView = RF.CreateTextureView(tex);
+            var textureView = GD.CreateTextureView(tex);
             Assert.NotNull(textureView);
         }
 
@@ -170,7 +170,7 @@ namespace XenoAtom.Graphics.Tests
 
             TextureDescription texDesc = TextureDescription.Texture2D(
                 TexSize, TexSize, MipLevels, 1, PixelFormat.R8_UNorm, TextureUsage.Cubemap);
-            Texture tex = RF.CreateTexture(texDesc);
+            Texture tex = GD.CreateTexture(texDesc);
 
             for (uint mip = 0; mip < MipLevels; mip++)
             {
@@ -214,7 +214,7 @@ namespace XenoAtom.Graphics.Tests
 
             TextureDescription texDesc = TextureDescription.Texture2D(
                 TexSize, TexSize, MipLevels, 1, PixelFormat.R8_UNorm, TextureUsage.Cubemap | TextureUsage.Sampled);
-            Texture tex = RF.CreateTexture(texDesc);
+            Texture tex = GD.CreateTexture(texDesc);
 
             for (uint mip = 0; mip < MipLevels; mip++)
             {
@@ -226,7 +226,7 @@ namespace XenoAtom.Graphics.Tests
                 }
             }
 
-            var view = RF.CreateTextureView(new TextureViewDescription(tex, 0, 1, 0, 1));
+            var view = GD.CreateTextureView(new TextureViewDescription(tex, 0, 1, 0, 1));
             Assert.NotNull(view);
         }
 
@@ -240,8 +240,8 @@ namespace XenoAtom.Graphics.Tests
                 TexSize, TexSize, MipLevels, 1, PixelFormat.R8_UNorm, TextureUsage.Cubemap);
             TextureDescription dstDesc = TextureDescription.Texture2D(
                 TexSize, TexSize, MipLevels, 6, PixelFormat.R8_UNorm, TextureUsage.Staging);
-            Texture src = RF.CreateTexture(srcDesc);
-            Texture dst = RF.CreateTexture(dstDesc);
+            Texture src = GD.CreateTexture(srcDesc);
+            Texture dst = GD.CreateTexture(dstDesc);
 
             for (uint face = 0; face < 6; face++)
             {
@@ -249,7 +249,7 @@ namespace XenoAtom.Graphics.Tests
                 GD.UpdateTexture(src, data, 0, 0, 0, TexSize, TexSize, 1, 0, face);
             }
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyTexture(src, dst);
             cl.End();
@@ -288,8 +288,8 @@ namespace XenoAtom.Graphics.Tests
                 TexSize, TexSize, MipLevels, 6, PixelFormat.R8_UNorm, TextureUsage.Staging);
             TextureDescription dstDesc = TextureDescription.Texture2D(
                 TexSize, TexSize, MipLevels, 1, PixelFormat.R8_UNorm, TextureUsage.Sampled | TextureUsage.Cubemap);
-            Texture src = RF.CreateTexture(srcDesc);
-            Texture dst = RF.CreateTexture(dstDesc);
+            Texture src = GD.CreateTexture(srcDesc);
+            Texture dst = GD.CreateTexture(dstDesc);
 
             for (uint face = 0; face < 6; face++)
             {
@@ -297,7 +297,7 @@ namespace XenoAtom.Graphics.Tests
                 GD.UpdateTexture(src, data, 0, 0, 0, TexSize, TexSize, 1, 0, face);
             }
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             for (uint face = 0; face < 6; face++)
                 cl.CopyTexture(src, dst, 0, face);
@@ -340,8 +340,8 @@ namespace XenoAtom.Graphics.Tests
                 TexSize, TexSize, MipLevels, 1, PixelFormat.R8_UNorm, TextureUsage.Cubemap);
             TextureDescription dstDesc = TextureDescription.Texture2D(
                 TexSize, TexSize, MipLevels, 6, PixelFormat.R8_UNorm, TextureUsage.Staging);
-            Texture src = RF.CreateTexture(srcDesc);
-            Texture dst = RF.CreateTexture(dstDesc);
+            Texture src = GD.CreateTexture(srcDesc);
+            Texture dst = GD.CreateTexture(dstDesc);
 
             for (uint mip = 0; mip < MipLevels; mip++)
             {
@@ -353,7 +353,7 @@ namespace XenoAtom.Graphics.Tests
                 }
             }
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             for (uint face = 0; face < 6; face++)
                 cl.CopyTexture(src, dst, CopiedMip, face);
@@ -389,8 +389,8 @@ namespace XenoAtom.Graphics.Tests
                 TexSize, TexSize, MipLevels, 1, PixelFormat.R8_UNorm, TextureUsage.Cubemap);
             TextureDescription dstDesc = TextureDescription.Texture2D(
                 TexSize, TexSize, MipLevels, 6, PixelFormat.R8_UNorm, TextureUsage.Staging);
-            Texture src = RF.CreateTexture(srcDesc);
-            Texture dst = RF.CreateTexture(dstDesc);
+            Texture src = GD.CreateTexture(srcDesc);
+            Texture dst = GD.CreateTexture(dstDesc);
 
             for (uint mip = 0; mip < MipLevels; mip++)
             {
@@ -402,7 +402,7 @@ namespace XenoAtom.Graphics.Tests
                 }
             }
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyTexture(src, dst);
             cl.End();
@@ -442,8 +442,8 @@ namespace XenoAtom.Graphics.Tests
                 TexSize, TexSize, MipLevels, 1, PixelFormat.R8_UNorm, TextureUsage.Cubemap);
             TextureDescription dstDesc = TextureDescription.Texture2D(
                 TexSize, TexSize, MipLevels, CopiedArrayLayer + 1, PixelFormat.R8_UNorm, TextureUsage.Staging);
-            Texture src = RF.CreateTexture(srcDesc);
-            Texture dst = RF.CreateTexture(dstDesc);
+            Texture src = GD.CreateTexture(srcDesc);
+            Texture dst = GD.CreateTexture(dstDesc);
 
             for (uint mip = 0; mip < MipLevels; mip++)
             {
@@ -455,7 +455,7 @@ namespace XenoAtom.Graphics.Tests
                 }
             }
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             for (uint mip = 0; mip < MipLevels; mip++)
                 cl.CopyTexture(src, dst, mip, CopiedArrayLayer);
@@ -495,7 +495,7 @@ namespace XenoAtom.Graphics.Tests
         {
             TextureDescription texDesc = TextureDescription.Texture2D(
                 TexSize, TexSize, MipLevels, 1, PixelFormat.R8_UNorm, TextureUsage.Cubemap | TextureUsage.GenerateMipmaps);
-            Texture tex = RF.CreateTexture(texDesc);
+            Texture tex = GD.CreateTexture(texDesc);
 
             for (uint face = 0; face < 6; face++)
             {
@@ -522,7 +522,7 @@ namespace XenoAtom.Graphics.Tests
                 GD.Unmap(readback, subresource);
             }
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.GenerateMipmaps(tex);
             cl.End();
@@ -565,7 +565,7 @@ namespace XenoAtom.Graphics.Tests
 
             TextureDescription texDesc = TextureDescription.Texture2D(
                 TexSize, TexSize, 1, ArrayLayers, PixelFormat.R8_UNorm, TextureUsage.Staging);
-            Texture tex = RF.CreateTexture(texDesc);
+            Texture tex = GD.CreateTexture(texDesc);
 
             for (uint layer = 0; layer < ArrayLayers; layer++)
             {
@@ -596,7 +596,7 @@ namespace XenoAtom.Graphics.Tests
 
             TextureDescription texDesc = TextureDescription.Texture2D(
                 TexSize, TexSize, 1, ArrayLayers, PixelFormat.R8_UNorm, TextureUsage.Staging);
-            Texture tex = RF.CreateTexture(texDesc);
+            Texture tex = GD.CreateTexture(texDesc);
 
             for (uint layer = 0; layer < ArrayLayers; layer++)
             {
@@ -628,9 +628,9 @@ namespace XenoAtom.Graphics.Tests
 
             TextureDescription texDesc = TextureDescription.Texture2D(
                 TexSize, TexSize, MipLevels, ArrayLayers, PixelFormat.R8_UNorm, TextureUsage.Sampled);
-            Texture tex = RF.CreateTexture(texDesc);
+            Texture tex = GD.CreateTexture(texDesc);
             texDesc.Usage = TextureUsage.Staging;
-            Texture readback = RF.CreateTexture(texDesc);
+            Texture readback = GD.CreateTexture(texDesc);
 
             for (uint mip = 0; mip < MipLevels; mip++)
             {
@@ -642,7 +642,7 @@ namespace XenoAtom.Graphics.Tests
                 }
             }
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyTexture(tex, readback);
             cl.End();
@@ -703,9 +703,9 @@ namespace XenoAtom.Graphics.Tests
                 return;
             }
 
-            Texture copySrc = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture copySrc = GD.CreateTexture(TextureDescription.Texture2D(
                 64, 64, 1, 1, format, TextureUsage.Staging));
-            Texture copyDst = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture copyDst = GD.CreateTexture(TextureDescription.Texture2D(
                 copyWidth, copyHeight, 1, 1, format, TextureUsage.Staging));
 
             const int numPixelsInBlockSide = 4;
@@ -723,7 +723,7 @@ namespace XenoAtom.Graphics.Tests
                 GD.UpdateTexture(copySrc, (IntPtr)dataPtr, totalDataSize, srcX, srcY, 0, copyWidth, copyHeight, 1, 0, 0);
             }
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyTexture(
                 copySrc, srcX, srcY, 0, 0, 0,
@@ -761,9 +761,9 @@ namespace XenoAtom.Graphics.Tests
                 format,
                 TextureUsage.Sampled);
 
-            Texture copySrc = RF.CreateTexture(texDesc);
+            Texture copySrc = GD.CreateTexture(texDesc);
             texDesc.Usage = TextureUsage.Staging;
-            Texture copyDst = RF.CreateTexture(texDesc);
+            Texture copyDst = GD.CreateTexture(texDesc);
 
             for (uint layer = 0; layer < copySrc.ArrayLayers; layer++)
             {
@@ -777,7 +777,7 @@ namespace XenoAtom.Graphics.Tests
                     0, layer);
             }
 
-            CommandList copyCL = RF.CreateCommandList();
+            CommandList copyCL = GD.CreateCommandList();
             copyCL.Begin();
             if (separateLayerCopies)
             {
@@ -791,7 +791,7 @@ namespace XenoAtom.Graphics.Tests
                 copyCL.CopyTexture(copySrc, 0, 0, 0, 0, 0, copyDst, 0, 0, 0, 0, 0, 16, 16, 1, copySrc.ArrayLayers);
             }
             copyCL.End();
-            Fence fence = RF.CreateFence(false);
+            Fence fence = GD.CreateFence(false);
             GD.SubmitCommands(copyCL, fence);
             GD.WaitForFence(fence);
 
@@ -820,7 +820,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public unsafe void Update_ThenMapRead_3D()
         {
-            Texture tex3D = RF.CreateTexture(TextureDescription.Texture3D(
+            Texture tex3D = GD.CreateTexture(TextureDescription.Texture3D(
                 10, 10, 10, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging));
 
             RgbaByte[] data = new RgbaByte[tex3D.Width * tex3D.Height * tex3D.Depth];
@@ -853,7 +853,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public unsafe void MapWrite_ThenMapRead_3D()
         {
-            Texture tex3D = RF.CreateTexture(TextureDescription.Texture3D(
+            Texture tex3D = GD.CreateTexture(TextureDescription.Texture3D(
                 10, 10, 10, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging));
 
             MappedResourceView<RgbaByte> writeView = GD.Map<RgbaByte>(tex3D, MapMode.Write);
@@ -880,7 +880,7 @@ namespace XenoAtom.Graphics.Tests
         {
             if (!GD.Features.Texture1D) { return; }
 
-            Texture tex1D = RF.CreateTexture(
+            Texture tex1D = GD.CreateTexture(
                 TextureDescription.Texture1D(100, 1, 1, PixelFormat.R16_UNorm, TextureUsage.Staging));
             ushort[] data = Enumerable.Range(0, (int)tex1D.Width).Select(i => (ushort)(i * 2)).ToArray();
             fixed (ushort* dataPtr = &data[0])
@@ -901,7 +901,7 @@ namespace XenoAtom.Graphics.Tests
         {
             if (!GD.Features.Texture1D) { return; }
 
-            Texture tex1D = RF.CreateTexture(
+            Texture tex1D = GD.CreateTexture(
                 TextureDescription.Texture1D(100, 1, 1, PixelFormat.R16_UNorm, TextureUsage.Staging));
 
             MappedResourceView<ushort> writeView = GD.Map<ushort>(tex1D, MapMode.Write);
@@ -923,15 +923,15 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public unsafe void Copy_DepthStencil()
         {
-            Texture depthTarget = RF.CreateTexture(
+            Texture depthTarget = GD.CreateTexture(
                 TextureDescription.Texture2D(64, 64, 1, 1, PixelFormat.D32_Float_S8_UInt, TextureUsage.DepthStencil));
 
-            Texture depthTarget1 = RF.CreateTexture(
+            Texture depthTarget1 = GD.CreateTexture(
                 TextureDescription.Texture2D(64, 64, 1, 1, PixelFormat.D32_Float_S8_UInt, TextureUsage.DepthStencil));
 
-            Framebuffer fb = RF.CreateFramebuffer(new FramebufferDescription(depthTarget));
+            Framebuffer fb = GD.CreateFramebuffer(new FramebufferDescription(depthTarget));
             {
-                using CommandList cl = RF.CreateCommandList();
+                using CommandList cl = GD.CreateCommandList();
                 cl.Begin();
                 cl.SetFramebuffer(fb);
                 cl.ClearDepthStencil(0.5f, 12);
@@ -939,11 +939,11 @@ namespace XenoAtom.Graphics.Tests
                 GD.SubmitCommands(cl);
             }
 
-            Texture copySrcFromDepth = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture copySrcFromDepth = GD.CreateTexture(TextureDescription.Texture2D(
                 64, 64, 1, 1, PixelFormat.R32_Float, TextureUsage.Staging));
 
             {
-                using CommandList cl = RF.CreateCommandList();
+                using CommandList cl = GD.CreateCommandList();
                 cl.Begin();
                 cl.CopyTexture(depthTarget, 0, 0, 0, 0, 0, depthTarget1, 0, 0, 0, 0, 0, 64, 64, 1, 1);
                 cl.CopyTexture(depthTarget1, 0, 0, 0, 0, 0, copySrcFromDepth, 0, 0, 0, 0, 0, 64, 64, 1, 1);
@@ -968,9 +968,9 @@ namespace XenoAtom.Graphics.Tests
         {
             if (!GD.Features.Texture1D) { return; }
 
-            Texture tex1D = RF.CreateTexture(
+            Texture tex1D = GD.CreateTexture(
                 TextureDescription.Texture1D(100, 1, 1, PixelFormat.R16_UNorm, TextureUsage.Staging));
-            Texture tex2D = RF.CreateTexture(
+            Texture tex2D = GD.CreateTexture(
                 TextureDescription.Texture2D(100, 10, 1, 1, PixelFormat.R16_UNorm, TextureUsage.Staging));
 
             MappedResourceView<ushort> writeView = GD.Map<ushort>(tex1D, MapMode.Write);
@@ -980,7 +980,7 @@ namespace XenoAtom.Graphics.Tests
             }
             GD.Unmap(tex1D);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyTexture(
                 tex1D, 0, 0, 0, 0, 0,
@@ -1004,7 +1004,7 @@ namespace XenoAtom.Graphics.Tests
         {
             if (!GD.Features.Texture1D) { return; }
 
-            Texture tex1D = RF.CreateTexture(TextureDescription.Texture1D(
+            Texture tex1D = GD.CreateTexture(TextureDescription.Texture1D(
                 100, 5, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging));
 
             for (uint level = 0; level < tex1D.MipLevels; level++)
@@ -1033,9 +1033,9 @@ namespace XenoAtom.Graphics.Tests
         {
             if (!GD.Features.Texture1D) { return; }
 
-            Texture tex1D = RF.CreateTexture(
+            Texture tex1D = GD.CreateTexture(
                 TextureDescription.Texture1D(200, 2, 1, PixelFormat.R16_UNorm, TextureUsage.Staging));
-            Texture tex2D = RF.CreateTexture(
+            Texture tex2D = GD.CreateTexture(
                 TextureDescription.Texture2D(100, 10, 1, 1, PixelFormat.R16_UNorm, TextureUsage.Staging));
 
             MappedResourceView<ushort> writeView = GD.Map<ushort>(tex1D, MapMode.Write, 1);
@@ -1045,7 +1045,7 @@ namespace XenoAtom.Graphics.Tests
             }
             GD.Unmap(tex1D, 1);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyTexture(
                 tex1D, 0, 0, 0, 1, 0,
@@ -1071,10 +1071,10 @@ namespace XenoAtom.Graphics.Tests
         [Theory]
         public void Copy_WithOffsets_2D(TextureUsage srcUsage, TextureUsage dstUsage)
         {
-            Texture src = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture src = GD.CreateTexture(TextureDescription.Texture2D(
                 100, 100, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, srcUsage));
 
-            Texture dst = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture dst = GD.CreateTexture(TextureDescription.Texture2D(
                 100, 100, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, dstUsage));
 
             RgbaByte[] srcData = new RgbaByte[src.Height * src.Width];
@@ -1086,7 +1086,7 @@ namespace XenoAtom.Graphics.Tests
 
             GD.UpdateTexture(src, srcData, 0, 0, 0, src.Width, src.Height, 1, 0, 0);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyTexture(
                 src,
@@ -1111,9 +1111,9 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Copy_ArrayToNonArray()
         {
-            Texture src = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture src = GD.CreateTexture(TextureDescription.Texture2D(
                 10, 10, 1, 10, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging));
-            Texture dst = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture dst = GD.CreateTexture(TextureDescription.Texture2D(
                 10, 10, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging));
 
             MappedResourceView<RgbaByte> writeView = GD.Map<RgbaByte>(src, MapMode.Write, 5);
@@ -1124,7 +1124,7 @@ namespace XenoAtom.Graphics.Tests
                 }
             GD.Unmap(src, 5);
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyTexture(
                 src, 0, 0, 0, 0, 5,
@@ -1146,7 +1146,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void Map_ThenRead_MultipleArrayLayers()
         {
-            Texture src = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture src = GD.CreateTexture(TextureDescription.Texture2D(
                 10, 10, 1, 10, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging));
 
             for (uint layer = 0; layer < src.ArrayLayers; layer++)
@@ -1175,7 +1175,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public unsafe void Update_WithOffset_2D()
         {
-            Texture tex2D = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture tex2D = GD.CreateTexture(TextureDescription.Texture2D(
                 100, 100, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging));
 
             RgbaByte[] data = new RgbaByte[50 * 30];
@@ -1205,7 +1205,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public unsafe void Update_NonMultipleOfFourWithCompressedTexture_2D()
         {
-            Texture tex2D = RF.CreateTexture(TextureDescription.Texture2D(
+            Texture tex2D = GD.CreateTexture(TextureDescription.Texture2D(
                 2, 2, 1, 1, PixelFormat.BC1_Rgb_UNorm, TextureUsage.Staging));
 
             byte[] data = new byte[16];
@@ -1223,7 +1223,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public unsafe void Map_NonZeroMip_3D()
         {
-            Texture tex3D = RF.CreateTexture(TextureDescription.Texture3D(
+            Texture tex3D = GD.CreateTexture(TextureDescription.Texture3D(
                 40, 40, 40, 3, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging));
 
             MappedResourceView<RgbaByte> writeView = GD.Map<RgbaByte>(tex3D, MapMode.Write, 2);
@@ -1248,7 +1248,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public unsafe void Update_NonStaging_3D()
         {
-            Texture tex3D = RF.CreateTexture(TextureDescription.Texture3D(
+            Texture tex3D = GD.CreateTexture(TextureDescription.Texture3D(
                 16, 16, 16, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
             RgbaByte[] data = new RgbaByte[16 * 16 * 16];
             for (int z = 0; z < 16; z++)
@@ -1267,10 +1267,10 @@ namespace XenoAtom.Graphics.Tests
                     0, 0);
             }
 
-            Texture staging = RF.CreateTexture(TextureDescription.Texture3D(
+            Texture staging = GD.CreateTexture(TextureDescription.Texture3D(
                 16, 16, 16, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging));
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyTexture(tex3D, staging);
             cl.End();
@@ -1290,7 +1290,7 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public unsafe void Copy_NonSquareTexture()
         {
-            Texture src = RF.CreateTexture(
+            Texture src = GD.CreateTexture(
                 TextureDescription.Texture2D(512, 128, 1, 1, PixelFormat.R8_UNorm, TextureUsage.Staging));
             byte[] data = Enumerable.Repeat((byte)255, (int)(src.Width * src.Height)).ToArray();
             fixed (byte* dataPtr = data)
@@ -1301,7 +1301,7 @@ namespace XenoAtom.Graphics.Tests
                     0, 0);
             }
 
-            Texture dst = RF.CreateTexture(
+            Texture dst = GD.CreateTexture(
                 TextureDescription.Texture2D(512, 128, 1, 1, PixelFormat.R8_UNorm, TextureUsage.Staging));
             byte[] data2 = Enumerable.Repeat((byte)100, (int)(dst.Width * dst.Height)).ToArray();
             fixed (byte* dataPtr2 = data2)
@@ -1312,7 +1312,7 @@ namespace XenoAtom.Graphics.Tests
                     0, 0);
             }
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyTexture(src, dst);
             cl.End();
@@ -1348,7 +1348,7 @@ namespace XenoAtom.Graphics.Tests
                 return;
             }
 
-            Texture srcTex = RF.CreateTexture(new TextureDescription(
+            Texture srcTex = GD.CreateTexture(new TextureDescription(
                 srcWidth, srcHeight, srcDepth, srcMipLevels, srcArrayLayers,
                 format, TextureUsage.Staging, srcType));
 
@@ -1376,11 +1376,11 @@ namespace XenoAtom.Graphics.Tests
                     0, 0, 0, srcWidth, srcHeight, srcDepth, 0, 0);
             }
 
-            Texture dstTex = RF.CreateTexture(new TextureDescription(
+            Texture dstTex = GD.CreateTexture(new TextureDescription(
                 dstWidth, dstHeight, dstDepth, dstMipLevels, dstArrayLayers,
                 format, TextureUsage.Staging, dstType));
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
 
             cl.CopyTexture(
@@ -1443,10 +1443,10 @@ namespace XenoAtom.Graphics.Tests
                 1024, 1024, 11, 1,
                 PixelFormat.R32_G32_B32_A32_Float,
                 usage);
-            Texture tex = RF.CreateTexture(texDesc);
+            Texture tex = GD.CreateTexture(texDesc);
 
             texDesc.Usage = TextureUsage.Staging;
-            Texture readback = RF.CreateTexture(texDesc);
+            Texture readback = GD.CreateTexture(texDesc);
 
             RgbaFloat[] pixelData = Enumerable.Repeat(RgbaFloat.Red, 1024 * 1024).ToArray();
             fixed (RgbaFloat* pixelDataPtr = pixelData)
@@ -1454,7 +1454,7 @@ namespace XenoAtom.Graphics.Tests
                 GD.UpdateTexture(tex, (IntPtr)pixelDataPtr, 1024 * 1024 * 16, 0, 0, 0, 1024, 1024, 1, 0, 0);
             }
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.GenerateMipmaps(tex);
             cl.CopyTexture(tex, readback);
@@ -1475,10 +1475,10 @@ namespace XenoAtom.Graphics.Tests
         [Fact]
         public void CopyTexture_SmallCompressed()
         {
-            Texture src = RF.CreateTexture(TextureDescription.Texture2D(16, 16, 4, 1, PixelFormat.BC3_UNorm, TextureUsage.Staging));
-            Texture dst = RF.CreateTexture(TextureDescription.Texture2D(16, 16, 4, 1, PixelFormat.BC3_UNorm, TextureUsage.Sampled));
+            Texture src = GD.CreateTexture(TextureDescription.Texture2D(16, 16, 4, 1, PixelFormat.BC3_UNorm, TextureUsage.Staging));
+            Texture dst = GD.CreateTexture(TextureDescription.Texture2D(16, 16, 4, 1, PixelFormat.BC3_UNorm, TextureUsage.Sampled));
 
-            CommandList cl = RF.CreateCommandList();
+            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.CopyTexture(
                 src, 0, 0, 0, 3, 0,
@@ -1506,7 +1506,7 @@ namespace XenoAtom.Graphics.Tests
         [InlineData(PixelFormat.BC7_UNorm_SRgb)]
         public void CreateSmallTexture(PixelFormat format)
         {
-            Texture tex = RF.CreateTexture(TextureDescription.Texture2D(1, 1, 1, 1, format, TextureUsage.Sampled));
+            Texture tex = GD.CreateTexture(TextureDescription.Texture2D(1, 1, 1, 1, format, TextureUsage.Sampled));
             Assert.Equal(1u, tex.Width);
             Assert.Equal(1u, tex.Height);
         }
@@ -1588,7 +1588,7 @@ namespace XenoAtom.Graphics.Tests
     }
 
     [Trait("Backend", "Vulkan")]
-    public class VulkanTextureTests : TextureTestBase<VulkanDeviceCreator>
+    public class VulkanTextureTests : TextureTestBase
     {
         public VulkanTextureTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
         {
