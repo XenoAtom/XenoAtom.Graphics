@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
@@ -12,18 +12,18 @@ namespace XenoAtom.Graphics
         /// </summary>
         public ResourceLayout Layout;
         /// <summary>
-        /// An array of <see cref="BindableResource"/> objects.
+        /// An array of <see cref="IBindableResource"/> objects.
         /// The number and type of resources must match those specified in the <see cref="ResourceLayout"/>.
         /// </summary>
-        public BindableResource[] BoundResources;
+        public IBindableResource[] BoundResources;
 
         /// <summary>
         /// Constructs a new ResourceSetDescription.
         /// </summary>
         /// <param name="layout">The <see cref="ResourceLayout"/> describing the number and kind of resources used.</param>
-        /// <param name="boundResources">An array of <see cref="BindableResource"/> objects.
+        /// <param name="boundResources">An array of <see cref="IBindableResource"/> objects.
         /// The number and type of resources must match those specified in the <see cref="ResourceLayout"/>.</param>
-        public ResourceSetDescription(ResourceLayout layout, params BindableResource[] boundResources)
+        public ResourceSetDescription(ResourceLayout layout, params IBindableResource[] boundResources)
         {
             Layout = layout;
             BoundResources = boundResources;

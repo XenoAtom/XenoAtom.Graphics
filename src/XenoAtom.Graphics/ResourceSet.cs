@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace XenoAtom.Graphics
 {
     /// <summary>
-    /// A device resource used to bind a particular set of <see cref="BindableResource"/> objects to a <see cref="CommandList"/>.
+    /// A device resource used to bind a particular set of <see cref="IBindableResource"/> objects to a <see cref="CommandList"/>.
     /// See <see cref="ResourceSetDescription"/>.
     /// </summary>
     public abstract class ResourceSet : GraphicsDeviceObject
@@ -19,7 +19,7 @@ namespace XenoAtom.Graphics
 
 #if VALIDATE_USAGE
         internal ResourceLayout Layout { get; }
-        internal BindableResource[] Resources { get; }
+        internal IBindableResource[] Resources { get; }
 #endif
     }
 }

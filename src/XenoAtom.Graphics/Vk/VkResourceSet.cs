@@ -8,7 +8,7 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkResourceSet : ResourceSet
     {
-        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
+        private new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
         private readonly DescriptorResourceCounts _descriptorCounts;
         private readonly DescriptorAllocationToken _descriptorAllocationToken;
         private readonly List<ResourceRefCount> _refCounts = new List<ResourceRefCount>();
@@ -29,9 +29,9 @@ namespace XenoAtom.Graphics.Vk
 
             VkDescriptorSetLayout dsl = vkLayout.DescriptorSetLayout;
             _descriptorCounts = vkLayout.DescriptorResourceCounts;
-            _descriptorAllocationToken = _gd.DescriptorPoolManager.Allocate(_descriptorCounts, dsl);
+            _descriptorAllocationToken = Device.DescriptorPoolManager.Allocate(_descriptorCounts, dsl);
 
-            BindableResource[] boundResources = description.BoundResources;
+            IBindableResource[] boundResources = description.BoundResources;
             uint descriptorWriteCount = (uint)boundResources.Length;
             VkWriteDescriptorSet* descriptorWrites = stackalloc VkWriteDescriptorSet[(int)descriptorWriteCount];
             VkDescriptorBufferInfo* bufferInfos = stackalloc VkDescriptorBufferInfo[(int)descriptorWriteCount];
@@ -60,7 +60,7 @@ namespace XenoAtom.Graphics.Vk
                 }
                 else if (type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
                 {
-                    TextureView texView = Util.GetTextureView(_gd, boundResources[i]);
+                    TextureView texView = Util.GetTextureView(Device, boundResources[i]);
                     VkTextureView vkTexView = Util.AssertSubtype<TextureView, VkTextureView>(texView);
                     imageInfos[i].imageView = vkTexView.ImageView;
                     imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -70,7 +70,7 @@ namespace XenoAtom.Graphics.Vk
                 }
                 else if (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
                 {
-                    TextureView texView = Util.GetTextureView(_gd, boundResources[i]);
+                    TextureView texView = Util.GetTextureView(Device, boundResources[i]);
                     VkTextureView vkTexView = Util.AssertSubtype<TextureView, VkTextureView>(texView);
                     imageInfos[i].imageView = vkTexView.ImageView;
                     imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -80,19 +80,19 @@ namespace XenoAtom.Graphics.Vk
                 }
                 else if (type == VK_DESCRIPTOR_TYPE_SAMPLER)
                 {
-                    VkSampler sampler = Util.AssertSubtype<BindableResource, VkSampler>(boundResources[i]);
+                    VkSampler sampler = Util.AssertSubtype<IBindableResource, VkSampler>(boundResources[i]);
                     imageInfos[i].sampler = sampler.DeviceSampler;
                     descriptorWrites[i].pImageInfo = &imageInfos[i];
                     _refCounts.Add(sampler);
                 }
             }
 
-            vkUpdateDescriptorSets(_gd.Device, descriptorWriteCount, descriptorWrites, 0, null);
+            vkUpdateDescriptorSets(Device, descriptorWriteCount, descriptorWrites, 0, null);
         }
 
         internal override void Destroy()
         {
-            _gd.DescriptorPoolManager.Free(_descriptorAllocationToken, _descriptorCounts);
+            Device.DescriptorPoolManager.Free(_descriptorAllocationToken, _descriptorCounts);
         }
     }
 }

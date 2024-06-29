@@ -30,22 +30,22 @@ namespace XenoAtom.Graphics
         /// <summary>
         /// Gets the underlying VkInstance used by the GraphicsDevice.
         /// </summary>
-        public IntPtr Instance => _gd.Instance.Value.Handle;
+        public IntPtr Instance => _gd.VkInstance.Value.Handle;
 
         /// <summary>
         /// Gets the underlying VkDevice used by the GraphicsDevice.
         /// </summary>
-        public IntPtr Device => _gd.Device.Value.Handle;
+        public IntPtr Device => _gd.VkDevice.Value.Handle;
 
         /// <summary>
         /// Gets the underlying VkPhysicalDevice used by the GraphicsDevice.
         /// </summary>
-        public IntPtr PhysicalDevice => _gd.PhysicalDevice.Value.Handle;
+        public IntPtr PhysicalDevice => _gd.VkPhysicalDevice.Value.Handle;
 
         /// <summary>
         /// Gets the VkQueue which is used by the GraphicsDevice to submit graphics work.
         /// </summary>
-        public IntPtr GraphicsQueue => _gd.GraphicsQueue.Value.Handle;
+        public IntPtr GraphicsQueue => _gd.VkGraphicsQueue.Value.Handle;
 
         /// <summary>
         /// Gets the queue family index of the graphics VkQueue.

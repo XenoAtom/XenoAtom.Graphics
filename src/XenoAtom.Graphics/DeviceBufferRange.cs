@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
     /// <summary>
-    /// A <see cref="BindableResource"/> that represents a section of a <see cref="DeviceBuffer"/>. This can be used in place of
+    /// A <see cref="IBindableResource"/> that represents a section of a <see cref="DeviceBuffer"/>. This can be used in place of
     /// a <see cref="DeviceBuffer"/> when creating a <see cref="ResourceSet"/> to make only a subset of the Buffer available to
     /// shaders.
     /// </summary>
-    public struct DeviceBufferRange : BindableResource, IEquatable<DeviceBufferRange>
+    public struct DeviceBufferRange : IBindableResource, IEquatable<DeviceBufferRange>
     {
         /// <summary>
         /// The underlying <see cref="DeviceBuffer"/> that this range refers to.

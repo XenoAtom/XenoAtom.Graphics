@@ -1,7 +1,7 @@
-﻿namespace XenoAtom.Graphics
+namespace XenoAtom.Graphics
 {
     /// <summary>
-    /// The kind of a <see cref="BindableResource"/> object.
+    /// The kind of a <see cref="IBindableResource"/> object.
     /// </summary>
     public enum ResourceKind : byte
     {

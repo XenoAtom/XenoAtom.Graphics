@@ -196,7 +196,7 @@ namespace XenoAtom.Graphics
         /// <param name="resource">The <see cref="DeviceBuffer"/> or <see cref="Texture"/> resource to map.</param>
         /// <param name="mode">The <see cref="MapMode"/> to use.</param>
         /// <returns>A <see cref="MappedResource"/> structure describing the mapped data region.</returns>
-        public MappedResource Map(MappableResource resource, MapMode mode) => Map(resource, mode, 0);
+        public MappedResource Map(IMappableResource resource, MapMode mode) => Map(resource, mode, 0);
         /// <summary>
         /// Maps a <see cref="DeviceBuffer"/> or <see cref="Texture"/> into a CPU-accessible data region.
         /// </summary>
@@ -205,7 +205,7 @@ namespace XenoAtom.Graphics
         /// <param name="subresource">The subresource to map. Subresources are indexed first by mip slice, then by array layer.
         /// For <see cref="DeviceBuffer"/> resources, this parameter must be 0.</param>
         /// <returns>A <see cref="MappedResource"/> structure describing the mapped data region.</returns>
-        public MappedResource Map(MappableResource resource, MapMode mode, uint subresource)
+        public MappedResource Map(IMappableResource resource, MapMode mode, uint subresource)
         {
 #if VALIDATE_USAGE
             if (resource is DeviceBuffer buffer)
@@ -248,7 +248,7 @@ namespace XenoAtom.Graphics
         /// <param name="mode"></param>
         /// <param name="subresource"></param>
         /// <returns></returns>
-        protected abstract MappedResource MapCore(MappableResource resource, MapMode mode, uint subresource);
+        protected abstract MappedResource MapCore(IMappableResource resource, MapMode mode, uint subresource);
 
         /// <summary>
         /// Maps a <see cref="DeviceBuffer"/> or <see cref="Texture"/> into a CPU-accessible data region, and returns a structured
@@ -258,7 +258,7 @@ namespace XenoAtom.Graphics
         /// <param name="mode">The <see cref="MapMode"/> to use.</param>
         /// <typeparam name="T">The blittable value type which mapped data is viewed as.</typeparam>
         /// <returns>A <see cref="MappedResource"/> structure describing the mapped data region.</returns>
-        public MappedResourceView<T> Map<T>(MappableResource resource, MapMode mode) where T : unmanaged
+        public MappedResourceView<T> Map<T>(IMappableResource resource, MapMode mode) where T : unmanaged
             => Map<T>(resource, mode, 0);
         /// <summary>
         /// Maps a <see cref="DeviceBuffer"/> or <see cref="Texture"/> into a CPU-accessible data region, and returns a structured
@@ -269,7 +269,7 @@ namespace XenoAtom.Graphics
         /// <param name="subresource">The subresource to map. Subresources are indexed first by mip slice, then by array layer.</param>
         /// <typeparam name="T">The blittable value type which mapped data is viewed as.</typeparam>
         /// <returns>A <see cref="MappedResource"/> structure describing the mapped data region.</returns>
-        public MappedResourceView<T> Map<T>(MappableResource resource, MapMode mode, uint subresource) where T : unmanaged
+        public MappedResourceView<T> Map<T>(IMappableResource resource, MapMode mode, uint subresource) where T : unmanaged
         {
             MappedResource mappedResource = Map(resource, mode, subresource);
             return new MappedResourceView<T>(mappedResource);
@@ -280,14 +280,14 @@ namespace XenoAtom.Graphics
         /// For <see cref="Texture"/> resources, this unmaps the first subresource.
         /// </summary>
         /// <param name="resource">The resource to unmap.</param>
-        public void Unmap(MappableResource resource) => Unmap(resource, 0);
+        public void Unmap(IMappableResource resource) => Unmap(resource, 0);
         /// <summary>
         /// Invalidates a previously-mapped data region for the given <see cref="DeviceBuffer"/> or <see cref="Texture"/>.
         /// </summary>
         /// <param name="resource">The resource to unmap.</param>
         /// <param name="subresource">The subresource to unmap. Subresources are indexed first by mip slice, then by array layer.
         /// For <see cref="DeviceBuffer"/> resources, this parameter must be 0.</param>
-        public void Unmap(MappableResource resource, uint subresource)
+        public void Unmap(IMappableResource resource, uint subresource)
         {
             UnmapCore(resource, subresource);
         }
@@ -296,7 +296,7 @@ namespace XenoAtom.Graphics
         /// </summary>
         /// <param name="resource"></param>
         /// <param name="subresource"></param>
-        protected abstract void UnmapCore(MappableResource resource, uint subresource);
+        protected abstract void UnmapCore(IMappableResource resource, uint subresource);
 
         /// <summary>
         /// Updates a portion of a <see cref="Texture"/> resource with new data.

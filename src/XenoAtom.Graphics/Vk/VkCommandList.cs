@@ -14,7 +14,8 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkCommandList : CommandList
     {
-        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
+        private new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
+
         private readonly VkCommandPool _pool;
         private VkCommandBuffer _cb;
 
@@ -64,7 +65,7 @@ namespace XenoAtom.Graphics.Vk
         public VkCommandList(VkGraphicsDevice gd, in CommandListDescription description)
             : base(gd, in description, gd.Features, gd.UniformBufferMinOffsetAlignment, gd.StructuredBufferMinOffsetAlignment)
         {
-            var manager = _gd.Adapter.Manager;
+            var manager = Device.Adapter.Manager;
             vkCmdBeginDebugUtilsLabelExt = manager.vkCmdBeginDebugUtilsLabelExt;
             vkCmdEndDebugUtilsLabelExt = manager.vkCmdEndDebugUtilsLabelExt;
             vkCmdInsertDebugUtilsLabelExt = manager.vkCmdInsertDebugUtilsLabelExt;
@@ -74,7 +75,7 @@ namespace XenoAtom.Graphics.Vk
                 flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                 queueFamilyIndex = gd.MainQueueIndex
             };
-            VkResult result = vkCreateCommandPool(_gd.Device, poolCInfo, null, out _pool);
+            VkResult result = vkCreateCommandPool(Device, poolCInfo, null, out _pool);
             CheckResult(result);
 
             _cb = GetNextCommandBuffer();
@@ -100,7 +101,7 @@ namespace XenoAtom.Graphics.Vk
                 level = VK_COMMAND_BUFFER_LEVEL_PRIMARY
             };
             VkCommandBuffer cb = default;
-            VkResult result = vkAllocateCommandBuffers(_gd.Device, cbAI, &cb);
+            VkResult result = vkAllocateCommandBuffers(Device, cbAI, &cb);
             CheckResult(result);
             return cb;
         }
@@ -740,7 +741,7 @@ namespace XenoAtom.Graphics.Vk
         {
             EnsureBegin();
             
-            if (index == 0 || _gd.Features.MultipleViewports)
+            if (index == 0 || Device.Features.MultipleViewports)
             {
                 VkRect2D scissor = new VkRect2D((int)x, (int)y, width, height);
                 if (_scissorRects[index] != scissor)
@@ -755,12 +756,12 @@ namespace XenoAtom.Graphics.Vk
         {
             EnsureBegin();
             
-            if (index == 0 || _gd.Features.MultipleViewports)
+            if (index == 0 || Device.Features.MultipleViewports)
             {
-                float vpY = _gd.IsClipSpaceYInverted
+                float vpY = Device.IsClipSpaceYInverted
                     ? viewport.Y
                     : viewport.Height + viewport.Y;
-                float vpHeight = _gd.IsClipSpaceYInverted
+                float vpHeight = Device.IsClipSpaceYInverted
                     ? viewport.Height
                     : -viewport.Height;
 
@@ -783,7 +784,7 @@ namespace XenoAtom.Graphics.Vk
             EnsureBegin();
 
             VkBuffer stagingBuffer = GetStagingBuffer(sizeInBytes);
-            _gd.UpdateBuffer(stagingBuffer, 0, source, sizeInBytes);
+            Device.UpdateBuffer(stagingBuffer, 0, source, sizeInBytes);
             CopyBuffer(stagingBuffer, 0, buffer, bufferOffsetInBytes, sizeInBytes);
         }
 
@@ -1225,7 +1226,7 @@ namespace XenoAtom.Graphics.Vk
                     deviceImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                     deviceImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     1, &region,
-                    _gd.GetFormatFilter(vkTex.VkFormat));
+                    Device.GetFormatFilter(vkTex.VkFormat));
 
                 width = mipWidth;
                 height = mipHeight;
@@ -1302,7 +1303,7 @@ namespace XenoAtom.Graphics.Vk
                 }
                 if (ret == null)
                 {
-                    ret = (VkBuffer)_gd.CreateBuffer(new BufferDescription(size, BufferUsage.Staging));
+                    ret = (VkBuffer)Device.CreateBuffer(new BufferDescription(size, BufferUsage.Staging));
                     ret.Name = $"Staging Buffer (CommandList {Name})";
                 }
 
@@ -1353,7 +1354,7 @@ namespace XenoAtom.Graphics.Vk
                 _currentStagingInfo = null;
             }
             
-            vkDestroyCommandPool(_gd.Device, _pool, null);
+            vkDestroyCommandPool(Device, _pool, null);
 
             Debug.Assert(_submittedStagingInfos.Count == 0);
 

@@ -12,15 +12,15 @@ namespace XenoAtom.Graphics.Vk
 {
     internal sealed unsafe partial class VkGraphicsDevice : GraphicsDevice
     {
-        private readonly VkPhysicalDevice _physicalDevice;
-        private readonly VkInstance _instance;
+        private readonly VkPhysicalDevice _vkPhysicalDevice;
+        private readonly VkInstance _vkInstance;
         private readonly bool _isDebugActivated;
         private readonly VkDeviceMemoryManager _memoryManager;
-        private readonly VkDevice _device;
+        private readonly VkDevice _vkDevice;
         private readonly uint _mainQueueIndex;
         private readonly VkCommandPool _graphicsCommandPool;
         private readonly object _graphicsCommandPoolLock = new object();
-        private readonly VkQueue _graphicsQueue;
+        private readonly VkQueue _vkGraphicsQueue;
         private readonly Action<GraphicsObject>? _onResourceCreated;
 
         public readonly object GraphicsQueueLock = new object();
@@ -76,11 +76,11 @@ namespace XenoAtom.Graphics.Vk
 
         public override GraphicsDeviceFeatures Features { get; }
 
-        public VkInstance Instance => _instance;
+        public VkInstance VkInstance => _vkInstance;
 
-        public VkDevice Device => _device;
-        public VkPhysicalDevice PhysicalDevice => _physicalDevice;
-        public VkQueue GraphicsQueue => _graphicsQueue;
+        public VkDevice VkDevice => _vkDevice;
+        public VkPhysicalDevice VkPhysicalDevice => _vkPhysicalDevice;
+        public VkQueue VkGraphicsQueue => _vkGraphicsQueue;
         public uint MainQueueIndex => _mainQueueIndex;
         public VkDeviceMemoryManager MemoryManager => _memoryManager;
         public VkDescriptorPoolManager DescriptorPoolManager => _descriptorPoolManager;
@@ -112,8 +112,8 @@ namespace XenoAtom.Graphics.Vk
         public VkGraphicsDevice(VkGraphicsAdapter adapter, GraphicsDeviceOptions options) : base(adapter)
         {
             // Just use the first one.
-            _physicalDevice = Adapter.PhysicalDevice;
-            _instance = Manager.Instance;
+            _vkPhysicalDevice = Adapter.PhysicalDevice;
+            _vkInstance = Manager.Instance;
             _isDebugActivated = Manager.IsDebugActivated;
             _vkSetDebugUtilsObjectNameEXT = Manager._vkSetDebugUtilsObjectNameEXT;
             _onResourceCreated = options.OnResourceCreated;
@@ -122,9 +122,9 @@ namespace XenoAtom.Graphics.Vk
             // Get QueueFamilyIndices
             // ---------------------------------------------------------------
             uint queueFamilyCount = 0;
-            vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, out queueFamilyCount);
+            vkGetPhysicalDeviceQueueFamilyProperties(_vkPhysicalDevice, out queueFamilyCount);
             VkQueueFamilyProperties[] qfp = new VkQueueFamilyProperties[queueFamilyCount];
-            vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, qfp);
+            vkGetPhysicalDeviceQueueFamilyProperties(_vkPhysicalDevice, qfp);
 
             bool foundMainQueue = false;
             const VkQueueFlagBits requiredQueue = VkQueueFlagBits.VK_QUEUE_GRAPHICS_BIT | VkQueueFlagBits.VK_QUEUE_COMPUTE_BIT;
@@ -234,28 +234,28 @@ namespace XenoAtom.Graphics.Vk
                 deviceCreateInfo.enabledExtensionCount = activeExtensionCount;
                 deviceCreateInfo.ppEnabledExtensionNames = (byte**)activeExtensionsPtr;
 
-                vkCreateDevice(_physicalDevice, deviceCreateInfo, null, out _device)
+                vkCreateDevice(_vkPhysicalDevice, deviceCreateInfo, null, out _vkDevice)
                     .VkCheck("Unable to create device.");
             }
 
-            vkGetDeviceQueue(_device, _mainQueueIndex, 0, out _graphicsQueue);
+            vkGetDeviceQueue(_vkDevice, _mainQueueIndex, 0, out _vkGraphicsQueue);
 
             // VK_KHR_surface
-            vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(Instance);
-            vkGetPhysicalDeviceSurfaceFormatsKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceFormatsKHR>(Instance);
-            vkGetPhysicalDeviceSurfacePresentModesKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfacePresentModesKHR>(Instance);
-            vkDestroySurfaceKHR = vkGetInstanceProcAddr<PFN_vkDestroySurfaceKHR>(Instance);
+            vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(VkInstance);
+            vkGetPhysicalDeviceSurfaceFormatsKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceFormatsKHR>(VkInstance);
+            vkGetPhysicalDeviceSurfacePresentModesKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfacePresentModesKHR>(VkInstance);
+            vkDestroySurfaceKHR = vkGetInstanceProcAddr<PFN_vkDestroySurfaceKHR>(VkInstance);
 
             // VK_KHR_swapchain
-            vkAcquireNextImageKHR = vkGetDeviceProcAddr<PFN_vkAcquireNextImageKHR>(_device);
-            vkCreateSwapchainKHR = vkGetDeviceProcAddr<PFN_vkCreateSwapchainKHR>(Device);
-            vkDestroySwapchainKHR = vkGetDeviceProcAddr<PFN_vkDestroySwapchainKHR>(Device);
-            _vkQueuePresentKHR = vkGetDeviceProcAddr<PFN_vkQueuePresentKHR>(Device);
-            vkGetSwapchainImagesKHR = vkGetDeviceProcAddr<PFN_vkGetSwapchainImagesKHR>(Device);
+            vkAcquireNextImageKHR = vkGetDeviceProcAddr<PFN_vkAcquireNextImageKHR>(_vkDevice);
+            vkCreateSwapchainKHR = vkGetDeviceProcAddr<PFN_vkCreateSwapchainKHR>(VkDevice);
+            vkDestroySwapchainKHR = vkGetDeviceProcAddr<PFN_vkDestroySwapchainKHR>(VkDevice);
+            _vkQueuePresentKHR = vkGetDeviceProcAddr<PFN_vkQueuePresentKHR>(VkDevice);
+            vkGetSwapchainImagesKHR = vkGetDeviceProcAddr<PFN_vkGetSwapchainImagesKHR>(VkDevice);
             
             _memoryManager = new VkDeviceMemoryManager(
-                _device,
-                _physicalDevice,
+                _vkDevice,
+                _vkPhysicalDevice,
                 Adapter.PhysicalDeviceProperties,
                 Adapter.PhysicalDeviceMemProperties);
 
@@ -355,12 +355,12 @@ namespace XenoAtom.Graphics.Vk
 
             lock (GraphicsQueueLock)
             {
-                vkQueueSubmit(_graphicsQueue, 1, &si, vkFence)
+                vkQueueSubmit(_vkGraphicsQueue, 1, &si, vkFence)
                     .VkCheck("Error while submitting command buffer");
 
                 if (fence != null)
                 {
-                    vkQueueSubmit(_graphicsQueue, 0, null, submissionFence)
+                    vkQueueSubmit(_vkGraphicsQueue, 0, null, submissionFence)
                         .VkCheck("Error while submitting command buffer with fence");
                 }
             }
@@ -378,7 +378,7 @@ namespace XenoAtom.Graphics.Vk
                 for (int i = 0; i < _submittedFences.Count; i++)
                 {
                     FenceSubmissionInfo fsi = _submittedFences[i];
-                    if (vkGetFenceStatus(_device, fsi.Fence) == VK_SUCCESS)
+                    if (vkGetFenceStatus(_vkDevice, fsi.Fence) == VK_SUCCESS)
                     {
                         CompleteFenceSubmission(fsi);
                         _submittedFences.RemoveAt(i);
@@ -397,7 +397,7 @@ namespace XenoAtom.Graphics.Vk
             XenoAtom.Interop.vulkan.VkFence fence = fsi.Fence;
             VkCommandBuffer completedCB = fsi.CommandBuffer;
             fsi.CommandList?.CommandBufferCompleted(completedCB);
-            vkResetFences(_device, 1, &fence)
+            vkResetFences(_vkDevice, 1, &fence)
                 .VkCheck("Unable to reset fence");
             ReturnSubmissionFence(fence);
             lock (_stagingResourcesLock)
@@ -451,7 +451,7 @@ namespace XenoAtom.Graphics.Vk
             else
             {
                 VkFenceCreateInfo fenceCI = new VkFenceCreateInfo();
-                vkCreateFence(_device, fenceCI, null, out XenoAtom.Interop.vulkan.VkFence newFence)
+                vkCreateFence(_vkDevice, fenceCI, null, out XenoAtom.Interop.vulkan.VkFence newFence)
                     .VkCheck("Unable to create fence");
                 return newFence;
             }
@@ -543,7 +543,7 @@ namespace XenoAtom.Graphics.Vk
             utf8Ptr[byteCount] = 0;
 
             nameInfo.pObjectName = utf8Ptr;
-            _vkSetDebugUtilsObjectNameEXT.Invoke(_device, &nameInfo)
+            _vkSetDebugUtilsObjectNameEXT.Invoke(_vkDevice, &nameInfo)
                 .VkCheck("Unable to set debug marker object name");
         }
 
@@ -554,10 +554,10 @@ namespace XenoAtom.Graphics.Vk
     
         public VkExtensionProperties[] GetDeviceExtensionProperties()
         {
-            vkEnumerateDeviceExtensionProperties(_physicalDevice, default, out var propertyCount)
+            vkEnumerateDeviceExtensionProperties(_vkPhysicalDevice, default, out var propertyCount)
                 .VkCheck("Unable to enumerate device extensions");
             VkExtensionProperties[] props = new VkExtensionProperties[(int)propertyCount];
-            vkEnumerateDeviceExtensionProperties(_physicalDevice, default, props)
+            vkEnumerateDeviceExtensionProperties(_vkPhysicalDevice, default, props)
                 .VkCheck("Unable to enumerate device extensions");
             return props;
         }
@@ -569,11 +569,11 @@ namespace XenoAtom.Graphics.Vk
                 flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                 queueFamilyIndex = _mainQueueIndex
             };
-            vkCreateCommandPool(_device, commandPoolCI, null, out commandPool)
+            vkCreateCommandPool(_vkDevice, commandPoolCI, null, out commandPool)
                 .VkCheck("Unable to create Graphics Command Pool");
         }
 
-        protected override MappedResource MapCore(MappableResource resource, MapMode mode, uint subresource)
+        protected override MappedResource MapCore(IMappableResource resource, MapMode mode, uint subresource)
         {
             VkMemoryBlock memoryBlock;
             IntPtr mappedPtr = IntPtr.Zero;
@@ -588,7 +588,7 @@ namespace XenoAtom.Graphics.Vk
             }
             else
             {
-                VkTexture texture = Util.AssertSubtype<MappableResource, VkTexture>(resource);
+                VkTexture texture = Util.AssertSubtype<IMappableResource, VkTexture>(resource);
                 VkSubresourceLayout layout = texture.GetSubresourceLayout(subresource);
                 memoryBlock = texture.Memory;
                 sizeInBytes = (uint)layout.size;
@@ -620,7 +620,7 @@ namespace XenoAtom.Graphics.Vk
                 depthPitch);
         }
 
-        protected override void UnmapCore(MappableResource resource, uint subresource)
+        protected override void UnmapCore(IMappableResource resource, uint subresource)
         {
             VkMemoryBlock memoryBlock;
             if (resource is VkBuffer buffer)
@@ -629,13 +629,13 @@ namespace XenoAtom.Graphics.Vk
             }
             else
             {
-                VkTexture tex = Util.AssertSubtype<MappableResource, VkTexture>(resource);
+                VkTexture tex = Util.AssertSubtype<IMappableResource, VkTexture>(resource);
                 memoryBlock = tex.Memory;
             }
 
             if (memoryBlock.DeviceMemory.Value.Handle != 0 && !memoryBlock.IsPersistentMapped)
             {
-                vkUnmapMemory(_device, memoryBlock.DeviceMemory);
+                vkUnmapMemory(_vkDevice, memoryBlock.DeviceMemory);
             }
         }
 
@@ -643,7 +643,7 @@ namespace XenoAtom.Graphics.Vk
         {
             lock (GraphicsQueueLock)
             {
-                vkQueueWaitIdle(_graphicsQueue);
+                vkQueueWaitIdle(_vkGraphicsQueue);
             }
 
             CheckSubmittedFences();
@@ -655,7 +655,7 @@ namespace XenoAtom.Graphics.Vk
             usageFlags |= depthFormat ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
             vkGetPhysicalDeviceImageFormatProperties(
-                _physicalDevice,
+                _vkPhysicalDevice,
                 VkFormats.VdToVkPixelFormat(format),
                 VK_IMAGE_TYPE_2D,
                 VK_IMAGE_TILING_OPTIMAL,
@@ -700,7 +700,7 @@ namespace XenoAtom.Graphics.Vk
             VkImageUsageFlags vkUsage = VkFormats.VdToVkTextureUsage(usage);
 
             VkResult result = vkGetPhysicalDeviceImageFormatProperties(
-                _physicalDevice,
+                _vkPhysicalDevice,
                 vkFormat,
                 vkType,
                 tiling,
@@ -729,7 +729,7 @@ namespace XenoAtom.Graphics.Vk
         {
             if (!_filters.TryGetValue(format, out VkFilter filter))
             {
-                vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, out VkFormatProperties vkFormatProps);
+                vkGetPhysicalDeviceFormatProperties(_vkPhysicalDevice, format, out VkFormatProperties vkFormatProps);
                 filter = (vkFormatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0
                     ? VK_FILTER_LINEAR
                     : VK_FILTER_NEAREST;
@@ -802,7 +802,7 @@ namespace XenoAtom.Graphics.Vk
             else
             {
                 void* mappedPtr;
-                vkMapMemory(Device, buffer.Memory.DeviceMemory, buffer.Memory.Offset, numBytes, default, &mappedPtr)
+                vkMapMemory(VkDevice, buffer.Memory.DeviceMemory, buffer.Memory.Offset, numBytes, default, &mappedPtr)
                     .VkCheck("Unable to map buffer memory");
                 return (IntPtr)mappedPtr;
             }
@@ -812,7 +812,7 @@ namespace XenoAtom.Graphics.Vk
         {
             if (!buffer.Memory.IsPersistentMapped)
             {
-                vkUnmapMemory(Device, buffer.Memory.DeviceMemory);
+                vkUnmapMemory(VkDevice, buffer.Memory.DeviceMemory);
             }
         }
 
@@ -919,13 +919,13 @@ namespace XenoAtom.Graphics.Vk
         public override void ResetFence(Fence fence)
         {
             XenoAtom.Interop.vulkan.VkFence vkFence = Util.AssertSubtype<Fence, VkFence>(fence).DeviceFence;
-            vkResetFences(_device, 1, &vkFence);
+            vkResetFences(_vkDevice, 1, &vkFence);
         }
 
         public override bool WaitForFence(Fence fence, ulong nanosecondTimeout)
         {
             XenoAtom.Interop.vulkan.VkFence vkFence = Util.AssertSubtype<Fence, VkFence>(fence).DeviceFence;
-            VkResult result = vkWaitForFences(_device, 1, &vkFence, true, nanosecondTimeout);
+            VkResult result = vkWaitForFences(_vkDevice, 1, &vkFence, true, nanosecondTimeout);
             return result == VK_SUCCESS;
         }
 
@@ -938,7 +938,7 @@ namespace XenoAtom.Graphics.Vk
                 fencesPtr[i] = Util.AssertSubtype<Fence, VkFence>(fences[i]).DeviceFence;
             }
 
-            VkResult result = vkWaitForFences(_device, (uint)fenceCount, fencesPtr, waitAll, nanosecondTimeout);
+            VkResult result = vkWaitForFences(_vkDevice, (uint)fenceCount, fencesPtr, waitAll, nanosecondTimeout);
             return result == VK_SUCCESS;
         }
 
@@ -1030,7 +1030,7 @@ namespace XenoAtom.Graphics.Vk
                 VkCommandPoolCreateInfo commandPoolCI = new VkCommandPoolCreateInfo();
                 commandPoolCI.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
                 commandPoolCI.queueFamilyIndex = _gd.MainQueueIndex;
-                vkCreateCommandPool(_gd.Device, commandPoolCI, null, out _pool)
+                vkCreateCommandPool(_gd.VkDevice, commandPoolCI, null, out _pool)
                     .VkCheck("Unable to create shared command pool");
 
                 VkCommandBufferAllocateInfo allocateInfo = new VkCommandBufferAllocateInfo();
@@ -1039,7 +1039,7 @@ namespace XenoAtom.Graphics.Vk
                 allocateInfo.commandPool = _pool;
 
                 VkCommandBuffer cb;
-                vkAllocateCommandBuffers(_gd.Device, allocateInfo, &cb)
+                vkAllocateCommandBuffers(_gd.VkDevice, allocateInfo, &cb)
                     .VkCheck("Unable to allocate shared command buffer");
                 _cb = cb;
             }
@@ -1067,7 +1067,7 @@ namespace XenoAtom.Graphics.Vk
 
             internal void Destroy()
             {
-                vkDestroyCommandPool(_gd.Device, _pool, null);
+                vkDestroyCommandPool(_gd.VkDevice, _pool, null);
             }
         }
 
@@ -1096,11 +1096,11 @@ namespace XenoAtom.Graphics.Vk
             Debug.Assert(_submittedFences.Count == 0);
             foreach (XenoAtom.Interop.vulkan.VkFence fence in _availableSubmissionFences)
             {
-                vkDestroyFence(_device, fence, null);
+                vkDestroyFence(_vkDevice, fence, null);
             }
 
             _descriptorPoolManager.DestroyAll();
-            vkDestroyCommandPool(_device, _graphicsCommandPool, null);
+            vkDestroyCommandPool(_vkDevice, _graphicsCommandPool, null);
 
             Debug.Assert(_submittedStagingTextures.Count == 0);
             foreach (VkTexture tex in _availableStagingTextures)
@@ -1125,9 +1125,12 @@ namespace XenoAtom.Graphics.Vk
 
             _memoryManager.Dispose();
 
-            vkDeviceWaitIdle(_device)
+            vkDeviceWaitIdle(_vkDevice)
                 .VkCheck("Unable to wait for idle on device");
-            vkDestroyDevice(_device, null);
+            vkDestroyDevice(_vkDevice, null);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator VkDevice(VkGraphicsDevice gd) => gd._vkDevice;
     }
 }

@@ -7,7 +7,7 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkTextureView : TextureView
     {
-        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
+        private new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
         private readonly VkImageView _imageView;
 
         public VkImageView ImageView => _imageView;
@@ -66,12 +66,12 @@ namespace XenoAtom.Graphics.Vk
                 }
             }
 
-            vkCreateImageView(_gd.Device, imageViewCI, null, out _imageView);
+            vkCreateImageView(Device, imageViewCI, null, out _imageView);
         }
 
         internal override void Destroy()
         {
-            vkDestroyImageView(_gd.Device, ImageView, null);
+            vkDestroyImageView(Device, ImageView, null);
         }
     }
 }

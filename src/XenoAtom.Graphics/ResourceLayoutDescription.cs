@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
     /// <summary>
-    /// Describes the layout of <see cref="BindableResource"/> objects for a <see cref="Pipeline"/>.
+    /// Describes the layout of <see cref="IBindableResource"/> objects for a <see cref="Pipeline"/>.
     /// </summary>
     public struct ResourceLayoutDescription : IEquatable<ResourceLayoutDescription>
     {

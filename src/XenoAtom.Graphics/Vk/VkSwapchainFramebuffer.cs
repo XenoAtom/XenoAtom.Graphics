@@ -86,13 +86,13 @@ namespace XenoAtom.Graphics.Vk
 
             // Get the images
             uint scImageCount = 0;
-            VkResult result = _gd.vkGetSwapchainImagesKHR.Invoke(_gd.Device, deviceSwapchain, out scImageCount);
+            VkResult result = Device.vkGetSwapchainImagesKHR.Invoke(Device, deviceSwapchain, out scImageCount);
             CheckResult(result);
             if (_scImages.Length < scImageCount)
             {
                 _scImages = new VkImage[(int)scImageCount];
             }
-            result = _gd.vkGetSwapchainImagesKHR.Invoke(_gd.Device, deviceSwapchain, _scImages);
+            result = Device.vkGetSwapchainImagesKHR.Invoke(Device, deviceSwapchain, _scImages);
             CheckResult(result);
 
             _scImageFormat = surfaceFormat.format;
@@ -122,7 +122,7 @@ namespace XenoAtom.Graphics.Vk
             if (_depthFormat.HasValue)
             {
                 _depthAttachment?.Target.Dispose();
-                VkTexture depthTexture = (VkTexture)_gd.CreateTexture(TextureDescription.Texture2D(
+                VkTexture depthTexture = (VkTexture)Device.CreateTexture(TextureDescription.Texture2D(
                     Math.Max(1, _scExtent.width),
                     Math.Max(1, _scExtent.height),
                     1,
@@ -147,7 +147,7 @@ namespace XenoAtom.Graphics.Vk
             for (uint i = 0; i < _scImages.Length; i++)
             {
                 VkTexture colorTex = new VkTexture(
-                    _gd,
+                    Device,
                     Math.Max(1, _scExtent.width),
                     Math.Max(1, _scExtent.height),
                     1,
@@ -157,7 +157,7 @@ namespace XenoAtom.Graphics.Vk
                     TextureSampleCount.Count1,
                     _scImages[i]);
                 FramebufferDescription desc = new FramebufferDescription(_depthAttachment?.Target, colorTex);
-                VkFramebuffer fb = new VkFramebuffer(_gd, desc, true);
+                VkFramebuffer fb = new VkFramebuffer(Device, desc, true);
                 _scFramebuffers[i] = fb;
                 _scColorTextures[i] = new FramebufferAttachment[] { new FramebufferAttachment(colorTex, 0) };
             }

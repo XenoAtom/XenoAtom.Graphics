@@ -6,7 +6,7 @@ namespace XenoAtom.Graphics.Vk
 {
     internal abstract class VkFramebufferBase : Framebuffer
     {
-        internal VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
+        internal new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
 
         public VkFramebufferBase(
             VkGraphicsDevice gd,

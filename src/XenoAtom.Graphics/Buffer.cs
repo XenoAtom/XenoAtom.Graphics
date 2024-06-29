@@ -7,7 +7,7 @@ namespace XenoAtom.Graphics
     /// The size of a <see cref="DeviceBuffer"/> is fixed upon creation, and resizing is not possible.
     /// See <see cref="BufferDescription"/>.
     /// </summary>
-    public abstract class DeviceBuffer : GraphicsDeviceObject, BindableResource, MappableResource
+    public abstract class DeviceBuffer : GraphicsDeviceObject, IBindableResource, IMappableResource
     {
         internal DeviceBuffer(GraphicsDevice device) : base(device)
         {

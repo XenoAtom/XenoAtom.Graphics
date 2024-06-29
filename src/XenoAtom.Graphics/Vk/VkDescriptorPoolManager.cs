@@ -28,7 +28,7 @@ namespace XenoAtom.Graphics.Vk
                 dsAI.pSetLayouts = &setLayout;
                 dsAI.descriptorPool = pool;
                 VkDescriptorSet set;
-                VkResult result = vkAllocateDescriptorSets(_gd.Device, dsAI, &set);
+                VkResult result = vkAllocateDescriptorSets(_gd.VkDevice, dsAI, &set);
                 VulkanUtil.CheckResult(result);
 
                 return new DescriptorAllocationToken(set, pool);
@@ -43,7 +43,7 @@ namespace XenoAtom.Graphics.Vk
                 {
                     if (poolInfo.Pool == token.Pool)
                     {
-                        poolInfo.Free(_gd.Device, token, counts);
+                        poolInfo.Free(_gd.VkDevice, token, counts);
                     }
                 }
             }
@@ -96,7 +96,7 @@ namespace XenoAtom.Graphics.Vk
             poolCI.pPoolSizes = sizes;
             poolCI.poolSizeCount = poolSizeCount;
 
-            VkResult result = vkCreateDescriptorPool(_gd.Device, poolCI, null, out VkDescriptorPool descriptorPool);
+            VkResult result = vkCreateDescriptorPool(_gd.VkDevice, poolCI, null, out VkDescriptorPool descriptorPool);
             VulkanUtil.CheckResult(result);
 
             return new PoolInfo(descriptorPool, totalSets, descriptorCount);
@@ -106,7 +106,7 @@ namespace XenoAtom.Graphics.Vk
         {
             foreach (PoolInfo poolInfo in _pools)
             {
-                vkDestroyDescriptorPool(_gd.Device, poolInfo.Pool, null);
+                vkDestroyDescriptorPool(_gd.VkDevice, poolInfo.Pool, null);
             }
         }
 

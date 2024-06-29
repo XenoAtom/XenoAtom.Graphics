@@ -11,7 +11,7 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkPipeline : Pipeline
     {
-        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
+        private new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
         private readonly XenoAtom.Interop.vulkan.VkPipeline _devicePipeline;
         private readonly VkPipelineLayout _pipelineLayout;
         private readonly VkRenderPass _renderPass;
@@ -244,7 +244,7 @@ namespace XenoAtom.Graphics.Vk
             }
             pipelineLayoutCI.pSetLayouts = dsls;
 
-            vkCreatePipelineLayout(_gd.Device, pipelineLayoutCI, null, out _pipelineLayout).VkCheck();
+            vkCreatePipelineLayout(Device, pipelineLayoutCI, null, out _pipelineLayout).VkCheck();
             pipelineCI.layout = _pipelineLayout;
 
             // Create fake RenderPass for compatibility.
@@ -320,13 +320,13 @@ namespace XenoAtom.Graphics.Vk
             renderPassCI.dependencyCount = 1;
             renderPassCI.pDependencies = &subpassDependency;
 
-            VkResult creationResult = vkCreateRenderPass(_gd.Device, renderPassCI, null, out _renderPass);
+            VkResult creationResult = vkCreateRenderPass(Device, renderPassCI, null, out _renderPass);
             CheckResult(creationResult);
 
             pipelineCI.renderPass = _renderPass;
 
             XenoAtom.Interop.vulkan.VkPipeline devicePipeline;
-            VkResult result = vkCreateGraphicsPipelines(_gd.Device, default, 1, &pipelineCI, null, &devicePipeline);
+            VkResult result = vkCreateGraphicsPipelines(Device, default, 1, &pipelineCI, null, &devicePipeline);
             CheckResult(result);
             _devicePipeline = devicePipeline;
 
@@ -357,7 +357,7 @@ namespace XenoAtom.Graphics.Vk
             }
             pipelineLayoutCI.pSetLayouts = dsls;
 
-            vkCreatePipelineLayout(_gd.Device, pipelineLayoutCI, null, out _pipelineLayout);
+            vkCreatePipelineLayout(Device, pipelineLayoutCI, null, out _pipelineLayout);
             pipelineCI.layout = _pipelineLayout;
 
             // Shader Stage
@@ -403,7 +403,7 @@ namespace XenoAtom.Graphics.Vk
 
             XenoAtom.Interop.vulkan.VkPipeline devicePipeline;
             VkResult result = vkCreateComputePipelines(
-                _gd.Device,
+                Device,
                 default,
                 1,
                 &pipelineCI,
@@ -423,11 +423,11 @@ namespace XenoAtom.Graphics.Vk
 
         internal override void Destroy()
         {
-            vkDestroyPipelineLayout(_gd.Device, _pipelineLayout, null);
-            vkDestroyPipeline(_gd.Device, _devicePipeline, null);
+            vkDestroyPipelineLayout(Device, _pipelineLayout, null);
+            vkDestroyPipeline(Device, _devicePipeline, null);
             if (!IsComputePipeline)
             {
-                vkDestroyRenderPass(_gd.Device, _renderPass, null);
+                vkDestroyRenderPass(Device, _renderPass, null);
             }
         }
     }

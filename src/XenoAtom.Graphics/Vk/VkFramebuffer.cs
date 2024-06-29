@@ -109,7 +109,7 @@ namespace XenoAtom.Graphics.Vk
             renderPassCI.dependencyCount = 1;
             renderPassCI.pDependencies = &subpassDependency;
 
-            VkResult creationResult = vkCreateRenderPass(_gd.Device, renderPassCI, null, out _renderPassNoClear);
+            VkResult creationResult = vkCreateRenderPass(Device, renderPassCI, null, out _renderPassNoClear);
             CheckResult(creationResult);
 
             for (int i = 0; i < colorAttachmentCount; i++)
@@ -128,7 +128,7 @@ namespace XenoAtom.Graphics.Vk
                 }
 
             }
-            creationResult = vkCreateRenderPass(_gd.Device, renderPassCI, null, out _renderPassNoClearLoad);
+            creationResult = vkCreateRenderPass(Device, renderPassCI, null, out _renderPassNoClearLoad);
             CheckResult(creationResult);
 
 
@@ -151,7 +151,7 @@ namespace XenoAtom.Graphics.Vk
                 attachments[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             }
 
-            creationResult = vkCreateRenderPass(_gd.Device, renderPassCI, null, out _renderPassClear);
+            creationResult = vkCreateRenderPass(Device, renderPassCI, null, out _renderPassClear);
             CheckResult(creationResult);
 
             VkFramebufferCreateInfo fbCI = new VkFramebufferCreateInfo();
@@ -178,7 +178,7 @@ namespace XenoAtom.Graphics.Vk
                     layerCount = 1
                 };
                 VkImageView* dest = (fbAttachments + i);
-                VkResult result = vkCreateImageView(_gd.Device, &imageViewCI, null, dest);
+                VkResult result = vkCreateImageView(Device, &imageViewCI, null, dest);
                 CheckResult(result);
                 _attachmentViews.Add(*dest);
             }
@@ -205,7 +205,7 @@ namespace XenoAtom.Graphics.Vk
                     layerCount = 1
                 };
                 VkImageView* dest = (fbAttachments + (fbAttachmentsCount - 1));
-                VkResult result = vkCreateImageView(_gd.Device, &depthViewCI, null, dest);
+                VkResult result = vkCreateImageView(Device, &depthViewCI, null, dest);
                 CheckResult(result);
                 _attachmentViews.Add(*dest);
             }
@@ -238,7 +238,7 @@ namespace XenoAtom.Graphics.Vk
             fbCI.layers = 1;
             fbCI.renderPass = _renderPassNoClear;
 
-            creationResult = vkCreateFramebuffer(_gd.Device, fbCI, null, out _deviceFramebuffer);
+            creationResult = vkCreateFramebuffer(Device, fbCI, null, out _deviceFramebuffer);
             CheckResult(creationResult);
 
             if (DepthTarget != null)
@@ -302,13 +302,13 @@ namespace XenoAtom.Graphics.Vk
 
         internal override void Destroy()
         {
-            vkDestroyFramebuffer(_gd.Device, _deviceFramebuffer, null);
-            vkDestroyRenderPass(_gd.Device, _renderPassNoClear, null);
-            vkDestroyRenderPass(_gd.Device, _renderPassNoClearLoad, null);
-            vkDestroyRenderPass(_gd.Device, _renderPassClear, null);
+            vkDestroyFramebuffer(Device, _deviceFramebuffer, null);
+            vkDestroyRenderPass(Device, _renderPassNoClear, null);
+            vkDestroyRenderPass(Device, _renderPassNoClearLoad, null);
+            vkDestroyRenderPass(Device, _renderPassClear, null);
             foreach (VkImageView view in _attachmentViews)
             {
-                vkDestroyImageView(_gd.Device, view, null);
+                vkDestroyImageView(Device, view, null);
             }
         }
     }

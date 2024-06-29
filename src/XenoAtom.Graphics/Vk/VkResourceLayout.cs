@@ -7,13 +7,16 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkResourceLayout : ResourceLayout
     {
-        internal VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
+        internal new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
+
         private readonly VkDescriptorSetLayout _dsl;
         private readonly VkDescriptorType[] _descriptorTypes;
 
         public VkDescriptorSetLayout DescriptorSetLayout => _dsl;
         public VkDescriptorType[] DescriptorTypes => _descriptorTypes;
-        public DescriptorResourceCounts DescriptorResourceCounts { get; }
+
+        public readonly DescriptorResourceCounts DescriptorResourceCounts;
+
         public new int DynamicBufferCount { get; }
 
         public VkResourceLayout(VkGraphicsDevice gd, in ResourceLayoutDescription description)
@@ -84,13 +87,13 @@ namespace XenoAtom.Graphics.Vk
             dslCI.bindingCount = (uint)elements.Length;
             dslCI.pBindings = bindings;
 
-            VkResult result = vkCreateDescriptorSetLayout(_gd.Device, dslCI, null, out _dsl);
+            VkResult result = vkCreateDescriptorSetLayout(Device, dslCI, null, out _dsl);
             CheckResult(result);
         }
 
         internal override void Destroy()
         {
-            vkDestroyDescriptorSetLayout(_gd.Device, _dsl, null);
+            vkDestroyDescriptorSetLayout(Device, _dsl, null);
         }
     }
 }

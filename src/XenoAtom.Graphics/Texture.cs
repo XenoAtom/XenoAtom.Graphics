@@ -6,7 +6,7 @@ namespace XenoAtom.Graphics
     /// A device resource used to store arbitrary image data in a specific format.
     /// See <see cref="TextureDescription"/>.
     /// </summary>
-    public abstract class Texture : GraphicsDeviceObject, MappableResource, BindableResource
+    public abstract class Texture : GraphicsDeviceObject, IMappableResource, IBindableResource
     {
         private readonly object _fullTextureViewLock = new();
         private TextureView? _fullTextureView;

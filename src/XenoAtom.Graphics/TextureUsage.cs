@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
@@ -30,7 +30,7 @@ namespace XenoAtom.Graphics
         Cubemap = 1 << 4,
         /// <summary>
         /// The Texture is used as a read-write staging resource for uploading Texture data.
-        /// With this flag, a Texture can be mapped using the <see cref="GraphicsDevice.Map(MappableResource, MapMode, uint)"/>
+        /// With this flag, a Texture can be mapped using the <see cref="GraphicsDevice.Map(IMappableResource, MapMode, uint)"/>
         /// method.
         /// </summary>
         Staging = 1 << 5,

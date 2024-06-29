@@ -11,7 +11,7 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkSwapchain : Swapchain
     {
-        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
+        private new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
         private readonly VkSurfaceKHR _surface;
         private VkSwapchainKHR _deviceSwapchain;
         private readonly VkSwapchainFramebuffer _framebuffer;
@@ -49,15 +49,15 @@ namespace XenoAtom.Graphics.Vk
             uint imageIndex = ImageIndex;
             presentInfo.pImageIndices = &imageIndex;
 
-            object presentLock = PresentQueueIndex == _gd.MainQueueIndex ? _gd.GraphicsQueueLock : this;
+            object presentLock = PresentQueueIndex == Device.MainQueueIndex ? Device.GraphicsQueueLock : this;
             lock (presentLock)
             {
-                _gd._vkQueuePresentKHR.Invoke(PresentQueue, presentInfo);
-                if (AcquireNextImage(_gd.Device, default, ImageAvailableFence))
+                Device._vkQueuePresentKHR.Invoke(PresentQueue, presentInfo);
+                if (AcquireNextImage(Device, default, ImageAvailableFence))
                 {
                     XenoAtom.Interop.vulkan.VkFence fence = ImageAvailableFence;
-                    vkWaitForFences(_gd.Device, 1, &fence, true, ulong.MaxValue);
-                    vkResetFences(_gd.Device, 1, &fence);
+                    vkWaitForFences(Device, 1, &fence, true, ulong.MaxValue);
+                    vkResetFences(Device, 1, &fence);
                 }
             }
         }
@@ -79,7 +79,7 @@ namespace XenoAtom.Graphics.Vk
 
             if (existingSurface == default)
             {
-                _surface = VkSurfaceUtil.CreateSurface(gd, gd.Instance, _swapchainSource);
+                _surface = VkSurfaceUtil.CreateSurface(gd, gd.VkInstance, _swapchainSource);
             }
             else
             {
@@ -90,7 +90,7 @@ namespace XenoAtom.Graphics.Vk
             {
                 throw new GraphicsException($"The system does not support presenting the given Vulkan surface.");
             }
-            vkGetDeviceQueue(_gd.Device, _presentQueueIndex, 0, out _presentQueue);
+            vkGetDeviceQueue(Device, _presentQueueIndex, 0, out _presentQueue);
 
             _framebuffer = new VkSwapchainFramebuffer(gd, this, _surface, description.Width, description.Height, description.DepthFormat);
 
@@ -98,11 +98,11 @@ namespace XenoAtom.Graphics.Vk
 
             VkFenceCreateInfo fenceCI = new VkFenceCreateInfo();
             fenceCI.flags = (VkFenceCreateFlagBits)0;
-            vkCreateFence(_gd.Device, fenceCI, null, out var imageAvailableFence);
+            vkCreateFence(Device, fenceCI, null, out var imageAvailableFence);
 
-            AcquireNextImage(_gd.Device, default, imageAvailableFence);
-            vkWaitForFences(_gd.Device, 1, &imageAvailableFence, true, ulong.MaxValue);
-            vkResetFences(_gd.Device, 1, &imageAvailableFence);
+            AcquireNextImage(Device, default, imageAvailableFence);
+            vkWaitForFences(Device, 1, &imageAvailableFence, true, ulong.MaxValue);
+            vkResetFences(Device, 1, &imageAvailableFence);
             _imageAvailableFence = imageAvailableFence;
         }
 
@@ -122,7 +122,7 @@ namespace XenoAtom.Graphics.Vk
             }
 
             var currentImageIndex = _currentImageIndex;
-            VkResult result = _gd.vkAcquireNextImageKHR.Invoke(
+            VkResult result = Device.vkAcquireNextImageKHR.Invoke(
                 device,
                 _deviceSwapchain,
                 ulong.MaxValue,
@@ -149,10 +149,10 @@ namespace XenoAtom.Graphics.Vk
             if (CreateSwapchain(width, height))
             {
                 var imageAvailableFence = _imageAvailableFence;
-                if (AcquireNextImage(_gd.Device, default, imageAvailableFence))
+                if (AcquireNextImage(Device, default, imageAvailableFence))
                 {
-                    vkWaitForFences(_gd.Device, 1, &imageAvailableFence, true, ulong.MaxValue);
-                    vkResetFences(_gd.Device, 1, &imageAvailableFence);
+                    vkWaitForFences(Device, 1, &imageAvailableFence, true, ulong.MaxValue);
+                    vkResetFences(Device, 1, &imageAvailableFence);
                 }
                 _imageAvailableFence = imageAvailableFence;
             }
@@ -161,7 +161,7 @@ namespace XenoAtom.Graphics.Vk
         private bool CreateSwapchain(uint width, uint height)
         {
             // Obtain the surface capabilities first -- this will indicate whether the surface has been lost.
-            VkResult result = _gd.vkGetPhysicalDeviceSurfaceCapabilitiesKHR.Invoke(_gd.PhysicalDevice, _surface, out VkSurfaceCapabilitiesKHR surfaceCapabilities);
+            VkResult result = Device.vkGetPhysicalDeviceSurfaceCapabilitiesKHR.Invoke(Device.VkPhysicalDevice, _surface, out VkSurfaceCapabilitiesKHR surfaceCapabilities);
             if (result == VK_ERROR_SURFACE_LOST_KHR)
             {
                 throw new GraphicsException($"The Swapchain's underlying surface has been lost.");
@@ -175,15 +175,15 @@ namespace XenoAtom.Graphics.Vk
 
             if (_deviceSwapchain != default)
             {
-                _gd.WaitForIdle();
+                Device.WaitForIdle();
             }
 
             _currentImageIndex = 0;
             uint surfaceFormatCount = 0;
-            result = _gd.vkGetPhysicalDeviceSurfaceFormatsKHR.Invoke(_gd.PhysicalDevice, _surface, out surfaceFormatCount);
+            result = Device.vkGetPhysicalDeviceSurfaceFormatsKHR.Invoke(Device.VkPhysicalDevice, _surface, out surfaceFormatCount);
             CheckResult(result);
             VkSurfaceFormatKHR[] formats = new VkSurfaceFormatKHR[surfaceFormatCount];
-            result = _gd.vkGetPhysicalDeviceSurfaceFormatsKHR.Invoke(_gd.PhysicalDevice, _surface, formats);
+            result = Device.vkGetPhysicalDeviceSurfaceFormatsKHR.Invoke(Device.VkPhysicalDevice, _surface, formats);
             CheckResult(result);
 
             VkFormat desiredFormat = _colorSrgb
@@ -217,10 +217,10 @@ namespace XenoAtom.Graphics.Vk
             }
 
             uint presentModeCount = 0;
-            result = _gd.vkGetPhysicalDeviceSurfacePresentModesKHR.Invoke(_gd.PhysicalDevice, _surface, out presentModeCount);
+            result = Device.vkGetPhysicalDeviceSurfacePresentModesKHR.Invoke(Device.VkPhysicalDevice, _surface, out presentModeCount);
             CheckResult(result);
             VkPresentModeKHR[] presentModes = new VkPresentModeKHR[presentModeCount];
-            result = _gd.vkGetPhysicalDeviceSurfacePresentModesKHR.Invoke(_gd.PhysicalDevice, _surface, presentModes);
+            result = Device.vkGetPhysicalDeviceSurfacePresentModesKHR.Invoke(Device.VkPhysicalDevice, _surface, presentModes);
             CheckResult(result);
 
             VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
@@ -261,10 +261,10 @@ namespace XenoAtom.Graphics.Vk
 
 
             FixedArray2<uint> queueFamilyIndices = new();
-            queueFamilyIndices[0] = _gd.MainQueueIndex;
+            queueFamilyIndices[0] = Device.MainQueueIndex;
             queueFamilyIndices[1] = _presentQueueIndex;
 
-            if (_gd.MainQueueIndex != _presentQueueIndex)
+            if (Device.MainQueueIndex != _presentQueueIndex)
             {
                 swapchainCI.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
                 swapchainCI.queueFamilyIndexCount = 2;
@@ -284,12 +284,12 @@ namespace XenoAtom.Graphics.Vk
             swapchainCI.oldSwapchain = oldSwapchain;
 
             VkSwapchainKHR deviceSwapchain;
-            result = _gd.vkCreateSwapchainKHR.Invoke(_gd.Device, &swapchainCI, null, &deviceSwapchain);
+            result = Device.vkCreateSwapchainKHR.Invoke(Device, &swapchainCI, null, &deviceSwapchain);
             _deviceSwapchain = deviceSwapchain;
             CheckResult(result);
             if (oldSwapchain != default)
             {
-                _gd.vkDestroySwapchainKHR.Invoke(_gd.Device, oldSwapchain, null);
+                Device.vkDestroySwapchainKHR.Invoke(Device, oldSwapchain, null);
             }
 
             _framebuffer.SetNewSwapchain(_deviceSwapchain, width, height, surfaceFormat, swapchainCI.imageExtent);
@@ -298,7 +298,7 @@ namespace XenoAtom.Graphics.Vk
 
         private bool GetPresentQueueIndex(out uint queueFamilyIndex)
         {
-            uint mainQueueIndex = _gd.MainQueueIndex;
+            uint mainQueueIndex = Device.MainQueueIndex;
 
             if (QueueSupportsPresent(mainQueueIndex, _surface))
             {
@@ -307,7 +307,7 @@ namespace XenoAtom.Graphics.Vk
             }
 
             uint queueFamilyCount = 0;
-            vkGetPhysicalDeviceQueueFamilyProperties(_gd.PhysicalDevice, out queueFamilyCount);
+            vkGetPhysicalDeviceQueueFamilyProperties(Device.VkPhysicalDevice, out queueFamilyCount);
             for (uint i = 0; i < queueFamilyCount; i++)
             {
                 if (mainQueueIndex != i && QueueSupportsPresent(i, _surface))
@@ -323,8 +323,8 @@ namespace XenoAtom.Graphics.Vk
 
         private bool QueueSupportsPresent(uint queueFamilyIndex, VkSurfaceKHR surface)
         {
-            VkResult result = _gd.Manager.vkGetPhysicalDeviceSurfaceSupportKHR.Invoke(
-                _gd.PhysicalDevice,
+            VkResult result = Device.Manager.vkGetPhysicalDeviceSurfaceSupportKHR.Invoke(
+                Device.VkPhysicalDevice,
                 queueFamilyIndex,
                 surface,
                 out VkBool32 supported);
@@ -334,10 +334,10 @@ namespace XenoAtom.Graphics.Vk
 
         internal override void Destroy()
         {
-            vkDestroyFence(_gd.Device, _imageAvailableFence, null);
+            vkDestroyFence(Device, _imageAvailableFence, null);
             _framebuffer.Dispose();
-            _gd.vkDestroySwapchainKHR.Invoke(_gd.Device, _deviceSwapchain, null);
-            _gd.vkDestroySurfaceKHR.Invoke(_gd.Instance, _surface, null);
+            Device.vkDestroySwapchainKHR.Invoke(Device, _deviceSwapchain, null);
+            Device.vkDestroySurfaceKHR.Invoke(Device.VkInstance, _surface, null);
         }
     }
 }

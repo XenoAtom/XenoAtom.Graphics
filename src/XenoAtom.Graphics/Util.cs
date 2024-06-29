@@ -256,7 +256,7 @@ namespace XenoAtom.Graphics
             return (T[])array.Clone();
         }
 
-        public static DeviceBufferRange GetBufferRange(BindableResource resource, uint additionalOffset)
+        public static DeviceBufferRange GetBufferRange(IBindableResource resource, uint additionalOffset)
         {
             if (resource is DeviceBufferRange range)
             {
@@ -269,7 +269,7 @@ namespace XenoAtom.Graphics
             }
         }
 
-        public static bool TryGetDeviceBuffer(BindableResource resource, [NotNullWhen(true)] out DeviceBuffer? buffer)
+        public static bool TryGetDeviceBuffer(IBindableResource resource, [NotNullWhen(true)] out DeviceBuffer? buffer)
         {
             if (resource is DeviceBuffer db)
             {
@@ -286,7 +286,7 @@ namespace XenoAtom.Graphics
             return false;
         }
 
-        internal static TextureView GetTextureView(GraphicsDevice gd, BindableResource resource)
+        internal static TextureView GetTextureView(GraphicsDevice gd, IBindableResource resource)
         {
             if (resource is TextureView view)
             {

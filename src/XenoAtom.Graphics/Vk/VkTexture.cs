@@ -9,7 +9,8 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkTexture : Texture
     {
-        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
+        private new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
+
         private readonly VkImage _optimalImage;
         private readonly VkMemoryBlock _memoryBlock;
         private readonly XenoAtom.Interop.vulkan.VkBuffer _stagingBuffer;
@@ -93,7 +94,7 @@ namespace XenoAtom.Graphics.Vk
                 }
 
                 uint subresourceCount = MipLevels * _actualImageArrayLayers * Depth;
-                VkResult result = vkCreateImage(gd.Device, imageCI, null, out _optimalImage);
+                VkResult result = vkCreateImage(gd.VkDevice, imageCI, null, out _optimalImage);
                 CheckResult(result);
 
                 VkMemoryRequirements memoryRequirements;
@@ -103,7 +104,7 @@ namespace XenoAtom.Graphics.Vk
                 VkMemoryRequirements2 memReqs2 = new VkMemoryRequirements2();
                 VkMemoryDedicatedRequirements dedicatedReqs = new VkMemoryDedicatedRequirements();
                 memReqs2.pNext = &dedicatedReqs;
-                vkGetImageMemoryRequirements2(_gd.Device, &memReqsInfo2, &memReqs2);
+                vkGetImageMemoryRequirements2(Device, &memReqsInfo2, &memReqs2);
                 memoryRequirements = memReqs2.memoryRequirements;
                 prefersDedicatedAllocation = dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation;
 
@@ -117,7 +118,7 @@ namespace XenoAtom.Graphics.Vk
                     _optimalImage,
                     default);
                 _memoryBlock = memoryToken;
-                result = vkBindImageMemory(gd.Device, _optimalImage, _memoryBlock.DeviceMemory, _memoryBlock.Offset);
+                result = vkBindImageMemory(gd.VkDevice, _optimalImage, _memoryBlock.DeviceMemory, _memoryBlock.Offset);
                 CheckResult(result);
 
                 _imageLayouts = new VkImageLayout[subresourceCount];
@@ -149,7 +150,7 @@ namespace XenoAtom.Graphics.Vk
                 VkBufferCreateInfo bufferCI = new VkBufferCreateInfo();
                 bufferCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
                 bufferCI.size = stagingSize;
-                VkResult result = vkCreateBuffer(_gd.Device, bufferCI, null, out _stagingBuffer);
+                VkResult result = vkCreateBuffer(Device, bufferCI, null, out _stagingBuffer);
                 CheckResult(result);
                 //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General, $"(StagingBuffer Texture) VkBuffer Created 0x{_stagingBuffer.Value.Handle:X16}");
 
@@ -161,7 +162,7 @@ namespace XenoAtom.Graphics.Vk
                 VkMemoryRequirements2 memReqs2 = new VkMemoryRequirements2();
                 VkMemoryDedicatedRequirements dedicatedReqs = new VkMemoryDedicatedRequirements();
                 memReqs2.pNext = &dedicatedReqs;
-                vkGetBufferMemoryRequirements2(_gd.Device, &memReqInfo2, &memReqs2);
+                vkGetBufferMemoryRequirements2(Device, &memReqInfo2, &memReqs2);
                 bufferMemReqs = memReqs2.memoryRequirements;
                 prefersDedicatedAllocation = dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation;
 
@@ -171,7 +172,7 @@ namespace XenoAtom.Graphics.Vk
                 {
                     propertyFlags ^= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
                 }
-                _memoryBlock = _gd.MemoryManager.Allocate(
+                _memoryBlock = Device.MemoryManager.Allocate(
                     bufferMemReqs.memoryTypeBits,
                     propertyFlags,
                     true,
@@ -181,7 +182,7 @@ namespace XenoAtom.Graphics.Vk
                     default,
                     _stagingBuffer);
 
-                result = vkBindBufferMemory(_gd.Device, _stagingBuffer, _memoryBlock.DeviceMemory, _memoryBlock.Offset);
+                result = vkBindBufferMemory(Device, _stagingBuffer, _memoryBlock.DeviceMemory, _memoryBlock.Offset);
                 CheckResult(result);
             }
 
@@ -225,11 +226,11 @@ namespace XenoAtom.Graphics.Vk
             // If the image is going to be used as a render target, we need to clear the data before its first use.
             if ((Usage & TextureUsage.RenderTarget) != 0)
             {
-                _gd.ClearColorTexture(this, new VkClearColorValue(0, 0, 0, 0));
+                Device.ClearColorTexture(this, new VkClearColorValue(0, 0, 0, 0));
             }
             else if ((Usage & TextureUsage.DepthStencil) != 0)
             {
-                _gd.ClearDepthTexture(this, new VkClearDepthStencilValue(0, 0));
+                Device.ClearDepthTexture(this, new VkClearDepthStencilValue(0, 0));
             }
         }
 
@@ -237,7 +238,7 @@ namespace XenoAtom.Graphics.Vk
         {
             if ((Usage & TextureUsage.Sampled) != 0)
             {
-                _gd.TransitionImageLayout(this, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                Device.TransitionImageLayout(this, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             }
         }
 
@@ -257,7 +258,7 @@ namespace XenoAtom.Graphics.Vk
                     aspectMask = aspect,
                 };
 
-                vkGetImageSubresourceLayout(_gd.Device, _optimalImage, imageSubresource, out VkSubresourceLayout layout);
+                vkGetImageSubresourceLayout(Device, _optimalImage, imageSubresource, out VkSubresourceLayout layout);
                 return layout;
             }
             else
@@ -413,16 +414,16 @@ namespace XenoAtom.Graphics.Vk
             if (isStaging)
             {
                 //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General, $"(StagingBuffer Texture) VkBuffer Destroyed 0x{_stagingBuffer.Value.Handle:X16}");
-                vkDestroyBuffer(_gd.Device, _stagingBuffer, null);
+                vkDestroyBuffer(Device, _stagingBuffer, null);
             }
             else
             {
-                vkDestroyImage(_gd.Device, _optimalImage, null);
+                vkDestroyImage(Device, _optimalImage, null);
             }
 
             if (_memoryBlock.DeviceMemory.Value.Handle != 0)
             {
-                _gd.MemoryManager.Free(_memoryBlock);
+                Device.MemoryManager.Free(_memoryBlock);
             }
         }
 

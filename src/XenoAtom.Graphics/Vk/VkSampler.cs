@@ -6,7 +6,8 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkSampler : Sampler
     {
-        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
+        public new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
+
         private readonly XenoAtom.Interop.vulkan.VkSampler _sampler;
 
         public XenoAtom.Interop.vulkan.VkSampler DeviceSampler => _sampler;
@@ -35,12 +36,12 @@ namespace XenoAtom.Graphics.Vk
                 borderColor = VkFormats.VdToVkSamplerBorderColor(description.BorderColor)
             };
 
-            vkCreateSampler(_gd.Device, samplerCI, null, out _sampler);
+            vkCreateSampler(Device, samplerCI, null, out _sampler);
         }
 
         internal override void Destroy()
         {
-            vkDestroySampler(_gd.Device, _sampler, null);
+            vkDestroySampler(Device, _sampler, null);
         }
     }
 }

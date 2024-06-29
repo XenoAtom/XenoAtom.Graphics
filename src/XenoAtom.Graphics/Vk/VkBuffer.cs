@@ -7,7 +7,8 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkBuffer : DeviceBuffer
     {
-        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
+        private new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
+
         private readonly XenoAtom.Interop.vulkan.VkBuffer _deviceBuffer;
         private readonly VkMemoryBlock _memory;
         private readonly VkMemoryRequirements _bufferMemoryRequirements;
@@ -53,7 +54,7 @@ namespace XenoAtom.Graphics.Vk
                 size = sizeInBytes,
                 usage = vkUsage
             };
-            VkResult result = vkCreateBuffer(gd.Device, bufferCI, null, out _deviceBuffer);
+            VkResult result = vkCreateBuffer(gd.VkDevice, bufferCI, null, out _deviceBuffer);
             CheckResult(result);
             //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General, $"VkBuffer Created 0x{_deviceBuffer.Value.Handle:X16}");
 
@@ -65,7 +66,7 @@ namespace XenoAtom.Graphics.Vk
             var memReqs2 = new VkMemoryRequirements2();
             var dedicatedReqs = new VkMemoryDedicatedRequirements();
             memReqs2.pNext = &dedicatedReqs;
-            vkGetBufferMemoryRequirements2(_gd.Device, memReqInfo2, ref memReqs2);
+            vkGetBufferMemoryRequirements2(Device, memReqInfo2, ref memReqs2);
             _bufferMemoryRequirements = memReqs2.memoryRequirements;
             prefersDedicatedAllocation = dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation;
 
@@ -100,15 +101,15 @@ namespace XenoAtom.Graphics.Vk
                 default,
                 _deviceBuffer);
             _memory = memoryToken;
-            result = vkBindBufferMemory(gd.Device, _deviceBuffer, _memory.DeviceMemory, _memory.Offset);
+            result = vkBindBufferMemory(gd.VkDevice, _deviceBuffer, _memory.DeviceMemory, _memory.Offset);
             CheckResult(result);
         }
 
         internal override void Destroy()
         {
             //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General,$"VkBuffer Destroyed 0x{_deviceBuffer.Value.Handle:X16}");
-            vkDestroyBuffer(_gd.Device, _deviceBuffer, null);
-            _gd.MemoryManager.Free(Memory);
+            vkDestroyBuffer(Device, _deviceBuffer, null);
+            Device.MemoryManager.Free(Memory);
         }
     }
 }

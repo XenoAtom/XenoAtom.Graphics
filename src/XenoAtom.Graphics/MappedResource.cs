@@ -1,17 +1,17 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 
 namespace XenoAtom.Graphics
 {
     /// <summary>
-    /// A structure describing the layout of a mapped <see cref="MappableResource"/> object.
+    /// A structure describing the layout of a mapped <see cref="IMappableResource"/> object.
     /// </summary>
     public struct MappedResource
     {
         /// <summary>
         /// The resource which has been mapped.
         /// </summary>
-        public readonly MappableResource Resource;
+        public readonly IMappableResource Resource;
         /// <summary>
         /// Identifies the <see cref="MapMode"/> that was used to map the resource.
         /// </summary>
@@ -41,7 +41,7 @@ namespace XenoAtom.Graphics
         public readonly uint DepthPitch;
 
         internal MappedResource(
-            MappableResource resource,
+            IMappableResource resource,
             MapMode mode,
             IntPtr data,
             uint sizeInBytes,
@@ -58,7 +58,7 @@ namespace XenoAtom.Graphics
             DepthPitch = depthPitch;
         }
 
-        internal MappedResource(MappableResource resource, MapMode mode, IntPtr data, uint sizeInBytes)
+        internal MappedResource(IMappableResource resource, MapMode mode, IntPtr data, uint sizeInBytes)
         {
             Resource = resource;
             Mode = mode;

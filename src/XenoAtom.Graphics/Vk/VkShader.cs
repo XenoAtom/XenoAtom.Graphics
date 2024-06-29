@@ -8,7 +8,7 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkShader : Shader
     {
-        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
+        private new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
         private readonly VkShaderModule _shaderModule;
 
         public VkShaderModule ShaderModule => _shaderModule;
@@ -21,14 +21,14 @@ namespace XenoAtom.Graphics.Vk
             {
                 shaderModuleCI.codeSize = (UIntPtr)description.ShaderBytes.Length;
                 shaderModuleCI.pCode = (uint*)codePtr;
-                VkResult result = vkCreateShaderModule(gd.Device, shaderModuleCI, null, out _shaderModule);
+                VkResult result = vkCreateShaderModule(gd.VkDevice, shaderModuleCI, null, out _shaderModule);
                 CheckResult(result);
             }
         }
 
         internal override void Destroy()
         {
-            vkDestroyShaderModule(_gd.Device, ShaderModule, null);
+            vkDestroyShaderModule(Device, ShaderModule, null);
         }
     }
 }

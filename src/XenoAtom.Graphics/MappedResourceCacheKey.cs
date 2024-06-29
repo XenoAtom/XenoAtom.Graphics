@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
     internal struct MappedResourceCacheKey : IEquatable<MappedResourceCacheKey>
     {
-        public readonly MappableResource Resource;
+        public readonly IMappableResource Resource;
         public readonly uint Subresource;
 
-        public MappedResourceCacheKey(MappableResource resource, uint subresource)
+        public MappedResourceCacheKey(IMappableResource resource, uint subresource)
         {
             Resource = resource;
             Subresource = subresource;
