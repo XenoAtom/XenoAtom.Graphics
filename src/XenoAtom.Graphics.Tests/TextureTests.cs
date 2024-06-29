@@ -919,6 +919,50 @@ namespace XenoAtom.Graphics.Tests
             GD.Unmap(tex1D);
         }
 
+
+        [Fact]
+        public unsafe void Copy_DepthStencil()
+        {
+            Texture depthTarget = RF.CreateTexture(
+                TextureDescription.Texture2D(64, 64, 1, 1, PixelFormat.D32_Float_S8_UInt, TextureUsage.DepthStencil));
+
+            Texture depthTarget1 = RF.CreateTexture(
+                TextureDescription.Texture2D(64, 64, 1, 1, PixelFormat.D32_Float_S8_UInt, TextureUsage.DepthStencil));
+
+            Framebuffer fb = RF.CreateFramebuffer(new FramebufferDescription(depthTarget));
+            {
+                using CommandList cl = RF.CreateCommandList();
+                cl.Begin();
+                cl.SetFramebuffer(fb);
+                cl.ClearDepthStencil(0.5f, 12);
+                cl.End();
+                GD.SubmitCommands(cl);
+            }
+
+            Texture copySrcFromDepth = RF.CreateTexture(TextureDescription.Texture2D(
+                64, 64, 1, 1, PixelFormat.R32_Float, TextureUsage.Staging));
+
+            {
+                using CommandList cl = RF.CreateCommandList();
+                cl.Begin();
+                cl.CopyTexture(depthTarget, 0, 0, 0, 0, 0, depthTarget1, 0, 0, 0, 0, 0, 64, 64, 1, 1);
+                cl.CopyTexture(depthTarget1, 0, 0, 0, 0, 0, copySrcFromDepth, 0, 0, 0, 0, 0, 64, 64, 1, 1);
+                cl.End();
+                GD.SubmitCommands(cl);
+            }
+            GD.WaitForIdle();
+
+            {
+                MappedResourceView<float> view = GD.Map<float>(copySrcFromDepth, MapMode.Read);
+                for (int i = 0; i < 64 * 64; i++)
+                {
+                    Assert.Equal(0.5f, view[i]);
+                }
+                GD.Unmap(copySrcFromDepth);
+            }
+        }
+
+
         [Fact]
         public unsafe void Copy_1DTo2D()
         {

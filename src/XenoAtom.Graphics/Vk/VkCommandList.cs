@@ -867,17 +867,35 @@ namespace XenoAtom.Graphics.Vk
 
             if (!sourceIsStaging && !destIsStaging)
             {
+                var srcAspect = (srcVkTexture.Usage & TextureUsage.DepthStencil) == TextureUsage.DepthStencil
+                    ? (FormatHelpers.IsStencilFormat(srcVkTexture.Format)
+                        ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
+                        : VK_IMAGE_ASPECT_DEPTH_BIT)
+                    : VK_IMAGE_ASPECT_COLOR_BIT;
+
+                var dstAspect = (dstVkTexture.Usage & TextureUsage.DepthStencil) == TextureUsage.DepthStencil
+                    ? (FormatHelpers.IsStencilFormat(dstVkTexture.Format)
+                        ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
+                        : VK_IMAGE_ASPECT_DEPTH_BIT)
+                    : VK_IMAGE_ASPECT_COLOR_BIT;
+
+                if (srcAspect != dstAspect)
+                {
+                    throw new InvalidOperationException($"Source texture with aspect `{srcAspect}` and destination texture with aspect `{dstAspect}` must have the same aspect.");
+                }
+
                 VkImageSubresourceLayers srcSubresource = new VkImageSubresourceLayers
                 {
-                    aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    aspectMask = srcAspect,
                     layerCount = layerCount,
                     mipLevel = srcMipLevel,
                     baseArrayLayer = srcBaseArrayLayer
                 };
 
+
                 VkImageSubresourceLayers dstSubresource = new VkImageSubresourceLayers
                 {
-                    aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    aspectMask = dstAspect,
                     layerCount = layerCount,
                     mipLevel = dstMipLevel,
                     baseArrayLayer = dstBaseArrayLayer
