@@ -100,7 +100,10 @@ namespace XenoAtom.Graphics.Vk
             EnsureBegin();
             AddReference();
 
-            _submittedStagingInfos.Add(cb, _currentStagingInfo!);
+            lock (_stagingLock)
+            {
+                _submittedStagingInfos.Add(cb, _currentStagingInfo!);
+            }
             _currentStagingInfo = null;
         }
 
@@ -477,7 +480,11 @@ namespace XenoAtom.Graphics.Vk
             }
 
             vkEndCommandBuffer(_cb);
-            _submittedCommandBuffers.Add(_cb);
+
+            lock (_submittedCommandBuffers)
+            {
+                _submittedCommandBuffers.Add(_cb);
+            }
         }
 
         protected override void SetFramebufferCore(Framebuffer fb)
