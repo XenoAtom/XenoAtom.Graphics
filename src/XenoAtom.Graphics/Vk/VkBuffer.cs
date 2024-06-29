@@ -80,8 +80,7 @@ namespace XenoAtom.Graphics.Vk
             if (isStaging)
             {
                 // Use "host cached" memory for staging when available, for better performance of GPU -> CPU transfers
-                var hostCachedAvailable = TryFindMemoryType(
-                    gd.PhysicalDeviceMemProperties,
+                var hostCachedAvailable = gd.MemoryManager.TryFindMemoryType(
                     _bufferMemoryRequirements.memoryTypeBits,
                     memoryPropertyFlags | VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
                     out _);
@@ -92,7 +91,6 @@ namespace XenoAtom.Graphics.Vk
             }
 
             VkMemoryBlock memoryToken = gd.MemoryManager.Allocate(
-                gd.PhysicalDeviceMemProperties,
                 _bufferMemoryRequirements.memoryTypeBits,
                 memoryPropertyFlags,
                 hostVisible,
@@ -106,7 +104,7 @@ namespace XenoAtom.Graphics.Vk
             CheckResult(result);
         }
 
-        internal override void DisposeCore()
+        internal override void Destroy()
         {
             //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General,$"VkBuffer Destroyed 0x{_deviceBuffer.Value.Handle:X16}");
             vkDestroyBuffer(_gd.Device, _deviceBuffer, null);

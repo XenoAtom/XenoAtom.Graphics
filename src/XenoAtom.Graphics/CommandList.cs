@@ -23,7 +23,7 @@ namespace XenoAtom.Graphics
     /// <see cref="GraphicsDevice"/>, they must be reset and commands must be issued again.
     /// See <see cref="CommandListDescription"/>.
     /// </summary>
-    public abstract class CommandList : GraphicsObject
+    public abstract class CommandList : GraphicsDeviceObject
     {
         private readonly GraphicsDeviceFeatures _features;
         private readonly uint _uniformBufferAlignment;

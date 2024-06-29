@@ -7,7 +7,7 @@ namespace XenoAtom.Graphics
     /// to a shader set.
     /// See <see cref="ResourceLayoutDescription"/>.
     /// </summary>
-    public abstract class ResourceLayout : GraphicsObject
+    public abstract class ResourceLayout : GraphicsDeviceObject
     {
 #if VALIDATE_USAGE
         internal readonly ResourceLayoutDescription Description;

@@ -12,10 +12,16 @@ namespace XenoAtom.Graphics.Tests
     {
         public static GraphicsDevice CreateVulkanDevice(DebugLogDelegate log)
         {
-            return GraphicsDevice.Create(new GraphicsDeviceOptions(true)
+            var manager = GraphicsManager.Create(new GraphicsManagerOptions(true)
             {
                 DebugLog = log
             });
+
+            Assert.True(manager.Adapters.Length > 0, "No Graphics adapters found");
+
+
+            var adapter = manager.Adapters[0];
+            return adapter.CreateDevice();
         }
 
         internal static unsafe string GetString(byte* stringStart)
@@ -115,6 +121,9 @@ namespace XenoAtom.Graphics.Tests
             _factory.DisposeCollector.DisposeAll();
             GD.Dispose();
 
+            var manager = GD.Adapter.Manager;
+            manager.Dispose();
+            
             Assert.False(_hasWarningOrErrorLogs);
         }
     }

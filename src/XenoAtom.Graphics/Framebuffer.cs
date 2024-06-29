@@ -8,7 +8,7 @@ namespace XenoAtom.Graphics
     /// A device resource used to control which color and depth textures are rendered to.
     /// See <see cref="FramebufferDescription"/>.
     /// </summary>
-    public abstract class Framebuffer : GraphicsObject
+    public abstract class Framebuffer : GraphicsDeviceObject
     {
         private readonly FramebufferAttachment[] _colorTargets = [];
 

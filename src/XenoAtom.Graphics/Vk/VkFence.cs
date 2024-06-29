@@ -25,7 +25,7 @@ namespace XenoAtom.Graphics.Vk
 
         public override bool Signaled => vkGetFenceStatus(_gd.Device, _fence) == VkResult.VK_SUCCESS;
 
-        internal override void DisposeCore()
+        internal override void Destroy()
         {
             vkDestroyFence(_gd.Device, _fence, null);
         }

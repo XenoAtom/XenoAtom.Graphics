@@ -88,7 +88,7 @@ namespace XenoAtom.Graphics.Vk
             CheckResult(result);
         }
 
-        internal override void DisposeCore()
+        internal override void Destroy()
         {
             vkDestroyDescriptorSetLayout(_gd.Device, _dsl, null);
         }

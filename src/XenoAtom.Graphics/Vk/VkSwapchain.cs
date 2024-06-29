@@ -303,7 +303,7 @@ namespace XenoAtom.Graphics.Vk
             return supported;
         }
 
-        internal override void DisposeCore()
+        internal override void Destroy()
         {
             vkDestroyFence(_gd.Device, _imageAvailableFence, null);
             _framebuffer.Dispose();

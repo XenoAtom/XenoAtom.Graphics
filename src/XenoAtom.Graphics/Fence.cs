@@ -6,7 +6,7 @@ namespace XenoAtom.Graphics
     /// <summary>
     /// A synchronization primitive which allows the GPU to communicate when submitted work items have finished executing.
     /// </summary>
-    public abstract class Fence : GraphicsObject
+    public abstract class Fence : GraphicsDeviceObject
     {
         internal Fence(GraphicsDevice device) : base(device)
         {

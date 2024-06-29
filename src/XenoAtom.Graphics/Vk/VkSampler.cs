@@ -38,7 +38,7 @@ namespace XenoAtom.Graphics.Vk
             vkCreateSampler(_gd.Device, samplerCI, null, out _sampler);
         }
 
-        internal override void DisposeCore()
+        internal override void Destroy()
         {
             vkDestroySampler(_gd.Device, _sampler, null);
         }

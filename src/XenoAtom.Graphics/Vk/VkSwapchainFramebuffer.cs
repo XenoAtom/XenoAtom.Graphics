@@ -10,7 +10,6 @@ namespace XenoAtom.Graphics.Vk
 {
     internal unsafe class VkSwapchainFramebuffer : VkFramebufferBase
     {
-        private VkGraphicsDevice _gd => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in Device));
         private readonly VkSwapchain _swapchain;
         private readonly VkSurfaceKHR _surface;
         private readonly PixelFormat? _depthFormat;
@@ -182,7 +181,7 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        internal override void DisposeCore()
+        internal override void Destroy()
         {
             _depthAttachment?.Target.Dispose();
             DestroySwapchainFramebuffers();

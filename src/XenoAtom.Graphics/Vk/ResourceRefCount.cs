@@ -12,9 +12,9 @@ namespace XenoAtom.Graphics.Vk
     /// </remarks>
     internal readonly struct ResourceRefCount : IEquatable<ResourceRefCount>
     {
-        private readonly GraphicsObject _internalInstance;
+        private readonly GraphicsDeviceObject _internalInstance;
 
-        public ResourceRefCount(GraphicsObject instance)
+        public ResourceRefCount(GraphicsDeviceObject instance)
         {
             _internalInstance = instance;
         }
@@ -40,6 +40,6 @@ namespace XenoAtom.Graphics.Vk
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator !=(ResourceRefCount left, ResourceRefCount right) => !left.Equals(right);
 
-        public static implicit operator ResourceRefCount(GraphicsObject instance) => new(instance);
+        public static implicit operator ResourceRefCount(GraphicsDeviceObject instance) => new(instance);
     }
 }

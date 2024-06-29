@@ -7,7 +7,7 @@ namespace XenoAtom.Graphics
     /// A device resource encapsulating a single shader module.
     /// See <see cref="ShaderDescription"/>.
     /// </summary>
-    public abstract class Shader : GraphicsObject
+    public abstract class Shader : GraphicsDeviceObject
     {
         internal Shader(GraphicsDevice device, ShaderStages stage, ReadOnlyMemoryUtf8 entryPoint) : base(device)
         {

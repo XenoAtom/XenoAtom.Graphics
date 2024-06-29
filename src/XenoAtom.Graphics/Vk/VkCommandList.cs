@@ -52,6 +52,11 @@ namespace XenoAtom.Graphics.Vk
         private readonly List<StagingResourceInfo> _availableStagingInfos = new();
         private readonly List<VkBuffer> _availableStagingBuffers = new();
 
+        private readonly PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelExt;
+        private readonly PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelExt;
+        private readonly PFN_vkCmdInsertDebugUtilsLabelEXT vkCmdInsertDebugUtilsLabelExt;
+
+
         public VkCommandPool CommandPool => _pool;
 
         public VkCommandBuffer CommandBuffer => _cb;
@@ -59,6 +64,11 @@ namespace XenoAtom.Graphics.Vk
         public VkCommandList(VkGraphicsDevice gd, ref CommandListDescription description)
             : base(gd, ref description, gd.Features, gd.UniformBufferMinOffsetAlignment, gd.StructuredBufferMinOffsetAlignment)
         {
+            var manager = _gd.Adapter.Manager;
+            vkCmdBeginDebugUtilsLabelExt = manager.vkCmdBeginDebugUtilsLabelExt;
+            vkCmdEndDebugUtilsLabelExt = manager.vkCmdEndDebugUtilsLabelExt;
+            vkCmdInsertDebugUtilsLabelExt = manager.vkCmdInsertDebugUtilsLabelExt;
+            
             var poolCInfo = new VkCommandPoolCreateInfo
             {
                 flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
@@ -1303,7 +1313,7 @@ namespace XenoAtom.Graphics.Vk
 
         public override void PushDebugGroup(ReadOnlySpanUtf8 name, in RgbaFloat color = default)
         {
-            var func = _gd.vkCmdBeginDebugUtilsLabelExt;
+            var func = vkCmdBeginDebugUtilsLabelExt;
             if (func == default) { return; }
 
             var label = new VkDebugUtilsLabelEXT
@@ -1316,7 +1326,7 @@ namespace XenoAtom.Graphics.Vk
 
         public override void PopDebugGroup()
         {
-            var func = _gd.vkCmdEndDebugUtilsLabelExt;
+            var func = vkCmdEndDebugUtilsLabelExt;
             if (func == default) { return; }
 
             func.Invoke(_cb);
@@ -1324,7 +1334,7 @@ namespace XenoAtom.Graphics.Vk
 
         public override void InsertDebugMarker(ReadOnlySpanUtf8 name, in RgbaFloat color = default)
         {
-            var func = _gd.vkCmdInsertDebugUtilsLabelExt;
+            var func = vkCmdInsertDebugUtilsLabelExt;
             if (func == default) { return; }
 
             var label = new VkDebugUtilsLabelEXT
@@ -1335,7 +1345,7 @@ namespace XenoAtom.Graphics.Vk
             func.Invoke(_cb, &label);
         }
 
-        internal override void DisposeCore()
+        internal override void Destroy()
         {
             if (_currentStagingInfo is not null)
             {

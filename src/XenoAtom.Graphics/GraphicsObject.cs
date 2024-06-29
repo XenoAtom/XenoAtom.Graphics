@@ -10,42 +10,13 @@ namespace XenoAtom.Graphics
     /// <summary>
     /// Base class for all graphics objects.
     /// </summary>
-    public abstract class GraphicsObject : IDeviceResource, IDisposable
+    public abstract class GraphicsObject : IDisposable
     {
         private int _refCount;
-        private string? _name;
 
-        internal GraphicsObject(GraphicsDevice device)
+        internal GraphicsObject()
         {
-            Device = device;
             _refCount = 1;
-        }
-
-        /// <summary>
-        /// Gets the <see cref="GraphicsDevice"/> associated with this instance.
-        /// </summary>
-        public readonly GraphicsDevice Device;
-
-        /// <summary>
-        /// A string identifying this instance. Can be used to differentiate between objects in graphics debuggers and other
-        /// tools.
-        /// </summary>
-        public string? Name
-        {
-            get => _name;
-            set
-            {
-                if (IsDisposed)
-                {
-                    throw new ObjectDisposedException(GetType().FullName);
-                }
-
-                if (!string.Equals(_name, value, StringComparison.Ordinal))
-                {
-                    _name = value;
-                    Device.SetResourceName(this, value);
-                }
-            }
         }
 
         /// <summary>
@@ -84,17 +55,16 @@ namespace XenoAtom.Graphics
 
             return ret;
         }
-
-
+        
         private void DestroyInternal()
         {
             if (!IsDisposed)
             {
                 IsDisposed = true;
-                DisposeCore();
+                Destroy();
             }
         }
 
-        internal abstract void DisposeCore();
+        internal abstract void Destroy();
     }
 }

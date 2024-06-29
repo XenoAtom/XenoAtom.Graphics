@@ -421,7 +421,7 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        internal override void DisposeCore()
+        internal override void Destroy()
         {
             vkDestroyPipelineLayout(_gd.Device, _pipelineLayout, null);
             vkDestroyPipeline(_gd.Device, _devicePipeline, null);

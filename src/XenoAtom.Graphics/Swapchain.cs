@@ -6,7 +6,7 @@ namespace XenoAtom.Graphics
     /// A device resource providing the ability to present rendered images to a visible surface.
     /// See <see cref="SwapchainDescription"/>.
     /// </summary>
-    public abstract class Swapchain : GraphicsObject
+    public abstract class Swapchain : GraphicsDeviceObject
     {
         internal Swapchain(GraphicsDevice device) : base(device)
         {

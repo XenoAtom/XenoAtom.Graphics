@@ -90,7 +90,7 @@ namespace XenoAtom.Graphics.Vk
             vkUpdateDescriptorSets(_gd.Device, descriptorWriteCount, descriptorWrites, 0, null);
         }
 
-        internal override void DisposeCore()
+        internal override void Destroy()
         {
             _gd.DescriptorPoolManager.Free(_descriptorAllocationToken, _descriptorCounts);
         }

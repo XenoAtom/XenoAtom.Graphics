@@ -7,7 +7,7 @@ namespace XenoAtom.Graphics
     /// A device resource used to bind a particular set of <see cref="BindableResource"/> objects to a <see cref="CommandList"/>.
     /// See <see cref="ResourceSetDescription"/>.
     /// </summary>
-    public abstract class ResourceSet : GraphicsObject
+    public abstract class ResourceSet : GraphicsDeviceObject
     {
         internal ResourceSet(GraphicsDevice device, ref ResourceSetDescription description) : base(device)
         {

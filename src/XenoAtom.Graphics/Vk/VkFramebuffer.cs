@@ -300,7 +300,7 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        internal override void DisposeCore()
+        internal override void Destroy()
         {
             vkDestroyFramebuffer(_gd.Device, _deviceFramebuffer, null);
             vkDestroyRenderPass(_gd.Device, _renderPassNoClear, null);

@@ -26,7 +26,7 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        internal override void DisposeCore()
+        internal override void Destroy()
         {
             vkDestroyShaderModule(_gd.Device, ShaderModule, null);
         }

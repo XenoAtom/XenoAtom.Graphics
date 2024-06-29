@@ -52,15 +52,15 @@ namespace XenoAtom.Graphics
         /// </summary>
         public uint GraphicsQueueFamilyIndex => _gd.GraphicsQueueIndex;
 
-        /// <summary>
-        /// Gets the driver name of the device. May be null.
-        /// </summary>
-        public string DriverName => _gd.DriverName;
+        ///// <summary>
+        ///// Gets the driver name of the device. May be null.
+        ///// </summary>
+        //public string DriverName => _gd.DriverName;
 
-        /// <summary>
-        /// Gets the driver information of the device. May be null.
-        /// </summary>
-        public string DriverInfo => _gd.DriverInfo;
+        ///// <summary>
+        ///// Gets the driver information of the device. May be null.
+        ///// </summary>
+        //public string DriverInfo => _gd.DriverInfo;
 
         public ReadOnlyCollection<ReadOnlyMemoryUtf8> AvailableInstanceLayers => _instanceLayers.Value;
 

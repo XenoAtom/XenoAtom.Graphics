@@ -69,7 +69,7 @@ namespace XenoAtom.Graphics.Vk
             vkCreateImageView(_gd.Device, imageViewCI, null, out _imageView);
         }
 
-        internal override void DisposeCore()
+        internal override void Destroy()
         {
             vkDestroyImageView(_gd.Device, ImageView, null);
         }

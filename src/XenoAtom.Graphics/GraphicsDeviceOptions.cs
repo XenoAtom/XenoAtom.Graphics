@@ -9,26 +9,6 @@ namespace XenoAtom.Graphics
     public struct GraphicsDeviceOptions
     {
         /// <summary>
-        /// Indicates whether the GraphicsDevice will support debug features, provided they are supported by the host system.
-        /// </summary>
-        public bool Debug;
-
-        /// <summary>
-        /// Logger used when <see cref="Debug"/> is true. Default is Console.Out.
-        /// </summary>
-        public DebugLogDelegate DebugLog;
-
-        /// <summary>
-        /// Flags used to log messages from the graphics backend. Default is <see cref="DebugLogLevel.Error"/> and <see cref="DebugLogLevel.Warning"/>.
-        /// </summary>
-        public DebugLogLevel DebugLogLevel;
-
-        /// <summary>
-        /// Indicates the kind of debug messages that should be logged. Default is <see cref="DebugLogKind.General | DebugLogKind.Validation"/>.
-        /// </summary>
-        public DebugLogKind DebugLogKind;
-        
-        /// <summary>
         /// Indicates whether the Graphicsdevice will include a "main" Swapchain. If this value is true, then the GraphicsDevice
         /// must be created with one of the overloads that provides Swapchain source information.
         /// </summary>
@@ -65,33 +45,14 @@ namespace XenoAtom.Graphics
         public bool SwapchainSrgbFormat;
 
         /// <summary>
-        /// Constructs a new GraphicsDeviceOptions for a device with no main Swapchain.
-        /// </summary>
-        /// <param name="debug">Indicates whether the GraphicsDevice will support debug features, provided they are supported by
-        /// the host system.</param>
-        public GraphicsDeviceOptions(bool debug)
-        {
-            Debug = debug;
-            DebugLog = LogToConsole;
-            DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
-            DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
-        }
-
-        /// <summary>
         /// Constructs a new GraphicsDeviceOptions for a device with a main Swapchain.
         /// </summary>
-        /// <param name="debug">Indicates whether the GraphicsDevice will enable debug features, provided they are supported by
-        /// the host system.</param>
         /// <param name="swapchainDepthFormat">An optional <see cref="PixelFormat"/> to be used for the depth buffer of the
         /// swapchain. If this value is null, then no depth buffer will be present on the swapchain.</param>
         /// <param name="syncToVerticalBlank">Indicates whether the main Swapchain will be synchronized to the window system's
         /// vertical refresh rate.</param>
-        public GraphicsDeviceOptions(bool debug, PixelFormat? swapchainDepthFormat, bool syncToVerticalBlank)
+        public GraphicsDeviceOptions(PixelFormat? swapchainDepthFormat, bool syncToVerticalBlank)
         {
-            Debug = debug;
-            DebugLog = LogToConsole;
-            DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
-            DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -100,23 +61,16 @@ namespace XenoAtom.Graphics
         /// <summary>
         /// Constructs a new GraphicsDeviceOptions for a device with a main Swapchain.
         /// </summary>
-        /// <param name="debug">Indicates whether the GraphicsDevice will enable debug features, provided they are supported by
-        /// the host system.</param>
         /// <param name="swapchainDepthFormat">An optional <see cref="PixelFormat"/> to be used for the depth buffer of the
         /// swapchain. If this value is null, then no depth buffer will be present on the swapchain.</param>
         /// <param name="syncToVerticalBlank">Indicates whether the main Swapchain will be synchronized to the window system's
         /// vertical refresh rate.</param>
         /// <param name="resourceBindingModel">Specifies which model the rendering backend should use for binding resources.</param>
         public GraphicsDeviceOptions(
-            bool debug,
             PixelFormat? swapchainDepthFormat,
             bool syncToVerticalBlank,
             ResourceBindingModel resourceBindingModel)
         {
-            Debug = debug;
-            DebugLog = LogToConsole;
-            DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
-            DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -126,8 +80,6 @@ namespace XenoAtom.Graphics
         /// <summary>
         /// Constructs a new GraphicsDeviceOptions for a device with a main Swapchain.
         /// </summary>
-        /// <param name="debug">Indicates whether the GraphicsDevice will enable debug features, provided they are supported by
-        /// the host system.</param>
         /// <param name="swapchainDepthFormat">An optional <see cref="PixelFormat"/> to be used for the depth buffer of the
         /// swapchain. If this value is null, then no depth buffer will be present on the swapchain.</param>
         /// <param name="syncToVerticalBlank">Indicates whether the main Swapchain will be synchronized to the window system's
@@ -136,16 +88,11 @@ namespace XenoAtom.Graphics
         /// <param name="preferDepthRangeZeroToOne">Indicates whether a 0-to-1 depth range mapping is preferred. For OpenGL,
         /// this is not the default, and is not available on all systems.</param>
         public GraphicsDeviceOptions(
-            bool debug,
             PixelFormat? swapchainDepthFormat,
             bool syncToVerticalBlank,
             ResourceBindingModel resourceBindingModel,
             bool preferDepthRangeZeroToOne)
         {
-            Debug = debug;
-            DebugLog = LogToConsole;
-            DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
-            DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -168,17 +115,12 @@ namespace XenoAtom.Graphics
         /// <param name="preferStandardClipSpaceYDirection">Indicates whether a bottom-to-top-increasing clip space Y direction
         /// is preferred. For Vulkan, this is not the default, and is not available on all systems.</param>
         public GraphicsDeviceOptions(
-            bool debug,
             PixelFormat? swapchainDepthFormat,
             bool syncToVerticalBlank,
             ResourceBindingModel resourceBindingModel,
             bool preferDepthRangeZeroToOne,
             bool preferStandardClipSpaceYDirection)
         {
-            Debug = debug;
-            DebugLog = LogToConsole;
-            DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
-            DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;
@@ -206,7 +148,6 @@ namespace XenoAtom.Graphics
         /// <see cref="SwapchainDescription"/>. If they are, then the value of <see cref="SwapchainDescription.ColorSrgb"/> will
         /// supercede the value specified here.</param>
         public GraphicsDeviceOptions(
-            bool debug,
             PixelFormat? swapchainDepthFormat,
             bool syncToVerticalBlank,
             ResourceBindingModel resourceBindingModel,
@@ -214,10 +155,6 @@ namespace XenoAtom.Graphics
             bool preferStandardClipSpaceYDirection,
             bool swapchainSrgbFormat)
         {
-            Debug = debug;
-            DebugLog = LogToConsole;
-            DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
-            DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
             SyncToVerticalBlank = syncToVerticalBlank;

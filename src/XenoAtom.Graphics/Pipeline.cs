@@ -7,7 +7,7 @@ namespace XenoAtom.Graphics
     /// <see cref="CommandList.SetPipeline(Pipeline)"/> to prepare a <see cref="CommandList"/> for draw commands.
     /// See <see cref="GraphicsPipelineDescription"/>.
     /// </summary>
-    public abstract class Pipeline : GraphicsObject
+    public abstract class Pipeline : GraphicsDeviceObject
     {
         internal Pipeline(GraphicsDevice device, ref GraphicsPipelineDescription graphicsDescription)
             : this(device, graphicsDescription.ResourceLayouts)

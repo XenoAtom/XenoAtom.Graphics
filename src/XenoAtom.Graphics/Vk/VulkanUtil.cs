@@ -19,23 +19,6 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        public static bool TryFindMemoryType(VkPhysicalDeviceMemoryProperties memProperties, uint typeFilter, VkMemoryPropertyFlagBits properties, out uint typeIndex)
-        {
-            typeIndex = 0;
-
-            for (int i = 0; i < memProperties.memoryTypeCount; i++)
-            {
-                if (((typeFilter & (1 << i)) != 0)
-                    && (memProperties.GetMemoryType((uint)i).propertyFlags & properties) == properties)
-                {
-                    typeIndex = (uint)i;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         public static ReadOnlyMemoryUtf8[] EnumerateInstanceLayers()
         {
             uint propCount = 0;

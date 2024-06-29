@@ -108,7 +108,6 @@ namespace XenoAtom.Graphics.Vk
                 prefersDedicatedAllocation = dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation;
 
                 VkMemoryBlock memoryToken = gd.MemoryManager.Allocate(
-                    gd.PhysicalDeviceMemProperties,
                     memoryRequirements.memoryTypeBits,
                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                     false,
@@ -168,12 +167,11 @@ namespace XenoAtom.Graphics.Vk
 
                 // Use "host cached" memory when available, for better performance of GPU -> CPU transfers
                 var propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
-                if (!TryFindMemoryType(_gd.PhysicalDeviceMemProperties, bufferMemReqs.memoryTypeBits, propertyFlags, out _))
+                if (!gd.MemoryManager.TryFindMemoryType(bufferMemReqs.memoryTypeBits, propertyFlags, out _))
                 {
                     propertyFlags ^= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
                 }
                 _memoryBlock = _gd.MemoryManager.Allocate(
-                    _gd.PhysicalDeviceMemProperties,
                     bufferMemReqs.memoryTypeBits,
                     propertyFlags,
                     true,
@@ -407,7 +405,7 @@ namespace XenoAtom.Graphics.Vk
             _format = format;
         }
 
-        internal override void DisposeCore()
+        internal override void Destroy()
         {
             DisposeTextureView();
 
