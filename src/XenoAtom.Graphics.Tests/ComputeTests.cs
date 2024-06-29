@@ -100,12 +100,10 @@ namespace XenoAtom.Graphics.Tests
             where TexelType : unmanaged
         {
             // We need to create a staging texture and copy into it.
-            TextureDescription description = new TextureDescription(texture.Width, texture.Height, depth: 1,
+            using Texture staging = RF.CreateTexture(new(texture.Width, texture.Height, depth: 1,
                 texture.MipLevels, texture.ArrayLayers,
                 texture.Format, TextureUsage.Staging,
-                texture.Type, texture.SampleCount);
-
-            using Texture staging = RF.CreateTexture(ref description);
+                texture.Type, texture.SampleCount));
 
             using CommandList cl = RF.CreateCommandList();
             cl.Begin();

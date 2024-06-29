@@ -38,7 +38,30 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
+        public override void SwapBuffers()
+        {
+            VkSwapchainKHR deviceSwapchain = DeviceSwapchain;
+            var presentInfo = new VkPresentInfoKHR
+            {
+                swapchainCount = 1,
+                pSwapchains = &deviceSwapchain
+            };
+            uint imageIndex = ImageIndex;
+            presentInfo.pImageIndices = &imageIndex;
 
+            object presentLock = PresentQueueIndex == _gd.MainQueueIndex ? _gd.GraphicsQueueLock : this;
+            lock (presentLock)
+            {
+                _gd._vkQueuePresentKHR.Invoke(PresentQueue, presentInfo);
+                if (AcquireNextImage(_gd.Device, default, ImageAvailableFence))
+                {
+                    XenoAtom.Interop.vulkan.VkFence fence = ImageAvailableFence;
+                    vkWaitForFences(_gd.Device, 1, &fence, true, ulong.MaxValue);
+                    vkResetFences(_gd.Device, 1, &fence);
+                }
+            }
+        }
+        
         public VkSwapchainKHR DeviceSwapchain => _deviceSwapchain;
         public uint ImageIndex => _currentImageIndex;
         public XenoAtom.Interop.vulkan.VkFence ImageAvailableFence => _imageAvailableFence;
@@ -46,9 +69,9 @@ namespace XenoAtom.Graphics.Vk
         public VkQueue PresentQueue => _presentQueue;
         public uint PresentQueueIndex => _presentQueueIndex;
 
-        public VkSwapchain(VkGraphicsDevice gd, ref SwapchainDescription description) : this(gd, ref description, default) { }
+        public VkSwapchain(VkGraphicsDevice gd, in SwapchainDescription description) : this(gd, description, default) { }
 
-        public VkSwapchain(VkGraphicsDevice gd, ref SwapchainDescription description, VkSurfaceKHR existingSurface) : base(gd)
+        public VkSwapchain(VkGraphicsDevice gd, in SwapchainDescription description, VkSurfaceKHR existingSurface) : base(gd)
         {
             _syncToVBlank = description.SyncToVerticalBlank;
             _swapchainSource = description.Source;
@@ -236,11 +259,12 @@ namespace XenoAtom.Graphics.Vk
             swapchainCI.imageArrayLayers = 1;
             swapchainCI.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-            FixedArray2<uint> queueFamilyIndices = new();
-            queueFamilyIndices[0] = _gd.GraphicsQueueIndex;
-            queueFamilyIndices[1] = _gd.PresentQueueIndex;
 
-            if (_gd.GraphicsQueueIndex != _gd.PresentQueueIndex)
+            FixedArray2<uint> queueFamilyIndices = new();
+            queueFamilyIndices[0] = _gd.MainQueueIndex;
+            queueFamilyIndices[1] = _presentQueueIndex;
+
+            if (_gd.MainQueueIndex != _presentQueueIndex)
             {
                 swapchainCI.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
                 swapchainCI.queueFamilyIndexCount = 2;
@@ -274,18 +298,23 @@ namespace XenoAtom.Graphics.Vk
 
         private bool GetPresentQueueIndex(out uint queueFamilyIndex)
         {
-            uint graphicsQueueIndex = _gd.GraphicsQueueIndex;
-            uint presentQueueIndex = _gd.PresentQueueIndex;
+            uint mainQueueIndex = _gd.MainQueueIndex;
 
-            if (QueueSupportsPresent(graphicsQueueIndex, _surface))
+            if (QueueSupportsPresent(mainQueueIndex, _surface))
             {
-                queueFamilyIndex = graphicsQueueIndex;
+                queueFamilyIndex = mainQueueIndex;
                 return true;
             }
-            else if (graphicsQueueIndex != presentQueueIndex && QueueSupportsPresent(presentQueueIndex, _surface))
+
+            uint queueFamilyCount = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties(_gd.PhysicalDevice, out queueFamilyCount);
+            for (uint i = 0; i < queueFamilyCount; i++)
             {
-                queueFamilyIndex = presentQueueIndex;
-                return true;
+                if (mainQueueIndex != i && QueueSupportsPresent(i, _surface))
+                {
+                    queueFamilyIndex = i;
+                    return true;
+                }
             }
 
             queueFamilyIndex = 0;
@@ -294,7 +323,7 @@ namespace XenoAtom.Graphics.Vk
 
         private bool QueueSupportsPresent(uint queueFamilyIndex, VkSurfaceKHR surface)
         {
-            VkResult result = _gd.vkGetPhysicalDeviceSurfaceSupportKHR.Invoke(
+            VkResult result = _gd.Manager.vkGetPhysicalDeviceSurfaceSupportKHR.Invoke(
                 _gd.PhysicalDevice,
                 queueFamilyIndex,
                 surface,

@@ -9,7 +9,7 @@ namespace XenoAtom.Graphics
     /// </summary>
     public abstract class Pipeline : GraphicsDeviceObject
     {
-        internal Pipeline(GraphicsDevice device, ref GraphicsPipelineDescription graphicsDescription)
+        internal Pipeline(GraphicsDevice device, in GraphicsPipelineDescription graphicsDescription)
             : this(device, graphicsDescription.ResourceLayouts)
         {
 #if VALIDATE_USAGE
@@ -17,7 +17,7 @@ namespace XenoAtom.Graphics
 #endif
         }
 
-        internal Pipeline(GraphicsDevice device, ref ComputePipelineDescription computeDescription)
+        internal Pipeline(GraphicsDevice device, in ComputePipelineDescription computeDescription)
             : this(device, computeDescription.ResourceLayouts)
         { }
 

@@ -32,7 +32,7 @@ public abstract class GraphicsManager : GraphicsObject
     /// Creates a new <see cref="GraphicsManager"/> with the specified options.
     /// </summary>
     /// <param name="options">Options for the graphics manager.</param>
-    public static GraphicsManager Create(GraphicsManagerOptions options) => new VkGraphicsManager(options, new VulkanManagerOptions());
+    public static GraphicsManager Create(in GraphicsManagerOptions options) => new VkGraphicsManager(options);
 }
 
 /// <summary>
@@ -91,5 +91,5 @@ public abstract class GraphicsAdapter : GraphicsObject
     /// </summary>
     /// <param name="options">The graphics device options.</param>
     /// <returns>The graphics device associated with this adapter.</returns>
-    public abstract GraphicsDevice CreateDevice(GraphicsDeviceOptions options);
+    public abstract GraphicsDevice CreateDevice(in GraphicsDeviceOptions options);
 }

@@ -50,7 +50,7 @@ namespace XenoAtom.Graphics
         /// <summary>
         /// Gets the queue family index of the graphics VkQueue.
         /// </summary>
-        public uint GraphicsQueueFamilyIndex => _gd.GraphicsQueueIndex;
+        public uint GraphicsQueueFamilyIndex => _gd.MainQueueIndex;
 
         ///// <summary>
         ///// Gets the driver name of the device. May be null.

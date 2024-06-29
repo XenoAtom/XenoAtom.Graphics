@@ -9,7 +9,7 @@ namespace XenoAtom.Graphics
     /// </summary>
     public abstract class ResourceSet : GraphicsDeviceObject
     {
-        internal ResourceSet(GraphicsDevice device, ref ResourceSetDescription description) : base(device)
+        internal ResourceSet(GraphicsDevice device, in ResourceSetDescription description) : base(device)
         {
 #if VALIDATE_USAGE
             Layout = description.Layout;

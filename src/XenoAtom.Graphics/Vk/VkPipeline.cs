@@ -26,8 +26,8 @@ namespace XenoAtom.Graphics.Vk
 
         public override bool IsComputePipeline { get; }
         
-        public VkPipeline(VkGraphicsDevice gd, ref GraphicsPipelineDescription description)
-            : base(gd, ref description)
+        public VkPipeline(VkGraphicsDevice gd, in GraphicsPipelineDescription description)
+            : base(gd, description)
         {
             IsComputePipeline = false;
 
@@ -339,8 +339,8 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        public VkPipeline(VkGraphicsDevice gd, ref ComputePipelineDescription description)
-            : base(gd,ref description)
+        public VkPipeline(VkGraphicsDevice gd, in ComputePipelineDescription description)
+            : base(gd, description)
         {
             IsComputePipeline = true;
 

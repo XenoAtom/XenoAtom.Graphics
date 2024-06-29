@@ -51,7 +51,7 @@ namespace XenoAtom.Graphics.Vk
 
         public bool IsSwapchainTexture { get; }
 
-        internal VkTexture(VkGraphicsDevice gd, ref TextureDescription description) : base(gd)
+        internal VkTexture(VkGraphicsDevice gd, in TextureDescription description) : base(gd)
         {
             _width = description.Width;
             _height = description.Height;

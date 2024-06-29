@@ -13,7 +13,7 @@ namespace XenoAtom.Graphics.Vk
 
         public VkShaderModule ShaderModule => _shaderModule;
 
-        public VkShader(VkGraphicsDevice gd, ref ShaderDescription description)
+        public VkShader(VkGraphicsDevice gd, in ShaderDescription description)
             : base(gd, description.Stage, description.EntryPoint)
         {
             VkShaderModuleCreateInfo shaderModuleCI = new VkShaderModuleCreateInfo();

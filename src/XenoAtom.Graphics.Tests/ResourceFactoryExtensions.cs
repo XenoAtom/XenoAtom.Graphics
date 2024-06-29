@@ -1,4 +1,4 @@
-﻿// Copyright (c) Alexandre Mutel. All rights reserved.
+// Copyright (c) Alexandre Mutel. All rights reserved.
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
@@ -56,8 +56,8 @@ public static class ResourceFactoryExtensions
 
         return new Shader[]
         {
-                factory.CreateShader(ref vertexShaderDescription),
-                factory.CreateShader(ref fragmentShaderDescription)
+                factory.CreateShader(vertexShaderDescription),
+                factory.CreateShader(fragmentShaderDescription)
         };
     }
 
@@ -95,7 +95,7 @@ public static class ResourceFactoryExtensions
     {
         GraphicsBackend backend = factory.BackendType;
         computeShaderDescription.ShaderBytes = EnsureSpirv(computeShaderDescription);
-        return factory.CreateShader(ref computeShaderDescription);
+        return factory.CreateShader(computeShaderDescription);
     }
 
     private static unsafe byte[] EnsureSpirv(ShaderDescription description)

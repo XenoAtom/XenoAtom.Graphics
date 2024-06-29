@@ -17,12 +17,13 @@ namespace XenoAtom.Graphics.Vk
         private readonly bool _isDebugActivated;
         private readonly VkDeviceMemoryManager _memoryManager;
         private readonly VkDevice _device;
-        private readonly uint _graphicsQueueIndex;
-        private readonly uint _presentQueueIndex;
+        private readonly uint _mainQueueIndex;
         private readonly VkCommandPool _graphicsCommandPool;
         private readonly object _graphicsCommandPoolLock = new object();
         private readonly VkQueue _graphicsQueue;
-        private readonly object _graphicsQueueLock = new object();
+
+        public readonly object GraphicsQueueLock = new object();
+
         private readonly ConcurrentDictionary<VkFormat, VkFilter> _filters = new ConcurrentDictionary<VkFormat, VkFilter>();
         private readonly BackendInfoVulkan _vulkanInfo;
 
@@ -56,8 +57,6 @@ namespace XenoAtom.Graphics.Vk
 
         public override bool IsClipSpaceYInverted => !_standardClipYDirection;
 
-        public override Swapchain? MainSwapchain => _mainSwapchain;
-
         /// <summary>
         /// Gets a simple point-filtered <see cref="Sampler"/> object owned by this instance.
         /// This object is created with <see cref="SamplerDescription.Point"/>.
@@ -81,16 +80,14 @@ namespace XenoAtom.Graphics.Vk
         public VkDevice Device => _device;
         public VkPhysicalDevice PhysicalDevice => _physicalDevice;
         public VkQueue GraphicsQueue => _graphicsQueue;
-        public uint GraphicsQueueIndex => _graphicsQueueIndex;
-        public uint PresentQueueIndex => _presentQueueIndex;
+        public uint MainQueueIndex => _mainQueueIndex;
         public VkDeviceMemoryManager MemoryManager => _memoryManager;
         public VkDescriptorPoolManager DescriptorPoolManager => _descriptorPoolManager;
-        public PFN_vkCreateMetalSurfaceEXT CreateMetalSurfaceEXT => _createMetalSurfaceEXT;
+        //public PFN_vkCreateMetalSurfaceEXT CreateMetalSurfaceEXT => _createMetalSurfaceEXT;
 
-        private readonly PFN_vkQueuePresentKHR _vkQueuePresentKHR;
-        private readonly PFN_vkCreateMetalSurfaceEXT _createMetalSurfaceEXT;
+        public readonly PFN_vkQueuePresentKHR _vkQueuePresentKHR;
+        //private readonly PFN_vkCreateMetalSurfaceEXT _createMetalSurfaceEXT;
 
-        public readonly PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR;
         public readonly PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR;
         public readonly PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
         public readonly PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR;
@@ -103,7 +100,6 @@ namespace XenoAtom.Graphics.Vk
         private readonly object _submittedFencesLock = new object();
         private readonly ConcurrentQueue<XenoAtom.Interop.vulkan.VkFence> _availableSubmissionFences = new ConcurrentQueue<XenoAtom.Interop.vulkan.VkFence>();
         private readonly List<FenceSubmissionInfo> _submittedFences = new List<FenceSubmissionInfo>();
-        private readonly VkSwapchain? _mainSwapchain;
 
         private readonly List<ReadOnlyMemoryUtf8> _surfaceExtensions = new List<ReadOnlyMemoryUtf8>();
         private readonly PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT;
@@ -112,10 +108,7 @@ namespace XenoAtom.Graphics.Vk
 
         public VkGraphicsManager Manager => Adapter.Manager;
 
-        public VkGraphicsDevice(VkGraphicsAdapter adapter, GraphicsDeviceOptions options, SwapchainDescription? scDesc)
-            : this(adapter, options, scDesc, new VulkanDeviceOptions()) { }
-
-        public VkGraphicsDevice(VkGraphicsAdapter adapter, GraphicsDeviceOptions options, SwapchainDescription? scDesc, VulkanDeviceOptions vkOptions) : base(adapter)
+        public VkGraphicsDevice(VkGraphicsAdapter adapter, GraphicsDeviceOptions options) : base(adapter)
         {
             // Just use the first one.
             _physicalDevice = Adapter.PhysicalDevice;
@@ -131,65 +124,41 @@ namespace XenoAtom.Graphics.Vk
             VkQueueFamilyProperties[] qfp = new VkQueueFamilyProperties[queueFamilyCount];
             vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, qfp);
 
-            bool foundGraphics = false;
-
-
-            VkSurfaceKHR surface = default;
-            if (scDesc != null)
-            {
-                surface = VkSurfaceUtil.CreateSurface(this, _instance, scDesc.Value.Source);
-            }
-            bool foundPresent = surface == default;
-
+            bool foundMainQueue = false;
+            const VkQueueFlagBits requiredQueue = VkQueueFlagBits.VK_QUEUE_GRAPHICS_BIT | VkQueueFlagBits.VK_QUEUE_COMPUTE_BIT;
             for (uint i = 0; i < qfp.Length; i++)
             {
-                if ((qfp[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
-                {
-                    _graphicsQueueIndex = i;
-                    foundGraphics = true;
-                }
+                ref var queueFamily = ref qfp[i];
+                var queueFlags = (VkQueueFlagBits)queueFamily.queueFlags;
 
-                if (!foundPresent)
+                if ((queueFlags & requiredQueue) == requiredQueue)
                 {
-                    vkGetPhysicalDeviceSurfaceSupportKHR.Invoke(_physicalDevice, i, surface, out VkBool32 presentSupported);
-                    if (presentSupported)
-                    {
-                        _presentQueueIndex = i;
-                        foundPresent = true;
-                    }
-                }
-
-                if (foundGraphics && foundPresent)
-                {
+                    _mainQueueIndex = i;
+                    foundMainQueue = true;
                     break;
                 }
+            }
+
+            if (!foundMainQueue)
+            {
+                throw new GraphicsException("No suitable queue family found.");
             }
 
             // ---------------------------------------------------------------
             // Create LogicalDevice
             // ---------------------------------------------------------------
 
-            var familyIndices = new HashSet<uint> { _graphicsQueueIndex, _presentQueueIndex };
-            VkDeviceQueueCreateInfo* queueCreateInfos = stackalloc VkDeviceQueueCreateInfo[familyIndices.Count];
-            uint queueCreateInfosCount = (uint)familyIndices.Count;
-
-            int queueIndex = 0;
-            foreach (uint index in familyIndices)
-            {
-                VkDeviceQueueCreateInfo queueCreateInfo = new VkDeviceQueueCreateInfo();
-                queueCreateInfo.queueFamilyIndex = _graphicsQueueIndex;
-                queueCreateInfo.queueCount = 1;
-                float priority = 1f;
-                queueCreateInfo.pQueuePriorities = &priority;
-                queueCreateInfos[queueIndex] = queueCreateInfo;
-                queueIndex += 1;
-            }
-
+            VkDeviceQueueCreateInfo queueCreateInfo = new VkDeviceQueueCreateInfo();
+            queueCreateInfo.queueFamilyIndex = _mainQueueIndex;
+            queueCreateInfo.queueCount = 1;
+            float priority = 1f;
+            queueCreateInfo.pQueuePriorities = &priority;
+            
             VkPhysicalDeviceFeatures deviceFeatures = Adapter.PhysicalDeviceFeatures;
 
             VkExtensionProperties[] props = GetDeviceExtensionProperties();
 
-            var requiredDeviceExtensions = new HashSet<ReadOnlyMemoryUtf8>(vkOptions.DeviceExtensions);
+            var requiredDeviceExtensions = new HashSet<ReadOnlyMemoryUtf8>(options.VulkanDeviceOptions.DeviceExtensions);
 
             // Enforce the presence of these extensions
             requiredDeviceExtensions.Add(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
@@ -246,8 +215,8 @@ namespace XenoAtom.Graphics.Vk
 
             var deviceCreateInfo = new VkDeviceCreateInfo
             {
-                queueCreateInfoCount = queueCreateInfosCount,
-                pQueueCreateInfos = queueCreateInfos,
+                queueCreateInfoCount = 1,
+                pQueueCreateInfos = &queueCreateInfo,
                 pEnabledFeatures = &deviceFeatures,
                 enabledLayerCount = layerNames.Count
             };
@@ -267,7 +236,7 @@ namespace XenoAtom.Graphics.Vk
                     .VkCheck("Unable to create device.");
             }
 
-            vkGetDeviceQueue(_device, _graphicsQueueIndex, 0, out _graphicsQueue);
+            vkGetDeviceQueue(_device, _mainQueueIndex, 0, out _graphicsQueue);
 
             // VK_KHR_surface
             vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(Instance);
@@ -281,8 +250,7 @@ namespace XenoAtom.Graphics.Vk
             vkDestroySwapchainKHR = vkGetDeviceProcAddr<PFN_vkDestroySwapchainKHR>(Device);
             _vkQueuePresentKHR = vkGetDeviceProcAddr<PFN_vkQueuePresentKHR>(Device);
             vkGetSwapchainImagesKHR = vkGetDeviceProcAddr<PFN_vkGetSwapchainImagesKHR>(Device);
-
-
+            
             _memoryManager = new VkDeviceMemoryManager(
                 _device,
                 _physicalDevice,
@@ -312,12 +280,6 @@ namespace XenoAtom.Graphics.Vk
                 shaderFloat64: physicalDeviceFeatures.shaderFloat64);
 
             ResourceFactory = new VkResourceFactory(this);
-
-            if (scDesc != null)
-            {
-                SwapchainDescription desc = scDesc.Value;
-                _mainSwapchain = new VkSwapchain(this, ref desc, surface);
-            }
 
             _descriptorPoolManager = new VkDescriptorPoolManager(this);
             CreateGraphicsCommandPool(out _graphicsCommandPool);
@@ -393,7 +355,7 @@ namespace XenoAtom.Graphics.Vk
                 submissionFence = vkFence;
             }
 
-            lock (_graphicsQueueLock)
+            lock (GraphicsQueueLock)
             {
                 vkQueueSubmit(_graphicsQueue, 1, &si, vkFence)
                     .VkCheck("Error while submitting command buffer");
@@ -494,31 +456,6 @@ namespace XenoAtom.Graphics.Vk
                 vkCreateFence(_device, fenceCI, null, out XenoAtom.Interop.vulkan.VkFence newFence)
                     .VkCheck("Unable to create fence");
                 return newFence;
-            }
-        }
-
-        private protected override void SwapBuffersCore(Swapchain swapchain)
-        {
-            VkSwapchain vkSC = Util.AssertSubtype<Swapchain, VkSwapchain>(swapchain);
-            VkSwapchainKHR deviceSwapchain = vkSC.DeviceSwapchain;
-            var presentInfo = new VkPresentInfoKHR
-            {
-                swapchainCount = 1,
-                pSwapchains = &deviceSwapchain
-            };
-            uint imageIndex = vkSC.ImageIndex;
-            presentInfo.pImageIndices = &imageIndex;
-
-            object presentLock = vkSC.PresentQueueIndex == _graphicsQueueIndex ? _graphicsQueueLock : vkSC;
-            lock (presentLock)
-            {
-                _vkQueuePresentKHR.Invoke(vkSC.PresentQueue, presentInfo);
-                if (vkSC.AcquireNextImage(_device, default, vkSC.ImageAvailableFence))
-                {
-                    XenoAtom.Interop.vulkan.VkFence fence = vkSC.ImageAvailableFence;
-                    vkWaitForFences(_device, 1, &fence, true, ulong.MaxValue);
-                    vkResetFences(_device, 1, &fence);
-                }
             }
         }
 
@@ -632,7 +569,7 @@ namespace XenoAtom.Graphics.Vk
             VkCommandPoolCreateInfo commandPoolCI = new()
             {
                 flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-                queueFamilyIndex = _graphicsQueueIndex
+                queueFamilyIndex = _mainQueueIndex
             };
             vkCreateCommandPool(_device, commandPoolCI, null, out commandPool)
                 .VkCheck("Unable to create Graphics Command Pool");
@@ -706,7 +643,7 @@ namespace XenoAtom.Graphics.Vk
 
         private protected override void WaitForIdleCore()
         {
-            lock (_graphicsQueueLock)
+            lock (GraphicsQueueLock)
             {
                 vkQueueWaitIdle(_graphicsQueue);
             }
@@ -1094,7 +1031,7 @@ namespace XenoAtom.Graphics.Vk
 
                 VkCommandPoolCreateInfo commandPoolCI = new VkCommandPoolCreateInfo();
                 commandPoolCI.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-                commandPoolCI.queueFamilyIndex = _gd.GraphicsQueueIndex;
+                commandPoolCI.queueFamilyIndex = _gd.MainQueueIndex;
                 vkCreateCommandPool(_gd.Device, commandPoolCI, null, out _pool)
                     .VkCheck("Unable to create shared command pool");
 
@@ -1163,8 +1100,6 @@ namespace XenoAtom.Graphics.Vk
             {
                 vkDestroyFence(_device, fence, null);
             }
-
-            _mainSwapchain?.Dispose();
 
             _descriptorPoolManager.DestroyAll();
             vkDestroyCommandPool(_device, _graphicsCommandPool, null);

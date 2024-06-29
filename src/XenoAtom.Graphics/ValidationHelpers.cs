@@ -1,11 +1,11 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 namespace XenoAtom.Graphics
 {
     internal static class ValidationHelpers
     {
         [Conditional("VALIDATE_USAGE")]
-        internal static void ValidateResourceSet(GraphicsDevice gd, ref ResourceSetDescription description)
+        internal static void ValidateResourceSet(GraphicsDevice gd, in ResourceSetDescription description)
         {
 #if VALIDATE_USAGE
             ResourceLayoutElementDescription[] elements = description.Layout.Description.Elements;

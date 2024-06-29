@@ -27,5 +27,10 @@ namespace XenoAtom.Graphics
         /// rate.
         /// </summary>
         public abstract bool SyncToVerticalBlank { get; set; }
+
+        /// <summary>
+        /// Swaps the buffers of the swapchain and presents the rendered image to the screen.
+        /// </summary>
+        public abstract void SwapBuffers();
     }
 }

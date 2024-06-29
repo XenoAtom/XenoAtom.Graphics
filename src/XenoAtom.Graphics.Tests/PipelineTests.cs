@@ -40,14 +40,14 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline1 = RF.CreateGraphicsPipeline(ref gpd);
-            Pipeline pipeline2 = RF.CreateGraphicsPipeline(ref gpd);
+            Pipeline pipeline1 = RF.CreateGraphicsPipeline(gpd);
+            Pipeline pipeline2 = RF.CreateGraphicsPipeline(gpd);
 
             gpd.ShaderSet.VertexLayouts[0].InstanceStepRate = 4;
-            Pipeline pipeline3 = RF.CreateGraphicsPipeline(ref gpd);
+            Pipeline pipeline3 = RF.CreateGraphicsPipeline(gpd);
 
             gpd.ShaderSet.VertexLayouts[0].InstanceStepRate = 5;
-            Pipeline pipeline4 = RF.CreateGraphicsPipeline(ref gpd);
+            Pipeline pipeline4 = RF.CreateGraphicsPipeline(gpd);
         }
 
         protected PipelineTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)

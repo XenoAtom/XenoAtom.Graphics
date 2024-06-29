@@ -46,29 +46,29 @@ namespace XenoAtom.Graphics.Tests
         {
         }
 
-        [Fact]
-        public void Textures_Properties_Correct()
-        {
-            Texture colorTarget = GD.MainSwapchain.Framebuffer.ColorTargets[0].Target;
-            Assert.Equal(TextureType.Texture2D, colorTarget.Type);
-            Assert.InRange(colorTarget.Width, 1u, uint.MaxValue);
-            Assert.InRange(colorTarget.Height, 1u, uint.MaxValue);
-            Assert.Equal(1u, colorTarget.Depth);
-            Assert.Equal(1u, colorTarget.ArrayLayers);
-            Assert.Equal(1u, colorTarget.MipLevels);
-            Assert.Equal(TextureUsage.RenderTarget, colorTarget.Usage);
-            Assert.Equal(TextureSampleCount.Count1, colorTarget.SampleCount);
+        //[Fact]
+        //public void Textures_Properties_Correct()
+        //{
+        //    Texture colorTarget = GD.MainSwapchain.Framebuffer.ColorTargets[0].Target;
+        //    Assert.Equal(TextureType.Texture2D, colorTarget.Type);
+        //    Assert.InRange(colorTarget.Width, 1u, uint.MaxValue);
+        //    Assert.InRange(colorTarget.Height, 1u, uint.MaxValue);
+        //    Assert.Equal(1u, colorTarget.Depth);
+        //    Assert.Equal(1u, colorTarget.ArrayLayers);
+        //    Assert.Equal(1u, colorTarget.MipLevels);
+        //    Assert.Equal(TextureUsage.RenderTarget, colorTarget.Usage);
+        //    Assert.Equal(TextureSampleCount.Count1, colorTarget.SampleCount);
 
-            Texture depthTarget = GD.MainSwapchain.Framebuffer.DepthTarget.Value.Target;
-            Assert.Equal(TextureType.Texture2D, depthTarget.Type);
-            Assert.Equal(colorTarget.Width, depthTarget.Width);
-            Assert.Equal(colorTarget.Height, depthTarget.Height);
-            Assert.Equal(1u, depthTarget.Depth);
-            Assert.Equal(1u, depthTarget.ArrayLayers);
-            Assert.Equal(1u, depthTarget.MipLevels);
-            Assert.Equal(TextureUsage.DepthStencil, depthTarget.Usage);
-            Assert.Equal(TextureSampleCount.Count1, depthTarget.SampleCount);
-        }
+        //    Texture depthTarget = GD.MainSwapchain.Framebuffer.DepthTarget.Value.Target;
+        //    Assert.Equal(TextureType.Texture2D, depthTarget.Type);
+        //    Assert.Equal(colorTarget.Width, depthTarget.Width);
+        //    Assert.Equal(colorTarget.Height, depthTarget.Height);
+        //    Assert.Equal(1u, depthTarget.Depth);
+        //    Assert.Equal(1u, depthTarget.ArrayLayers);
+        //    Assert.Equal(1u, depthTarget.MipLevels);
+        //    Assert.Equal(TextureUsage.DepthStencil, depthTarget.Usage);
+        //    Assert.Equal(TextureSampleCount.Count1, depthTarget.SampleCount);
+        //}
 
     }
 

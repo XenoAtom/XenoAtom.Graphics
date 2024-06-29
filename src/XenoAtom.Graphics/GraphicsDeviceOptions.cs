@@ -45,13 +45,26 @@ namespace XenoAtom.Graphics
         public bool SwapchainSrgbFormat;
 
         /// <summary>
+        /// Gets or sets Vulkan device specific options.
+        /// </summary>
+        public VulkanDeviceOptions VulkanDeviceOptions;
+
+        /// <summary>
+        /// Default GraphicsDeviceOptions.
+        /// </summary>
+        public GraphicsDeviceOptions()
+        {
+            VulkanDeviceOptions = new();
+        }
+        
+        /// <summary>
         /// Constructs a new GraphicsDeviceOptions for a device with a main Swapchain.
         /// </summary>
         /// <param name="swapchainDepthFormat">An optional <see cref="PixelFormat"/> to be used for the depth buffer of the
         /// swapchain. If this value is null, then no depth buffer will be present on the swapchain.</param>
         /// <param name="syncToVerticalBlank">Indicates whether the main Swapchain will be synchronized to the window system's
         /// vertical refresh rate.</param>
-        public GraphicsDeviceOptions(PixelFormat? swapchainDepthFormat, bool syncToVerticalBlank)
+        public GraphicsDeviceOptions(PixelFormat? swapchainDepthFormat, bool syncToVerticalBlank) : this()
         {
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
@@ -69,7 +82,7 @@ namespace XenoAtom.Graphics
         public GraphicsDeviceOptions(
             PixelFormat? swapchainDepthFormat,
             bool syncToVerticalBlank,
-            ResourceBindingModel resourceBindingModel)
+            ResourceBindingModel resourceBindingModel) : this()
         {
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
@@ -91,7 +104,7 @@ namespace XenoAtom.Graphics
             PixelFormat? swapchainDepthFormat,
             bool syncToVerticalBlank,
             ResourceBindingModel resourceBindingModel,
-            bool preferDepthRangeZeroToOne)
+            bool preferDepthRangeZeroToOne) : this()
         {
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
@@ -119,7 +132,7 @@ namespace XenoAtom.Graphics
             bool syncToVerticalBlank,
             ResourceBindingModel resourceBindingModel,
             bool preferDepthRangeZeroToOne,
-            bool preferStandardClipSpaceYDirection)
+            bool preferStandardClipSpaceYDirection) : this()
         {
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
@@ -153,7 +166,7 @@ namespace XenoAtom.Graphics
             ResourceBindingModel resourceBindingModel,
             bool preferDepthRangeZeroToOne,
             bool preferStandardClipSpaceYDirection,
-            bool swapchainSrgbFormat)
+            bool swapchainSrgbFormat) : this()
         {
             HasMainSwapchain = true;
             SwapchainDepthFormat = swapchainDepthFormat;
@@ -163,7 +176,5 @@ namespace XenoAtom.Graphics
             PreferStandardClipSpaceYDirection = preferStandardClipSpaceYDirection;
             SwapchainSrgbFormat = swapchainSrgbFormat;
         }
-
-        private static readonly DebugLogDelegate LogToConsole = static (level, kind, message) => Console.WriteLine($"[{level.ToText()}] {kind} - {message}");
     }
 }

@@ -40,7 +40,7 @@ namespace XenoAtom.Graphics
 
         internal CommandList(
             GraphicsDevice device,
-            ref CommandListDescription description,
+            in CommandListDescription description,
             GraphicsDeviceFeatures features,
             uint uniformAlignment,
             uint structuredAlignment) : base(device)

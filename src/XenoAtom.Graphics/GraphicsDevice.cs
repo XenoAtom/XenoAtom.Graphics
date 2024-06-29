@@ -54,36 +54,11 @@ namespace XenoAtom.Graphics
         /// </summary>
         public abstract ResourceFactory ResourceFactory { get; }
 
-        /// <summary>
-        /// Retrieves the main Swapchain for this device. This property is only valid if the device was created with a main
-        /// Swapchain, and will return null otherwise.
-        /// </summary>
-        public abstract Swapchain? MainSwapchain { get; }
 
         /// <summary>
         /// Gets a <see cref="GraphicsDeviceFeatures"/> which enumerates the optional features supported by this instance.
         /// </summary>
         public abstract GraphicsDeviceFeatures Features { get; }
-
-        /// <summary>
-        /// Gets or sets whether the main Swapchain's <see cref="SwapBuffers()"/> should be synchronized to the window system's
-        /// vertical refresh rate.
-        /// This is equivalent to <see cref="MainSwapchain"/>.<see cref="Swapchain.SyncToVerticalBlank"/>.
-        /// This property cannot be set if this GraphicsDevice was created without a main Swapchain.
-        /// </summary>
-        public virtual bool SyncToVerticalBlank
-        {
-            get => MainSwapchain?.SyncToVerticalBlank ?? false;
-            set
-            {
-                if (MainSwapchain == null)
-                {
-                    throw new GraphicsException($"This GraphicsDevice was created without a main Swapchain. This property cannot be set.");
-                }
-
-                MainSwapchain.SyncToVerticalBlank = value;
-            }
-        }
 
         /// <summary>
         /// The required alignment, in bytes, for uniform buffer offsets. <see cref="DeviceBufferRange.Offset"/> must be a
@@ -199,54 +174,6 @@ namespace XenoAtom.Graphics
         /// </summary>
         /// <param name="fence">The <see cref="Fence"/> instance to reset.</param>
         public abstract void ResetFence(Fence fence);
-
-        /// <summary>
-        /// Swaps the buffers of the main swapchain and presents the rendered image to the screen.
-        /// This is equivalent to passing <see cref="MainSwapchain"/> to <see cref="SwapBuffers(Swapchain)"/>.
-        /// This method can only be called if this GraphicsDevice was created with a main Swapchain.
-        /// </summary>
-        public void SwapBuffers()
-        {
-            if (MainSwapchain == null)
-            {
-                throw new GraphicsException("This GraphicsDevice was created without a main Swapchain, so the requested operation cannot be performed.");
-            }
-
-            SwapBuffers(MainSwapchain);
-        }
-
-        /// <summary>
-        /// Swaps the buffers of the given swapchain.
-        /// </summary>
-        /// <param name="swapchain">The <see cref="Swapchain"/> to swap and present.</param>
-        public void SwapBuffers(Swapchain swapchain) => SwapBuffersCore(swapchain);
-
-        private protected abstract void SwapBuffersCore(Swapchain swapchain);
-
-        /// <summary>
-        /// Gets a <see cref="Framebuffer"/> object representing the render targets of the main swapchain.
-        /// This is equivalent to <see cref="MainSwapchain"/>.<see cref="Swapchain.Framebuffer"/>.
-        /// If this GraphicsDevice was created without a main Swapchain, then this returns null.
-        /// </summary>
-        public Framebuffer? SwapchainFramebuffer => MainSwapchain?.Framebuffer;
-
-        /// <summary>
-        /// Notifies this instance that the main window has been resized. This causes the <see cref="SwapchainFramebuffer"/> to
-        /// be appropriately resized and recreated.
-        /// This is equivalent to calling <see cref="MainSwapchain"/>.<see cref="Swapchain.Resize(uint, uint)"/>.
-        /// This method can only be called if this GraphicsDevice was created with a main Swapchain.
-        /// </summary>
-        /// <param name="width">The new width of the main window.</param>
-        /// <param name="height">The new height of the main window.</param>
-        public void ResizeMainWindow(uint width, uint height)
-        {
-            if (MainSwapchain == null)
-            {
-                throw new GraphicsException("This GraphicsDevice was created without a main Swapchain, so the requested operation cannot be performed.");
-            }
-
-            MainSwapchain.Resize(width, height);
-        }
 
         /// <summary>
         /// A blocking method that returns when all submitted <see cref="CommandList"/> objects have fully completed.

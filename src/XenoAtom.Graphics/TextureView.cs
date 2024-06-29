@@ -34,7 +34,7 @@ namespace XenoAtom.Graphics
         /// </summary>
         public PixelFormat Format { get; }
 
-        internal TextureView(GraphicsDevice device, ref TextureViewDescription description) : base(device)
+        internal TextureView(GraphicsDevice device, in TextureViewDescription description) : base(device)
         {
             Target = description.Target;
             BaseMipLevel = description.BaseMipLevel;

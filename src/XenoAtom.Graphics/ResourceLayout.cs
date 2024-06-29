@@ -14,7 +14,7 @@ namespace XenoAtom.Graphics
         internal readonly uint DynamicBufferCount;
 #endif
 
-        internal ResourceLayout(GraphicsDevice device, ref ResourceLayoutDescription description) : base(device)
+        internal ResourceLayout(GraphicsDevice device, in ResourceLayoutDescription description) : base(device)
         {
 #if VALIDATE_USAGE
             Description = description;

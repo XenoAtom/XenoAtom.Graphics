@@ -26,7 +26,7 @@ namespace XenoAtom.Graphics.Vk
 
         public override uint AttachmentCount { get; }
 
-        public VkFramebuffer(VkGraphicsDevice gd, ref FramebufferDescription description, bool isPresented)
+        public VkFramebuffer(VkGraphicsDevice gd, in FramebufferDescription description, bool isPresented)
             : base(gd, description.DepthTarget, description.ColorTargets)
         {
             VkRenderPassCreateInfo renderPassCI = new VkRenderPassCreateInfo();

@@ -16,8 +16,8 @@ namespace XenoAtom.Graphics.Vk
         public DescriptorResourceCounts DescriptorResourceCounts { get; }
         public new int DynamicBufferCount { get; }
 
-        public VkResourceLayout(VkGraphicsDevice gd, ref ResourceLayoutDescription description)
-            : base(gd, ref description)
+        public VkResourceLayout(VkGraphicsDevice gd, in ResourceLayoutDescription description)
+            : base(gd, description)
         {
             VkDescriptorSetLayoutCreateInfo dslCI = new VkDescriptorSetLayoutCreateInfo();
             ResourceLayoutElementDescription[] elements = description.Elements;

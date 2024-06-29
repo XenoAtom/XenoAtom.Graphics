@@ -23,17 +23,6 @@ namespace XenoAtom.Graphics.Tests
             var adapter = manager.Adapters[0];
             return adapter.CreateDevice();
         }
-
-        internal static unsafe string GetString(byte* stringStart)
-        {
-            int characters = 0;
-            while (stringStart[characters] != 0)
-            {
-                characters++;
-            }
-
-            return Encoding.UTF8.GetString(stringStart, characters);
-        }
     }
 
     public abstract class GraphicsDeviceTestBase<T> : IDisposable where T : GraphicsDeviceCreator
@@ -104,7 +93,7 @@ namespace XenoAtom.Graphics.Tests
                     texture.MipLevels, layers,
                     texture.Format,
                     TextureUsage.Staging, texture.Type);
-                Texture readback = RF.CreateTexture(ref desc);
+                Texture readback = RF.CreateTexture(desc);
                 CommandList cl = RF.CreateCommandList();
                 cl.Begin();
                 cl.CopyTexture(texture, readback);

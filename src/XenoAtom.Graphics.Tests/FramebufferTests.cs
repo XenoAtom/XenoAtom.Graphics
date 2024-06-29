@@ -145,16 +145,16 @@ namespace XenoAtom.Graphics.Tests
         {
         }
 
-        [Fact]
-        public void ClearSwapchainFramebuffer_Succeeds()
-        {
-            CommandList cl = RF.CreateCommandList();
-            cl.Begin();
-            cl.SetFramebuffer(GD.SwapchainFramebuffer);
-            cl.ClearColorTarget(0, RgbaFloat.Red);
-            cl.ClearDepthStencil(1f);
-            cl.End();
-        }
+        //[Fact]
+        //public void ClearSwapchainFramebuffer_Succeeds()
+        //{
+        //    CommandList cl = RF.CreateCommandList();
+        //    cl.Begin();
+        //    cl.SetFramebuffer(GD.SwapchainFramebuffer);
+        //    cl.ClearColorTarget(0, RgbaFloat.Red);
+        //    cl.ClearDepthStencil(1f);
+        //    cl.End();
+        //}
     }
 
     [Trait("Backend", "Vulkan")]

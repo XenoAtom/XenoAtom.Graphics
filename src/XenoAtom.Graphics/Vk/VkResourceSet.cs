@@ -22,8 +22,8 @@ namespace XenoAtom.Graphics.Vk
 
         public List<ResourceRefCount> RefCounts => _refCounts;
 
-        public VkResourceSet(VkGraphicsDevice gd, ref ResourceSetDescription description)
-            : base(gd, ref description)
+        public VkResourceSet(VkGraphicsDevice gd, in ResourceSetDescription description)
+            : base(gd, description)
         {
             VkResourceLayout vkLayout = Util.AssertSubtype<ResourceLayout, VkResourceLayout>(description.Layout);
 

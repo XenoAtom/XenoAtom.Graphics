@@ -14,8 +14,8 @@ namespace XenoAtom.Graphics.Vk
 
         public new VkTexture Target => (VkTexture)base.Target;
 
-        public VkTextureView(VkGraphicsDevice gd, ref TextureViewDescription description)
-            : base(gd, ref description)
+        public VkTextureView(VkGraphicsDevice gd, in TextureViewDescription description)
+            : base(gd, description)
         {
             VkImageViewCreateInfo imageViewCI = new VkImageViewCreateInfo();
             VkTexture tex = Util.AssertSubtype<Texture, VkTexture>(description.Target);

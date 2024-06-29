@@ -11,7 +11,7 @@ namespace XenoAtom.Graphics.Vk
 
         public XenoAtom.Interop.vulkan.VkSampler DeviceSampler => _sampler;
 
-        public VkSampler(VkGraphicsDevice gd, ref SamplerDescription description) : base(gd)
+        public VkSampler(VkGraphicsDevice gd, in SamplerDescription description) : base(gd)
         {
             VkFormats.GetFilterParams(description.Filter, out VkFilter minFilter, out VkFilter magFilter, out VkSamplerMipmapMode mipmapMode);
 

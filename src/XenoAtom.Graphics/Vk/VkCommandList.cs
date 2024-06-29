@@ -61,8 +61,8 @@ namespace XenoAtom.Graphics.Vk
 
         public VkCommandBuffer CommandBuffer => _cb;
 
-        public VkCommandList(VkGraphicsDevice gd, ref CommandListDescription description)
-            : base(gd, ref description, gd.Features, gd.UniformBufferMinOffsetAlignment, gd.StructuredBufferMinOffsetAlignment)
+        public VkCommandList(VkGraphicsDevice gd, in CommandListDescription description)
+            : base(gd, in description, gd.Features, gd.UniformBufferMinOffsetAlignment, gd.StructuredBufferMinOffsetAlignment)
         {
             var manager = _gd.Adapter.Manager;
             vkCmdBeginDebugUtilsLabelExt = manager.vkCmdBeginDebugUtilsLabelExt;
@@ -72,7 +72,7 @@ namespace XenoAtom.Graphics.Vk
             var poolCInfo = new VkCommandPoolCreateInfo
             {
                 flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-                queueFamilyIndex = gd.GraphicsQueueIndex
+                queueFamilyIndex = gd.MainQueueIndex
             };
             VkResult result = vkCreateCommandPool(_gd.Device, poolCInfo, null, out _pool);
             CheckResult(result);

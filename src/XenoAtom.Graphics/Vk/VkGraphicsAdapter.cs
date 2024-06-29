@@ -59,7 +59,7 @@ internal sealed unsafe class VkGraphicsAdapter : GraphicsAdapter
 
     public override GraphicsVersion DriverVersion { get; }
 
-    public override GraphicsDevice CreateDevice(GraphicsDeviceOptions options) => new VkGraphicsDevice(this, options, null);
+    public override GraphicsDevice CreateDevice(in GraphicsDeviceOptions options) => new VkGraphicsDevice(this, options);
     
     internal override void Destroy()
     {

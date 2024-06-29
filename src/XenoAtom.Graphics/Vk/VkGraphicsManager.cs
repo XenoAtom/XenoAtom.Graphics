@@ -23,8 +23,6 @@ internal sealed unsafe class VkGraphicsManager : GraphicsManager
 
     public VkInstance Instance => _instance;
 
-    private readonly PFN_vkQueuePresentKHR _vkQueuePresentKHR;
-
     public readonly PFN_vkCreateMetalSurfaceEXT vkCreateMetalSurfaceEXT;
 
     public readonly PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR;
@@ -54,7 +52,7 @@ internal sealed unsafe class VkGraphicsManager : GraphicsManager
 
     public override ReadOnlySpan<GraphicsAdapter> Adapters => _vkGraphicsAdapters;
 
-    public VkGraphicsManager(GraphicsManagerOptions options, VulkanManagerOptions vkOptions)
+    public VkGraphicsManager(in GraphicsManagerOptions options)
     {
         _thisGcHandle = GCHandle.Alloc(this);
 
@@ -74,6 +72,8 @@ internal sealed unsafe class VkGraphicsManager : GraphicsManager
         {
             throw new GraphicsException("Vulkan 1.1 is not supported on this system.");
         }
+
+        ref readonly var vkOptions = ref options.VulkanOptions;
 
         var instanceCI = new VkInstanceCreateInfo();
         var applicationInfo = new VkApplicationInfo

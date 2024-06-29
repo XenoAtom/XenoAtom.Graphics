@@ -88,7 +88,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(ref gpd);
+            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
 
             uint colorNormalizationFactor = 2500;
 
@@ -221,7 +221,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(ref gpd);
+            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
 
             VertexCPU_UShortNorm[] vertices = new VertexCPU_UShortNorm[]
             {
@@ -365,7 +365,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(ref gpd);
+            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
 
             uint colorNormalizationFactor = 2500;
 
@@ -488,7 +488,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(ref gpd);
+            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
 
             uint colorNormalizationFactor = 2500;
 
@@ -662,7 +662,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(ref gpd);
+            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
 
             Vector2[] vertices = new Vector2[]
             {
@@ -962,7 +962,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(ref gpd);
+            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
 
             CommandList cl = RF.CreateCommandList();
 
@@ -1147,7 +1147,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(ref gpd);
+            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
 
             CommandList cl = RF.CreateCommandList();
 
@@ -1217,7 +1217,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(ref gpd);
+            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
 
             CommandList cl = RF.CreateCommandList();
 
@@ -1270,7 +1270,7 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 framebuffer.OutputDescription);
 
-            Pipeline pipeline = RF.CreateGraphicsPipeline(ref gpd);
+            Pipeline pipeline = RF.CreateGraphicsPipeline(gpd);
 
             CommandList cl = RF.CreateCommandList();
 

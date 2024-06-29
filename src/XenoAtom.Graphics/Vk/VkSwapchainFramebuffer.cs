@@ -157,7 +157,7 @@ namespace XenoAtom.Graphics.Vk
                     TextureSampleCount.Count1,
                     _scImages[i]);
                 FramebufferDescription desc = new FramebufferDescription(_depthAttachment?.Target, colorTex);
-                VkFramebuffer fb = new VkFramebuffer(_gd, ref desc, true);
+                VkFramebuffer fb = new VkFramebuffer(_gd, desc, true);
                 _scFramebuffers[i] = fb;
                 _scColorTextures[i] = new FramebufferAttachment[] { new FramebufferAttachment(colorTex, 0) };
             }

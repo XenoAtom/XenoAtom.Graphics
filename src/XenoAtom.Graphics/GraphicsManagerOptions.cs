@@ -30,7 +30,12 @@ namespace XenoAtom.Graphics
         /// Indicates the kind of debug messages that should be logged. Default is <see cref="DebugLogKind.General"/> and <see cref="DebugLogKind.Validation"/>.
         /// </summary>
         public DebugLogKind DebugLogKind;
-
+        
+        /// <summary>
+        /// Options for the Vulkan backend.
+        /// </summary>
+        public VulkanManagerOptions VulkanOptions;
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphicsManagerOptions"/> structure. Debug is set to false.
         /// </summary>
@@ -40,17 +45,16 @@ namespace XenoAtom.Graphics
             DebugLog = LogToConsole;
             DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
             DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
+            VulkanOptions = new();
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphicsManagerOptions"/> structure. Debug is set to true with default logging to Console.
         /// </summary>
-        public GraphicsManagerOptions(bool debug)
+        public GraphicsManagerOptions(bool debug) : this()
         {
             Debug = debug;
             DebugLog = LogToConsole;
-            DebugLogLevel = DebugLogLevel.Warning | DebugLogLevel.Error;
-            DebugLogKind = DebugLogKind.General | DebugLogKind.Validation;
         }
 
         /// <summary>
@@ -66,6 +70,7 @@ namespace XenoAtom.Graphics
             DebugLog = debugLog;
             DebugLogLevel = debugLogLevel;
             DebugLogKind = debugLogKind;
+            VulkanOptions = new();
         }
 
         private static readonly DebugLogDelegate LogToConsole = static (level, kind, message) => Console.WriteLine($"[{level.ToText()}] {kind} - {message}");
