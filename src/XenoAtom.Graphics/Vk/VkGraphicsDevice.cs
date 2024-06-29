@@ -17,7 +17,7 @@ namespace XenoAtom.Graphics.Vk
         private readonly bool _isDebugActivated;
         private readonly VkDeviceMemoryManager _memoryManager;
         private readonly VkDevice _vkDevice;
-        private readonly uint _mainQueueIndex;
+        private readonly uint _mainQueueFamilyIndex;
         private readonly VkCommandPool _graphicsCommandPool;
         private readonly object _graphicsCommandPoolLock = new object();
         private readonly VkQueue _vkGraphicsQueue;
@@ -81,7 +81,7 @@ namespace XenoAtom.Graphics.Vk
         public VkDevice VkDevice => _vkDevice;
         public VkPhysicalDevice VkPhysicalDevice => _vkPhysicalDevice;
         public VkQueue VkGraphicsQueue => _vkGraphicsQueue;
-        public uint MainQueueIndex => _mainQueueIndex;
+        public uint MainQueueFamilyIndex => _mainQueueFamilyIndex;
         public VkDeviceMemoryManager MemoryManager => _memoryManager;
         public VkDescriptorPoolManager DescriptorPoolManager => _descriptorPoolManager;
         //public PFN_vkCreateMetalSurfaceEXT CreateMetalSurfaceEXT => _createMetalSurfaceEXT;
@@ -135,7 +135,7 @@ namespace XenoAtom.Graphics.Vk
 
                 if ((queueFlags & requiredQueue) == requiredQueue)
                 {
-                    _mainQueueIndex = i;
+                    _mainQueueFamilyIndex = i;
                     foundMainQueue = true;
                     break;
                 }
@@ -151,7 +151,7 @@ namespace XenoAtom.Graphics.Vk
             // ---------------------------------------------------------------
 
             VkDeviceQueueCreateInfo queueCreateInfo = new VkDeviceQueueCreateInfo();
-            queueCreateInfo.queueFamilyIndex = _mainQueueIndex;
+            queueCreateInfo.queueFamilyIndex = _mainQueueFamilyIndex;
             queueCreateInfo.queueCount = 1;
             float priority = 1f;
             queueCreateInfo.pQueuePriorities = &priority;
@@ -238,7 +238,7 @@ namespace XenoAtom.Graphics.Vk
                     .VkCheck("Unable to create device.");
             }
 
-            vkGetDeviceQueue(_vkDevice, _mainQueueIndex, 0, out _vkGraphicsQueue);
+            vkGetDeviceQueue(_vkDevice, _mainQueueFamilyIndex, 0, out _vkGraphicsQueue);
 
             // VK_KHR_surface
             vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(VkInstance);
@@ -567,7 +567,7 @@ namespace XenoAtom.Graphics.Vk
             VkCommandPoolCreateInfo commandPoolCI = new()
             {
                 flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-                queueFamilyIndex = _mainQueueIndex
+                queueFamilyIndex = _mainQueueFamilyIndex
             };
             vkCreateCommandPool(_vkDevice, commandPoolCI, null, out commandPool)
                 .VkCheck("Unable to create Graphics Command Pool");
@@ -1029,7 +1029,7 @@ namespace XenoAtom.Graphics.Vk
 
                 VkCommandPoolCreateInfo commandPoolCI = new VkCommandPoolCreateInfo();
                 commandPoolCI.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-                commandPoolCI.queueFamilyIndex = _gd.MainQueueIndex;
+                commandPoolCI.queueFamilyIndex = _gd.MainQueueFamilyIndex;
                 vkCreateCommandPool(_gd.VkDevice, commandPoolCI, null, out _pool)
                     .VkCheck("Unable to create shared command pool");
 

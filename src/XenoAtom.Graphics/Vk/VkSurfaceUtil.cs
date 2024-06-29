@@ -7,8 +7,6 @@ namespace XenoAtom.Graphics.Vk
     {
         internal static VkSurfaceKHR CreateSurface(VkGraphicsDevice gd, VkInstance instance, SwapchainSource swapchainSource)
         {
-            // TODO a null GD is passed from VkSurfaceSource.CreateSurface for compatibility
-            //      when VkSurfaceInfo is removed we do not have to handle gd == null anymore
             if (!gd.HasSurfaceExtension(VK_KHR_SURFACE_EXTENSION_NAME))
                 throw new GraphicsException($"The required instance extension was not available: {VK_KHR_SURFACE_EXTENSION_NAME}");
 
