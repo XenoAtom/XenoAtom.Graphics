@@ -8,9 +8,7 @@ It is a fork of the excellent [Veldrid](https://github.com/veldrid/veldrid) libr
 
 > **Note**: This library is still in early development and not yet ready for production use.
 >
-> Some changes are expected to be made to the API and the implementation. Among other things:
-> - The API will use nullable reference types.
-> - The implementation might be updated and optimized with more modern C# features.
+> Some changes are expected to be made to the API and the implementation. See issue [#1](https://github.com/XenoAtom/XenoAtom.Graphics/issues/1)
 
 ## ✨ Features 
 
