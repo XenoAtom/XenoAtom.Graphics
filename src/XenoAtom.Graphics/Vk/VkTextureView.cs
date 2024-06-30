@@ -48,19 +48,19 @@ namespace XenoAtom.Graphics.Vk
             }
             else
             {
-                switch (tex.Type)
+                switch (tex.Kind)
                 {
-                    case TextureType.Texture1D:
+                    case TextureKind.Texture1D:
                         imageViewCI.viewType = description.ArrayLayers == 1
                             ? VK_IMAGE_VIEW_TYPE_1D
                             : VK_IMAGE_VIEW_TYPE_1D_ARRAY;
                         break;
-                    case TextureType.Texture2D:
+                    case TextureKind.Texture2D:
                         imageViewCI.viewType = description.ArrayLayers == 1
                             ? VK_IMAGE_VIEW_TYPE_2D
                             : VK_IMAGE_VIEW_TYPE_2D_ARRAY;
                         break;
-                    case TextureType.Texture3D:
+                    case TextureKind.Texture3D:
                         imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_3D;
                         break;
                 }

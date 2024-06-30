@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using static XenoAtom.Interop.vulkan;
 
@@ -107,18 +107,18 @@ namespace XenoAtom.Graphics.Vk
             return vkUsage;
         }
 
-        internal static VkImageType VdToVkTextureType(TextureType type)
+        internal static VkImageType VdToVkTextureType(TextureKind kind)
         {
-            switch (type)
+            switch (kind)
             {
-                case TextureType.Texture1D:
+                case TextureKind.Texture1D:
                     return VK_IMAGE_TYPE_1D;
-                case TextureType.Texture2D:
+                case TextureKind.Texture2D:
                     return VK_IMAGE_TYPE_2D;
-                case TextureType.Texture3D:
+                case TextureKind.Texture3D:
                     return VK_IMAGE_TYPE_3D;
                 default:
-                    throw Illegal.Value<TextureType>();
+                    throw Illegal.Value<TextureKind>();
             }
         }
 

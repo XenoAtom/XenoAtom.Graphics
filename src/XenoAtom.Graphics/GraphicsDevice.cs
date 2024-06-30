@@ -620,27 +620,27 @@ namespace XenoAtom.Graphics
         private protected abstract void UpdateBufferCore(DeviceBuffer buffer, uint bufferOffsetInBytes, IntPtr source, uint sizeInBytes);
 
         /// <summary>
-        /// Gets whether or not the given <see cref="PixelFormat"/>, <see cref="TextureType"/>, and <see cref="TextureUsage"/>
+        /// Gets whether or not the given <see cref="PixelFormat"/>, <see cref="TextureKind"/>, and <see cref="TextureUsage"/>
         /// combination is supported by this instance.
         /// </summary>
         /// <param name="format">The PixelFormat to query.</param>
-        /// <param name="type">The TextureType to query.</param>
+        /// <param name="kind">The TextureType to query.</param>
         /// <param name="usage">The TextureUsage to query.</param>
         /// <returns>True if the given combination is supported; false otherwise.</returns>
         public bool GetPixelFormatSupport(
             PixelFormat format,
-            TextureType type,
+            TextureKind kind,
             TextureUsage usage)
         {
-            return GetPixelFormatSupportCore(format, type, usage, out _);
+            return GetPixelFormatSupportCore(format, kind, usage, out _);
         }
 
         /// <summary>
-        /// Gets whether or not the given <see cref="PixelFormat"/>, <see cref="TextureType"/>, and <see cref="TextureUsage"/>
+        /// Gets whether or not the given <see cref="PixelFormat"/>, <see cref="TextureKind"/>, and <see cref="TextureUsage"/>
         /// combination is supported by this instance, and also gets the device-specific properties supported by this instance.
         /// </summary>
         /// <param name="format">The PixelFormat to query.</param>
-        /// <param name="type">The TextureType to query.</param>
+        /// <param name="kind">The TextureType to query.</param>
         /// <param name="usage">The TextureUsage to query.</param>
         /// <param name="properties">If the combination is supported, then this parameter describes the limits of a Texture
         /// created using the given combination of attributes.</param>
@@ -648,16 +648,16 @@ namespace XenoAtom.Graphics
         /// then <paramref name="properties"/> contains the limits supported by this instance.</returns>
         public bool GetPixelFormatSupport(
             PixelFormat format,
-            TextureType type,
+            TextureKind kind,
             TextureUsage usage,
             out PixelFormatProperties properties)
         {
-            return GetPixelFormatSupportCore(format, type, usage, out properties);
+            return GetPixelFormatSupportCore(format, kind, usage, out properties);
         }
 
         private protected abstract bool GetPixelFormatSupportCore(
             PixelFormat format,
-            TextureType type,
+            TextureKind kind,
             TextureUsage usage,
             out PixelFormatProperties properties);
 

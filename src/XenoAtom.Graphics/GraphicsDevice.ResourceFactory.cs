@@ -108,13 +108,13 @@ namespace XenoAtom.Graphics
             {
                 throw new GraphicsException("The givel PixelFormat can only be used in a Texture with DepthStencil usage.");
             }
-            if ((description.Type == TextureType.Texture1D || description.Type == TextureType.Texture3D)
+            if ((description.Kind == TextureKind.Texture1D || description.Kind == TextureKind.Texture3D)
                 && description.SampleCount != TextureSampleCount.Count1)
             {
                 throw new GraphicsException(
                     $"1D and 3D Textures must use {nameof(TextureSampleCount)}.{nameof(TextureSampleCount.Count1)}.");
             }
-            if (description.Type == TextureType.Texture1D && !Features.Texture1D)
+            if (description.Kind == TextureKind.Texture1D && !Features.Texture1D)
             {
                 throw new GraphicsException($"1D Textures are not supported by this device.");
             }

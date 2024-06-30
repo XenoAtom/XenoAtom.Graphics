@@ -1,4 +1,4 @@
-﻿namespace XenoAtom.Graphics
+namespace XenoAtom.Graphics
 {
     /// <summary>
     /// Enumerates the optional features supported by a given <see cref="GraphicsDevice"/>.
@@ -61,7 +61,7 @@
         /// </summary>
         public bool DepthClipDisable { get; }
         /// <summary>
-        /// Indicates whether a <see cref="Texture"/> can be created with <see cref="TextureType.Texture1D"/>.
+        /// Indicates whether a <see cref="Texture"/> can be created with <see cref="TextureKind.Texture1D"/>.
         /// </summary>
         public bool Texture1D { get; }
         /// <summary>

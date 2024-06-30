@@ -1,9 +1,9 @@
-﻿namespace XenoAtom.Graphics
+namespace XenoAtom.Graphics
 {
     /// <summary>
     /// Identifies a particular type of Texture.
     /// </summary>
-    public enum TextureType
+    public enum TextureKind
     {
         /// <summary>
         /// A one-dimensional Texture.

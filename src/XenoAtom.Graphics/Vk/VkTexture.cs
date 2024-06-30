@@ -37,7 +37,7 @@ namespace XenoAtom.Graphics.Vk
 
         public override TextureUsage Usage { get; }
 
-        public override TextureType Type { get; }
+        public override TextureKind Kind { get; }
 
         public override TextureSampleCount SampleCount { get; }
 
@@ -65,7 +65,7 @@ namespace XenoAtom.Graphics.Vk
                 : ArrayLayers;
             _format = description.Format;
             Usage = description.Usage;
-            Type = description.Type;
+            Kind = description.Kind;
             SampleCount = description.SampleCount;
             VkSampleCount = VkFormats.VdToVkSampleCount(SampleCount);
             VkFormat = VkFormats.VdToVkPixelFormat(Format, (description.Usage & TextureUsage.DepthStencil) == TextureUsage.DepthStencil);
@@ -78,7 +78,7 @@ namespace XenoAtom.Graphics.Vk
                 {
                     mipLevels = MipLevels,
                     arrayLayers = _actualImageArrayLayers,
-                    imageType = VkFormats.VdToVkTextureType(Type),
+                    imageType = VkFormats.VdToVkTextureType(Kind),
                     initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED,
                     usage = VkFormats.VdToVkTextureUsage(Usage),
                     tiling = isStaging ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL,
@@ -211,7 +211,7 @@ namespace XenoAtom.Graphics.Vk
             _format = VkFormats.VkToVdPixelFormat(VkFormat);
             ArrayLayers = arrayLayers;
             Usage = usage;
-            Type = TextureType.Texture2D;
+            Kind = TextureKind.Texture2D;
             SampleCount = sampleCount;
             VkSampleCount = VkFormats.VdToVkSampleCount(sampleCount);
             _optimalImage = existingImage;

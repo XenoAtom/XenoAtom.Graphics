@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
@@ -42,7 +42,7 @@ namespace XenoAtom.Graphics
         /// <summary>
         /// The type of Texture to create.
         /// </summary>
-        public TextureType Type;
+        public TextureKind Kind;
         /// <summary>
         /// The number of samples. If equal to <see cref="TextureSampleCount.Count1"/>, this instance does not describe a
         /// multisample <see cref="Texture"/>.
@@ -63,7 +63,7 @@ namespace XenoAtom.Graphics
         /// <see cref="Framebuffer"/>, then <see cref="TextureUsage.DepthStencil"/> must be included. If the Texture will be used
         /// as a color target in a <see cref="Framebuffer"/>, then <see cref="TextureUsage.RenderTarget"/> must be included.
         /// If the Texture will be used as a 2D cubemap, then <see cref="TextureUsage.Cubemap"/> must be included.</param>
-        /// <param name="type">The type of Texture to create.</param>
+        /// <param name="kind">The type of Texture to create.</param>
         public TextureDescription(
             uint width,
             uint height,
@@ -72,7 +72,7 @@ namespace XenoAtom.Graphics
             uint arrayLayers,
             PixelFormat format,
             TextureUsage usage,
-            TextureType type)
+            TextureKind kind)
         {
             Width = width;
             Height = height;
@@ -82,7 +82,7 @@ namespace XenoAtom.Graphics
             Format = format;
             Usage = usage;
             SampleCount = TextureSampleCount.Count1;
-            Type = type;
+            Kind = kind;
         }
 
         /// <summary>
@@ -99,7 +99,7 @@ namespace XenoAtom.Graphics
         /// <see cref="Framebuffer"/>, then <see cref="TextureUsage.DepthStencil"/> must be included. If the Texture will be used
         /// as a color target in a <see cref="Framebuffer"/>, then <see cref="TextureUsage.RenderTarget"/> must be included.
         /// If the Texture will be used as a 2D cubemap, then <see cref="TextureUsage.Cubemap"/> must be included.</param>
-        /// <param name="type">The type of Texture to create.</param>
+        /// <param name="kind">The type of Texture to create.</param>
         /// <param name="sampleCount">The number of samples. If any other value than <see cref="TextureSampleCount.Count1"/> is
         /// provided, then this describes a multisample texture.</param>
         public TextureDescription(
@@ -110,7 +110,7 @@ namespace XenoAtom.Graphics
             uint arrayLayers,
             PixelFormat format,
             TextureUsage usage,
-            TextureType type,
+            TextureKind kind,
             TextureSampleCount sampleCount)
         {
             Width = width;
@@ -120,7 +120,7 @@ namespace XenoAtom.Graphics
             ArrayLayers = arrayLayers;
             Format = format;
             Usage = usage;
-            Type = type;
+            Kind = kind;
             SampleCount = sampleCount;
         }
 
@@ -152,7 +152,7 @@ namespace XenoAtom.Graphics
                 arrayLayers,
                 format,
                 usage,
-                TextureType.Texture1D,
+                TextureKind.Texture1D,
                 TextureSampleCount.Count1);
         }
 
@@ -186,7 +186,7 @@ namespace XenoAtom.Graphics
                 arrayLayers,
                 format,
                 usage,
-                TextureType.Texture2D,
+                TextureKind.Texture2D,
                 TextureSampleCount.Count1);
         }
 
@@ -223,7 +223,7 @@ namespace XenoAtom.Graphics
                 arrayLayers,
                 format,
                 usage,
-                TextureType.Texture2D,
+                TextureKind.Texture2D,
                 sampleCount);
         }
 
@@ -256,7 +256,7 @@ namespace XenoAtom.Graphics
                 1,
                 format,
                 usage,
-                TextureType.Texture3D,
+                TextureKind.Texture3D,
                 TextureSampleCount.Count1);
         }
 
@@ -274,7 +274,7 @@ namespace XenoAtom.Graphics
                 && ArrayLayers.Equals(other.ArrayLayers)
                 && Format == other.Format
                 && Usage == other.Usage
-                && Type == other.Type
+                && Kind == other.Kind
                 && SampleCount == other.SampleCount;
         }
 
@@ -292,7 +292,7 @@ namespace XenoAtom.Graphics
                 ArrayLayers.GetHashCode(),
                 (int)Format,
                 (int)Usage,
-                (int)Type,
+                (int)Kind,
                 (int)SampleCount);
         }
     }

@@ -1,9 +1,9 @@
-﻿namespace XenoAtom.Graphics
+namespace XenoAtom.Graphics
 {
     /// <summary>
     /// Describes the properties that are supported for a particular combination of <see cref="PixelFormat"/>,
-    /// <see cref="TextureType"/>, and <see cref="TextureUsage"/> by a <see cref="GraphicsDevice"/>.
-    /// See <see cref="GraphicsDevice.GetPixelFormatSupport(PixelFormat, TextureType, TextureUsage, out PixelFormatProperties)"/>.
+    /// <see cref="TextureKind"/>, and <see cref="TextureUsage"/> by a <see cref="GraphicsDevice"/>.
+    /// See <see cref="GraphicsDevice.GetPixelFormatSupport(PixelFormat, TextureKind, TextureUsage, out PixelFormatProperties)"/>.
     /// </summary>
     public struct PixelFormatProperties
     {

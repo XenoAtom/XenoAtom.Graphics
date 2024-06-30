@@ -94,7 +94,7 @@ namespace XenoAtom.Graphics.Tests
                     texture.Width, texture.Height, texture.Depth,
                     texture.MipLevels, layers,
                     texture.Format,
-                    TextureUsage.Staging, texture.Type);
+                    TextureUsage.Staging, texture.Kind);
                 Texture readback = GD.CreateTexture(desc);
                 CommandList cl = GD.CreateCommandList();
                 cl.Begin();

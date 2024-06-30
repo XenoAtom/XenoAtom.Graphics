@@ -698,7 +698,7 @@ namespace XenoAtom.Graphics.Tests
         [InlineData(PixelFormat.BC7_UNorm_SRgb, 16, 8, 4, 16, 16)]
         public unsafe void Copy_Compressed_Texture(PixelFormat format, uint blockSizeInBytes, uint srcX, uint srcY, uint copyWidth, uint copyHeight)
         {
-            if (!GD.GetPixelFormatSupport(format, TextureType.Texture2D, TextureUsage.Sampled))
+            if (!GD.GetPixelFormatSupport(format, TextureKind.Texture2D, TextureUsage.Sampled))
             {
                 return;
             }
@@ -750,7 +750,7 @@ namespace XenoAtom.Graphics.Tests
         public unsafe void Copy_Compressed_Array(bool separateLayerCopies)
         {
             PixelFormat format = PixelFormat.BC3_UNorm;
-            if (!GD.GetPixelFormatSupport(format, TextureType.Texture2D, TextureUsage.Sampled))
+            if (!GD.GetPixelFormatSupport(format, TextureKind.Texture2D, TextureUsage.Sampled))
             {
                 return;
             }
@@ -1333,9 +1333,9 @@ namespace XenoAtom.Graphics.Tests
         [MemberData(nameof(FormatCoverageData))]
         public unsafe void FormatCoverage_CopyThenRead(
             PixelFormat format, int rBits, int gBits, int bBits, int aBits,
-            TextureType srcType,
+            TextureKind srcKind,
             uint srcWidth, uint srcHeight, uint srcDepth, uint srcMipLevels, uint srcArrayLayers,
-            TextureType dstType,
+            TextureKind dstKind,
             uint dstWidth, uint dstHeight, uint dstDepth, uint dstMipLevels, uint dstArrayLayers,
             uint copyWidth, uint copyHeight, uint copyDepth,
             uint srcX, uint srcY, uint srcZ,
@@ -1343,14 +1343,14 @@ namespace XenoAtom.Graphics.Tests
             uint dstX, uint dstY, uint dstZ,
             uint dstMipLevel, uint dstArrayLayer)
         {
-            if (!GD.GetPixelFormatSupport(format, srcType, TextureUsage.Staging))
+            if (!GD.GetPixelFormatSupport(format, srcKind, TextureUsage.Staging))
             {
                 return;
             }
 
             Texture srcTex = GD.CreateTexture(new TextureDescription(
                 srcWidth, srcHeight, srcDepth, srcMipLevels, srcArrayLayers,
-                format, TextureUsage.Staging, srcType));
+                format, TextureUsage.Staging, srcKind));
 
             TextureDataReaderWriter tdrw = new TextureDataReaderWriter(rBits, gBits, bBits, aBits);
             byte[] dataArray = tdrw.GetDataArray(srcWidth, srcHeight, srcDepth);
@@ -1378,7 +1378,7 @@ namespace XenoAtom.Graphics.Tests
 
             Texture dstTex = GD.CreateTexture(new TextureDescription(
                 dstWidth, dstHeight, dstDepth, dstMipLevels, dstArrayLayers,
-                format, TextureUsage.Staging, dstType));
+                format, TextureUsage.Staging, dstKind));
 
             CommandList cl = GD.CreateCommandList();
             cl.Begin();
@@ -1419,9 +1419,9 @@ namespace XenoAtom.Graphics.Tests
                 yield return new object[]
                 {
                     props.Format, props.RedBits, props.GreenBits, props.BlueBits, props.AlphaBits,
-                    TextureType.Texture2D,
+                    TextureKind.Texture2D,
                     64, 64, 1, 1, 1,
-                    TextureType.Texture2D,
+                    TextureKind.Texture2D,
                     64, 64, 1, 1, 1,
                     64, 64, 1,
                     0, 0, 0,

@@ -103,7 +103,7 @@ namespace XenoAtom.Graphics.Tests
             using Texture staging = GD.CreateTexture(new(texture.Width, texture.Height, depth: 1,
                 texture.MipLevels, texture.ArrayLayers,
                 texture.Format, TextureUsage.Staging,
-                texture.Type, texture.SampleCount));
+                texture.Kind, texture.SampleCount));
 
             using CommandList cl = GD.CreateCommandList();
             cl.Begin();

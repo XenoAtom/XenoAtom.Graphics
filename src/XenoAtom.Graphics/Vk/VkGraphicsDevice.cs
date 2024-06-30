@@ -689,12 +689,12 @@ namespace XenoAtom.Graphics.Vk
 
         private protected override bool GetPixelFormatSupportCore(
             PixelFormat format,
-            TextureType type,
+            TextureKind kind,
             TextureUsage usage,
             out PixelFormatProperties properties)
         {
             VkFormat vkFormat = VkFormats.VdToVkPixelFormat(format, (usage & TextureUsage.DepthStencil) != 0);
-            VkImageType vkType = VkFormats.VdToVkTextureType(type);
+            VkImageType vkType = VkFormats.VdToVkTextureType(kind);
             VkImageTiling tiling = usage == TextureUsage.Staging ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
             VkImageUsageFlags vkUsage = VkFormats.VdToVkTextureUsage(usage);
 
