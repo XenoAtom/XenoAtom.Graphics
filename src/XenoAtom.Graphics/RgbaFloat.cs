@@ -186,5 +186,19 @@ namespace XenoAtom.Graphics
         {
             return !left.Equals(right);
         }
+
+        /// <summary>
+        /// Converts a RgbaFloat to a Vector4.
+        /// </summary>
+        /// <param name="rgba">Rgba value</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator Vector4(RgbaFloat rgba) => rgba.ToVector4();
+        
+        /// <summary>
+        /// Converts a Vector4 to a RgbaFloat.
+        /// </summary>
+        /// <param name="rgba">Rgba value</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static explicit operator RgbaFloat(Vector4 rgba) => new(rgba);
     }
 }

@@ -2,11 +2,9 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
-using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using NWindows;
 using XenoAtom.Graphics;
 
@@ -127,7 +125,7 @@ public class HelloCube
         _cl.SetGraphicsResourceSet(0, _resourceSet);
         _cl.UpdateBuffer(_matrixBuffer, 0, mvp);
         _cl.SetVertexBuffer(0, _vertexBuffer);
-        _cl.Draw(36);
+        _cl.Draw((uint)Vertices.Length);
         _cl.End();
         _graphicsDevice.SubmitCommands(_cl);
 
@@ -150,51 +148,50 @@ public class HelloCube
         _graphicsDevice.Dispose();
         _graphicsManager.Dispose();
     }
-
-
+    
     private static readonly VertexPositionColor[] Vertices =
     [
-        new(new(-1.0f, -1.0f, -1.0f), RgbaFloat.Red.ToVector4()), // Front
-        new(new(-1.0f, 1.0f, -1.0f), RgbaFloat.Red.ToVector4()),
-        new(new(1.0f, 1.0f, -1.0f), RgbaFloat.Red.ToVector4()),
-        new(new(-1.0f, -1.0f, -1.0f), RgbaFloat.Red.ToVector4()),
-        new(new(1.0f, 1.0f, -1.0f), RgbaFloat.Red.ToVector4()),
-        new(new(1.0f, -1.0f, -1.0f), RgbaFloat.Red.ToVector4()),
+        new(new(-1.0f, -1.0f, -1.0f), RgbaFloat.Red), // Front
+        new(new(-1.0f, 1.0f, -1.0f), RgbaFloat.Red),
+        new(new(1.0f, 1.0f, -1.0f), RgbaFloat.Red),
+        new(new(-1.0f, -1.0f, -1.0f), RgbaFloat.Red),
+        new(new(1.0f, 1.0f, -1.0f), RgbaFloat.Red),
+        new(new(1.0f, -1.0f, -1.0f), RgbaFloat.Red),
 
-        new(new(-1.0f, -1.0f, 1.0f), RgbaFloat.Green.ToVector4()), // Back
-        new(new(1.0f, 1.0f, 1.0f), RgbaFloat.Green.ToVector4()),
-        new(new(-1.0f, 1.0f, 1.0f), RgbaFloat.Green.ToVector4()),
-        new(new(-1.0f, -1.0f, 1.0f), RgbaFloat.Green.ToVector4()),
-        new(new(1.0f, -1.0f, 1.0f), RgbaFloat.Green.ToVector4()),
-        new(new(1.0f, 1.0f, 1.0f), RgbaFloat.Green.ToVector4()),
+        new(new(-1.0f, -1.0f, 1.0f), RgbaFloat.Green), // Back
+        new(new(1.0f, 1.0f, 1.0f), RgbaFloat.Green),
+        new(new(-1.0f, 1.0f, 1.0f), RgbaFloat.Green),
+        new(new(-1.0f, -1.0f, 1.0f), RgbaFloat.Green),
+        new(new(1.0f, -1.0f, 1.0f), RgbaFloat.Green),
+        new(new(1.0f, 1.0f, 1.0f), RgbaFloat.Green),
 
-        new(new(-1.0f, 1.0f, -1.0f), RgbaFloat.Blue.ToVector4()), // Top
-        new(new(-1.0f, 1.0f, 1.0f), RgbaFloat.Blue.ToVector4()),
-        new(new(1.0f, 1.0f, 1.0f), RgbaFloat.Blue.ToVector4()),
-        new(new(-1.0f, 1.0f, -1.0f), RgbaFloat.Blue.ToVector4()),
-        new(new(1.0f, 1.0f, 1.0f), RgbaFloat.Blue.ToVector4()),
-        new(new(1.0f, 1.0f, -1.0f), RgbaFloat.Blue.ToVector4()),
+        new(new(-1.0f, 1.0f, -1.0f), RgbaFloat.Blue), // Top
+        new(new(-1.0f, 1.0f, 1.0f), RgbaFloat.Blue),
+        new(new(1.0f, 1.0f, 1.0f), RgbaFloat.Blue),
+        new(new(-1.0f, 1.0f, -1.0f), RgbaFloat.Blue),
+        new(new(1.0f, 1.0f, 1.0f), RgbaFloat.Blue),
+        new(new(1.0f, 1.0f, -1.0f), RgbaFloat.Blue),
 
-        new(new(-1.0f, -1.0f, -1.0f), RgbaFloat.Yellow.ToVector4()), // Bottom
-        new(new(1.0f, -1.0f, 1.0f), RgbaFloat.Yellow.ToVector4()),
-        new(new(-1.0f, -1.0f, 1.0f), RgbaFloat.Yellow.ToVector4()),
-        new(new(-1.0f, -1.0f, -1.0f), RgbaFloat.Yellow.ToVector4()),
-        new(new(1.0f, -1.0f, -1.0f), RgbaFloat.Yellow.ToVector4()),
-        new(new(1.0f, -1.0f, 1.0f), RgbaFloat.Yellow.ToVector4()),
+        new(new(-1.0f, -1.0f, -1.0f), RgbaFloat.Yellow), // Bottom
+        new(new(1.0f, -1.0f, 1.0f), RgbaFloat.Yellow),
+        new(new(-1.0f, -1.0f, 1.0f), RgbaFloat.Yellow),
+        new(new(-1.0f, -1.0f, -1.0f), RgbaFloat.Yellow),
+        new(new(1.0f, -1.0f, -1.0f), RgbaFloat.Yellow),
+        new(new(1.0f, -1.0f, 1.0f), RgbaFloat.Yellow),
 
-        new(new(-1.0f, -1.0f, -1.0f), RgbaFloat.Cyan.ToVector4()), // Left
-        new(new(-1.0f, -1.0f, 1.0f), RgbaFloat.Cyan.ToVector4()),
-        new(new(-1.0f, 1.0f, 1.0f), RgbaFloat.Cyan.ToVector4()),
-        new(new(-1.0f, -1.0f, -1.0f), RgbaFloat.Cyan.ToVector4()),
-        new(new(-1.0f, 1.0f, 1.0f), RgbaFloat.Cyan.ToVector4()),
-        new(new(-1.0f, 1.0f, -1.0f), RgbaFloat.Cyan.ToVector4()),
+        new(new(-1.0f, -1.0f, -1.0f), RgbaFloat.Cyan), // Left
+        new(new(-1.0f, -1.0f, 1.0f), RgbaFloat.Cyan),
+        new(new(-1.0f, 1.0f, 1.0f), RgbaFloat.Cyan),
+        new(new(-1.0f, -1.0f, -1.0f), RgbaFloat.Cyan),
+        new(new(-1.0f, 1.0f, 1.0f), RgbaFloat.Cyan),
+        new(new(-1.0f, 1.0f, -1.0f), RgbaFloat.Cyan),
 
-        new(new(1.0f, -1.0f, -1.0f), RgbaFloat.Magenta.ToVector4()), // Right
-        new(new(1.0f, 1.0f, 1.0f), RgbaFloat.Magenta.ToVector4()),
-        new(new(1.0f, -1.0f, 1.0f), RgbaFloat.Magenta.ToVector4()),
-        new(new(1.0f, -1.0f, -1.0f), RgbaFloat.Magenta.ToVector4()),
-        new(new(1.0f, 1.0f, -1.0f), RgbaFloat.Magenta.ToVector4()),
-        new(new(1.0f, 1.0f, 1.0f), RgbaFloat.Magenta.ToVector4()),
+        new(new(1.0f, -1.0f, -1.0f), RgbaFloat.Magenta), // Right
+        new(new(1.0f, 1.0f, 1.0f), RgbaFloat.Magenta),
+        new(new(1.0f, -1.0f, 1.0f), RgbaFloat.Magenta),
+        new(new(1.0f, -1.0f, -1.0f), RgbaFloat.Magenta),
+        new(new(1.0f, 1.0f, -1.0f), RgbaFloat.Magenta),
+        new(new(1.0f, 1.0f, 1.0f), RgbaFloat.Magenta),
     ];
     
     private struct VertexPositionColor(Vector3 position, Vector4 color)
