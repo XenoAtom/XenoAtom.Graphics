@@ -36,7 +36,7 @@ public class HelloCube
     {
         _window = window;
         _graphicsManager = GraphicsManager.Create(new GraphicsManagerOptions(true));
-        var adapter = _graphicsManager.Adapters[0];
+        var adapter = _graphicsManager.GetBestAdapter();
         _graphicsDevice = adapter.CreateDevice(new GraphicsDeviceOptions());
 
         _windowClientSize = _window.Dpi.LogicalToPixel(_window.ClientSize);

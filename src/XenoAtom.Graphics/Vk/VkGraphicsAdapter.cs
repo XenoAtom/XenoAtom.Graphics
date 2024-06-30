@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -14,35 +15,57 @@ internal sealed unsafe class VkGraphicsAdapter : GraphicsAdapter
     public readonly VkPhysicalDevice PhysicalDevice;
     public readonly VkPhysicalDeviceProperties PhysicalDeviceProperties;
     public readonly VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
+    public readonly VkPhysicalDeviceDriverProperties PhysicalDeviceDriverPropertie;
     public readonly VkPhysicalDeviceMemoryProperties PhysicalDeviceMemProperties;
+    private readonly GraphicsVersion _apiVersion;
+    private readonly GraphicsVersion _driverVersion;
+
+    private readonly Guid _deviceUUID;
+    private readonly Guid _driverUUID;
 
     public VkGraphicsAdapter(VkGraphicsManager manager, VkPhysicalDevice physicalDevice) : base(manager)
     {
         PhysicalDevice = physicalDevice;
 
-        vkGetPhysicalDeviceProperties(PhysicalDevice, out PhysicalDeviceProperties);
-        fixed (byte* utf8NamePtr = PhysicalDeviceProperties.deviceName)
-        {
-            DeviceName = Encoding.UTF8.GetString(utf8NamePtr, (int)VK_MAX_PHYSICAL_DEVICE_NAME_SIZE).TrimEnd('\0');
-        }
-
-        // Get driver name and version
+        // Get the properties of the physical device
         VkPhysicalDeviceProperties2 deviceProps = new VkPhysicalDeviceProperties2();
         VkPhysicalDeviceDriverProperties driverProps = new VkPhysicalDeviceDriverProperties();
-        deviceProps.pNext = &driverProps;
-        vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProps);
+        VkPhysicalDeviceIDProperties idProps = new VkPhysicalDeviceIDProperties();
+        deviceProps.pNext = &idProps;
+        idProps.pNext = &driverProps;
 
-        VkConformanceVersion conforming = driverProps.conformanceVersion;
-        ApiVersion = new(conforming.major, conforming.minor, conforming.subminor, conforming.patch);
+        vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProps);
+        PhysicalDeviceProperties = deviceProps.properties;
+        PhysicalDeviceDriverPropertie = driverProps;
+
+        DeviceName = Encoding.UTF8.GetString(deviceProps.properties.deviceName, (int)VK_MAX_PHYSICAL_DEVICE_NAME_SIZE).TrimEnd('\0');
         DriverName = Encoding.UTF8.GetString(driverProps.driverName, (int)VK_MAX_DRIVER_NAME_SIZE).TrimEnd('\0');
         DriverInfo = Encoding.UTF8.GetString(driverProps.driverInfo, (int)VK_MAX_DRIVER_INFO_SIZE).TrimEnd('\0');
-        VendorName = "id:" + PhysicalDeviceProperties.vendorID.ToString("x8");
+        VendorName = "id:" + deviceProps.properties.vendorID.ToString("x8");
+        VendorId = deviceProps.properties.vendorID;
+        DeviceId = deviceProps.properties.deviceID;
 
-        var vkDriverVersion = new VkVersion(PhysicalDeviceProperties.driverVersion);
-        DriverVersion = new(vkDriverVersion.Major, vkDriverVersion.Minor, vkDriverVersion.Patch, 0);
+        VkConformanceVersion conforming = driverProps.conformanceVersion;
+        _apiVersion = new(conforming.major, conforming.minor, conforming.subminor, conforming.patch);
+
+        var vkDriverVersion = new VkVersion(deviceProps.properties.driverVersion);
+        _driverVersion = new(vkDriverVersion.Major, vkDriverVersion.Minor, vkDriverVersion.Patch, 0);
 
         vkGetPhysicalDeviceFeatures(PhysicalDevice, out PhysicalDeviceFeatures);
         vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, out PhysicalDeviceMemProperties);
+
+        Kind = deviceProps.properties.deviceType switch
+        {
+            VkPhysicalDeviceType.VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU => GraphicsAdapterKind.DiscreteGpu,
+            VkPhysicalDeviceType.VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU => GraphicsAdapterKind.IntegratedGpu,
+            VkPhysicalDeviceType.VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU => GraphicsAdapterKind.VirtualGpu,
+            VkPhysicalDeviceType.VK_PHYSICAL_DEVICE_TYPE_CPU => GraphicsAdapterKind.Cpu,
+            _ => GraphicsAdapterKind.Other
+        };
+
+        _deviceUUID = new Guid(new ReadOnlySpan<byte>(idProps.deviceUUID, 16), true); // TODO: is it correct to use bigEndian = true?
+        _driverUUID = new Guid(new ReadOnlySpan<byte>(idProps.driverUUID, 16), true);
+        DeviceLUID = *(ulong*)idProps.deviceLUID;
     }
 
     public new VkGraphicsManager Manager => Unsafe.As<GraphicsManager, VkGraphicsManager>(ref Unsafe.AsRef(in base.Manager));
@@ -51,13 +74,25 @@ internal sealed unsafe class VkGraphicsAdapter : GraphicsAdapter
 
     public override string DriverName { get; }
 
+    public override uint VendorId { get; }
+
+    public override uint DeviceId { get; }
+
     public override string DriverInfo { get; }
 
     public override string VendorName { get; }
 
-    public override GraphicsVersion ApiVersion { get; }
+    public override ref readonly GraphicsVersion ApiVersion => ref _apiVersion;
 
-    public override GraphicsVersion DriverVersion { get; }
+    public override ref readonly GraphicsVersion DriverVersion => ref _driverVersion;
+
+    public override ref readonly Guid DeviceUUID => ref _deviceUUID;
+
+    public override ref readonly Guid DriverUUID => ref _driverUUID;
+
+    public override ulong DeviceLUID { get; }
+
+    public override GraphicsAdapterKind Kind { get; }
 
     public override GraphicsDevice CreateDevice(in GraphicsDeviceOptions options) => new VkGraphicsDevice(this, options);
     

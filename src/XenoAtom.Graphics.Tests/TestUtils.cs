@@ -17,10 +17,7 @@ namespace XenoAtom.Graphics.Tests
                 DebugLog = log
             });
 
-            Assert.True(manager.Adapters.Length > 0, "No Graphics adapters found");
-
-
-            var adapter = manager.Adapters[0];
+            var adapter = manager.GetBestAdapter();
             return adapter.CreateDevice(new GraphicsDeviceOptions()
             {
                 OnResourceCreated = resourcesCreated
