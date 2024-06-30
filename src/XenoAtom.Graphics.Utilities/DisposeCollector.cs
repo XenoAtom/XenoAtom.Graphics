@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace XenoAtom.Graphics.Utilities
@@ -150,7 +150,7 @@ namespace XenoAtom.Graphics.Utilities
             _disposables.Add(tenth);
         }
 
-        public void Add<T>(T[] array) where T : IDisposable
+        public void Add<T>(ReadOnlySpan<T> array) where T : IDisposable
         {
             foreach (T item in array)
             {

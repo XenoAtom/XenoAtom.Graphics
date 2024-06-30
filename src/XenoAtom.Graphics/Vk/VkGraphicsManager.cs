@@ -362,7 +362,7 @@ internal sealed unsafe class VkGraphicsManager : GraphicsManager
             
         return 0;
     }
-
+    
     internal override void Destroy()
     {
         foreach (var adapter in _vkGraphicsAdapters)

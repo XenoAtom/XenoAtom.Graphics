@@ -499,36 +499,15 @@ namespace XenoAtom.Graphics
         /// </summary>
         /// <typeparam name="T">The type of data to upload.</typeparam>
         /// <param name="buffer">The resource to update.</param>
-        /// <param name="bufferOffsetInBytes">An offset, in bytes, from the beginning of the <see cref="DeviceBuffer"/> storage, at
-        /// which new data will be uploaded.</param>
-        /// <param name="source">The value to upload.</param>
-        public unsafe void UpdateBuffer<T>(
-            DeviceBuffer buffer,
-            uint bufferOffsetInBytes,
-            T source) where T : unmanaged
-        {
-            ref byte sourceByteRef = ref Unsafe.AsRef<byte>(Unsafe.AsPointer(ref source));
-            fixed (byte* ptr = &sourceByteRef)
-            {
-                UpdateBuffer(buffer, bufferOffsetInBytes, (IntPtr)ptr, (uint)sizeof(T));
-            }
-        }
-
-        /// <summary>
-        /// Updates a <see cref="DeviceBuffer"/> region with new data.
-        /// This function must be used with a blittable value type <typeparamref name="T"/>.
-        /// </summary>
-        /// <typeparam name="T">The type of data to upload.</typeparam>
-        /// <param name="buffer">The resource to update.</param>
         /// <param name="bufferOffsetInBytes">An offset, in bytes, from the beginning of the <see cref="DeviceBuffer"/>'s storage, at
         /// which new data will be uploaded.</param>
         /// <param name="source">A reference to the single value to upload.</param>
         public unsafe void UpdateBuffer<T>(
             DeviceBuffer buffer,
             uint bufferOffsetInBytes,
-            ref T source) where T : unmanaged
+            in T source) where T : unmanaged
         {
-            ref byte sourceByteRef = ref Unsafe.AsRef<byte>(Unsafe.AsPointer(ref source));
+            ref byte sourceByteRef = ref Unsafe.AsRef<byte>(Unsafe.AsPointer(ref Unsafe.AsRef(in source)));
             fixed (byte* ptr = &sourceByteRef)
             {
                 UpdateBuffer(buffer, bufferOffsetInBytes, (IntPtr)ptr, (uint)sizeof(T));
@@ -548,10 +527,10 @@ namespace XenoAtom.Graphics
         public unsafe void UpdateBuffer<T>(
             DeviceBuffer buffer,
             uint bufferOffsetInBytes,
-            ref T source,
+            in T source,
             uint sizeInBytes) where T : unmanaged
         {
-            ref byte sourceByteRef = ref Unsafe.AsRef<byte>(Unsafe.AsPointer(ref source));
+            ref byte sourceByteRef = ref Unsafe.AsRef<byte>(Unsafe.AsPointer(ref Unsafe.AsRef(in source)));
             fixed (byte* ptr = &sourceByteRef)
             {
                 UpdateBuffer(buffer, bufferOffsetInBytes, (IntPtr)ptr, sizeInBytes);

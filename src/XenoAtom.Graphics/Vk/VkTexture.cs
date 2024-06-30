@@ -74,18 +74,18 @@ namespace XenoAtom.Graphics.Vk
 
             if (!isStaging)
             {
-                VkImageCreateInfo imageCI = new VkImageCreateInfo();
-                imageCI.mipLevels = MipLevels;
-                imageCI.arrayLayers = _actualImageArrayLayers;
-                imageCI.imageType = VkFormats.VdToVkTextureType(Type);
-                imageCI.extent.width = Width;
-                imageCI.extent.height = Height;
-                imageCI.extent.depth = Depth;
-                imageCI.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-                imageCI.usage = VkFormats.VdToVkTextureUsage(Usage);
-                imageCI.tiling = isStaging ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
-                imageCI.format = VkFormat;
-                imageCI.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+                VkImageCreateInfo imageCI = new VkImageCreateInfo
+                {
+                    mipLevels = MipLevels,
+                    arrayLayers = _actualImageArrayLayers,
+                    imageType = VkFormats.VdToVkTextureType(Type),
+                    initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED,
+                    usage = VkFormats.VdToVkTextureUsage(Usage),
+                    tiling = isStaging ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL,
+                    format = VkFormat,
+                    flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+                    extent = new(Width, Height, Depth),
+                };
 
                 imageCI.samples = VkSampleCount;
                 if (isCubemap)

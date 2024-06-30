@@ -102,7 +102,6 @@ namespace XenoAtom.Graphics.Vk
         private readonly ConcurrentQueue<XenoAtom.Interop.vulkan.VkFence> _availableSubmissionFences = new ConcurrentQueue<XenoAtom.Interop.vulkan.VkFence>();
         private readonly List<FenceSubmissionInfo> _submittedFences = new List<FenceSubmissionInfo>();
 
-        private readonly List<ReadOnlyMemoryUtf8> _surfaceExtensions = new List<ReadOnlyMemoryUtf8>();
         private readonly PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT;
 
         public new VkGraphicsAdapter Adapter => Unsafe.As<GraphicsAdapter, VkGraphicsAdapter>(ref Unsafe.AsRef(in base.Adapter));
@@ -549,7 +548,7 @@ namespace XenoAtom.Graphics.Vk
 
         public bool HasSurfaceExtension(ReadOnlyMemoryUtf8 extension)
         {
-            return _surfaceExtensions.Contains(extension);
+            return Manager.HasSurfaceExtension(extension);
         }
     
         public VkExtensionProperties[] GetDeviceExtensionProperties()

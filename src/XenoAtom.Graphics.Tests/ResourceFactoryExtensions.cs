@@ -46,14 +46,11 @@ public static class ResourceFactoryExtensions
     /// <returns>A two-element array, containing the vertex shader (element 0) and the fragment shader (element 1).</returns>
     public static Shader[] CreateFromSpirv(
         this GraphicsDevice device,
-        ShaderDescription vertexShaderDescription,
-        ShaderDescription fragmentShaderDescription,
+        in ShaderDescription vertexShaderDescription,
+        in ShaderDescription fragmentShaderDescription,
         CrossCompileOptions options)
     {
         GraphicsBackend backend = device.BackendType;
-        vertexShaderDescription.ShaderBytes = EnsureSpirv(vertexShaderDescription);
-        fragmentShaderDescription.ShaderBytes = EnsureSpirv(fragmentShaderDescription);
-
         return new Shader[]
         {
                 device.CreateShader(vertexShaderDescription),
@@ -90,37 +87,14 @@ public static class ResourceFactoryExtensions
     /// <returns>The compiled compute <see cref="Shader"/>.</returns>
     public static Shader CreateFromSpirv(
         this GraphicsDevice device,
-        ShaderDescription computeShaderDescription,
+        in ShaderDescription computeShaderDescription,
         CrossCompileOptions options)
     {
         GraphicsBackend backend = device.BackendType;
-        computeShaderDescription.ShaderBytes = EnsureSpirv(computeShaderDescription);
         return device.CreateShader(computeShaderDescription);
     }
 
-    private static unsafe byte[] EnsureSpirv(ShaderDescription description)
-    {
-        return description.ShaderBytes;
-        //if (Util.HasSpirvHeader(description.ShaderBytes))
-        //{
-        //    return description.ShaderBytes;
-        //}
-        //else
-        //{
-        //    fixed (byte* sourceAsciiPtr = description.ShaderBytes)
-        //    {
-        //        SpirvCompilationResult glslCompileResult = SpirvCompilation.CompileGlslToSpirv(
-        //            (uint)description.ShaderBytes.Length,
-        //            sourceAsciiPtr,
-        //            null,
-        //            description.Stage,
-        //            description.Debug,
-        //            0,
-        //            null);
-        //        return glslCompileResult.SpirvBytes;
-        //    }
-        //}
-    }
+   
 }
 
 

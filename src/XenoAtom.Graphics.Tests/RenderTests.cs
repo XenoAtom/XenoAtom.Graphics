@@ -62,7 +62,7 @@ namespace XenoAtom.Graphics.Tests
                 0,
                 -1,
                 1);
-            GD.UpdateBuffer(orthoBuffer, 0, ref orthoMatrix);
+            GD.UpdateBuffer(orthoBuffer, 0, orthoMatrix);
 
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 new VertexLayoutDescription[]
@@ -196,7 +196,7 @@ namespace XenoAtom.Graphics.Tests
                 0,
                 -1,
                 1);
-            GD.UpdateBuffer(orthoBuffer, 0, ref orthoMatrix);
+            GD.UpdateBuffer(orthoBuffer, 0, orthoMatrix);
 
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 new VertexLayoutDescription[]
@@ -339,7 +339,7 @@ namespace XenoAtom.Graphics.Tests
                 0,
                 -1,
                 1);
-            GD.UpdateBuffer(orthoBuffer, 0, ref orthoMatrix);
+            GD.UpdateBuffer(orthoBuffer, 0, orthoMatrix);
 
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 new VertexLayoutDescription[]
@@ -462,7 +462,7 @@ namespace XenoAtom.Graphics.Tests
                 0,
                 -1,
                 1);
-            GD.UpdateBuffer(orthoBuffer, 0, ref orthoMatrix);
+            GD.UpdateBuffer(orthoBuffer, 0, orthoMatrix);
 
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 new VertexLayoutDescription[]
@@ -618,7 +618,7 @@ namespace XenoAtom.Graphics.Tests
                 0,
                 -1,
                 1);
-            GD.UpdateBuffer(orthoBuffer, 0, ref orthoMatrix);
+            GD.UpdateBuffer(orthoBuffer, 0, orthoMatrix);
 
             Texture sampledTexture = GD.CreateTexture(
                 TextureDescription.Texture2D(1, 1, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Sampled));

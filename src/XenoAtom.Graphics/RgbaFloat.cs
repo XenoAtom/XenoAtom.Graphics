@@ -87,6 +87,10 @@ namespace XenoAtom.Graphics
         /// </summary>
         public static readonly RgbaFloat Cyan = new(0, 1, 1, 1);
         /// <summary>
+        /// Magenta (1, 0, 1, 1)
+        /// </summary>
+        public static RgbaFloat Magenta = new(1, 0, 1, 1);
+        /// <summary>
         /// White (1, 1, 1, 1)
         /// </summary>
         public static readonly RgbaFloat White = new(1, 1, 1, 1);
@@ -116,7 +120,7 @@ namespace XenoAtom.Graphics
         /// </summary>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Vector4 ToVector4()
+        public readonly Vector4 ToVector4()
         {
             return _channels;
         }
