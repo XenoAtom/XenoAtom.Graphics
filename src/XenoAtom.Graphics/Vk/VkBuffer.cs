@@ -26,23 +26,23 @@ namespace XenoAtom.Graphics.Vk
             SizeInBytes = sizeInBytes;
             Usage = usage;
 
-            VkBufferUsageFlagBits vkUsage = VkBufferUsageFlagBits.VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VkBufferUsageFlagBits.VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            VkBufferUsageFlags vkUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
             if ((usage & BufferUsage.VertexBuffer) == BufferUsage.VertexBuffer)
             {
-                vkUsage |= VkBufferUsageFlagBits.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                vkUsage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
             }
             if ((usage & BufferUsage.IndexBuffer) == BufferUsage.IndexBuffer)
             {
-                vkUsage |= VkBufferUsageFlagBits.VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+                vkUsage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
             }
             if ((usage & BufferUsage.UniformBuffer) == BufferUsage.UniformBuffer)
             {
-                vkUsage |= VkBufferUsageFlagBits.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+                vkUsage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
             }
             if ((usage & BufferUsage.StructuredBufferReadWrite) == BufferUsage.StructuredBufferReadWrite
                 || (usage & BufferUsage.StructuredBufferReadOnly) == BufferUsage.StructuredBufferReadOnly)
             {
-                vkUsage |= VkBufferUsageFlagBits.VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+                vkUsage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
             }
             if ((usage & BufferUsage.IndirectBuffer) == BufferUsage.IndirectBuffer)
             {
@@ -73,10 +73,10 @@ namespace XenoAtom.Graphics.Vk
             var isStaging = (usage & BufferUsage.Staging) == BufferUsage.Staging;
             var hostVisible = isStaging || (usage & BufferUsage.Dynamic) == BufferUsage.Dynamic;
 
-            VkMemoryPropertyFlagBits memoryPropertyFlags =
+            VkMemoryPropertyFlags memoryPropertyFlags =
                 hostVisible
                     ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-                    : VkMemoryPropertyFlagBits.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+                    : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
             if (isStaging)
             {
@@ -87,7 +87,7 @@ namespace XenoAtom.Graphics.Vk
                     out _);
                 if (hostCachedAvailable)
                 {
-                    memoryPropertyFlags |= VkMemoryPropertyFlagBits.VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+                    memoryPropertyFlags |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
                 }
             }
 

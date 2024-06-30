@@ -97,7 +97,7 @@ namespace XenoAtom.Graphics.Vk
             CreateSwapchain(description.Width, description.Height);
 
             VkFenceCreateInfo fenceCI = new VkFenceCreateInfo();
-            fenceCI.flags = (VkFenceCreateFlagBits)0;
+            fenceCI.flags = (VkFenceCreateFlags)0;
             vkCreateFence(Device, fenceCI, null, out var imageAvailableFence);
 
             AcquireNextImage(Device, default, imageAvailableFence);

@@ -81,9 +81,9 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        internal static VkImageUsageFlagBits VdToVkTextureUsage(TextureUsage vdUsage)
+        internal static VkImageUsageFlags VdToVkTextureUsage(TextureUsage vdUsage)
         {
-            VkImageUsageFlagBits vkUsage = (VkImageUsageFlagBits)0;
+            VkImageUsageFlags vkUsage = (VkImageUsageFlags)0;
 
             vkUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
             bool isDepthStencil = (vdUsage & TextureUsage.DepthStencil) == TextureUsage.DepthStencil;
@@ -143,7 +143,7 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        internal static VkSampleCountFlagBits VdToVkSampleCount(TextureSampleCount sampleCount)
+        internal static VkSampleCountFlags VdToVkSampleCount(TextureSampleCount sampleCount)
         {
             switch (sampleCount)
             {
@@ -202,7 +202,7 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        internal static VkCullModeFlagBits VdToVkCullMode(FaceCullMode cullMode)
+        internal static VkCullModeFlags VdToVkCullMode(FaceCullMode cullMode)
         {
             switch (cullMode)
             {
@@ -211,7 +211,7 @@ namespace XenoAtom.Graphics.Vk
                 case FaceCullMode.Front:
                     return VK_CULL_MODE_FRONT_BIT;
                 case FaceCullMode.None:
-                    return (VkCullModeFlagBits)0;
+                    return (VkCullModeFlags)0;
                 default:
                     throw Illegal.Value<FaceCullMode>();
             }
@@ -236,9 +236,9 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        internal static VkColorComponentFlagBits VdToVkColorWriteMask(ColorWriteMask mask)
+        internal static VkColorComponentFlags VdToVkColorWriteMask(ColorWriteMask mask)
         {
-            VkColorComponentFlagBits flags = (VkColorComponentFlagBits)0;
+            VkColorComponentFlags flags = (VkColorComponentFlags)0;
 
             if ((mask & ColorWriteMask.Red) == ColorWriteMask.Red)
                 flags |= VK_COLOR_COMPONENT_R_BIT;
@@ -402,9 +402,9 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        internal static VkShaderStageFlagBits VdToVkShaderStages(ShaderStages stage)
+        internal static VkShaderStageFlags VdToVkShaderStages(ShaderStages stage)
         {
-            VkShaderStageFlagBits ret = (VkShaderStageFlagBits)0;
+            VkShaderStageFlags ret = (VkShaderStageFlags)0;
 
             if ((stage & ShaderStages.Vertex) == ShaderStages.Vertex)
                 ret |= VK_SHADER_STAGE_VERTEX_BIT;

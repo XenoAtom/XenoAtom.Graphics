@@ -119,9 +119,11 @@ namespace XenoAtom.Graphics.Vk
 
                 if (dedicated || size >= minDedicatedAllocationSize)
                 {
-                    VkMemoryAllocateInfo allocateInfo = new VkMemoryAllocateInfo();
-                    allocateInfo.allocationSize = size;
-                    allocateInfo.memoryTypeIndex = memoryTypeIndex;
+                    var allocateInfo = new VkMemoryAllocateInfo
+                    {
+                        allocationSize = size,
+                        memoryTypeIndex = memoryTypeIndex
+                    };
 
                     VkMemoryDedicatedAllocateInfo dedicatedAI;
                     if (dedicated)
@@ -146,6 +148,7 @@ namespace XenoAtom.Graphics.Vk
                         VkResult mapResult = vkMapMemory(_device, memory, 0, size, default, &mappedPtr);
                         if (mapResult != VK_SUCCESS)
                         {
+                            vkFreeMemory(_device, memory, null);
                             throw new GraphicsException("Unable to map newly-allocated Vulkan memory.");
                         }
                     }
@@ -166,7 +169,7 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        public bool TryFindMemoryType(uint typeFilter, VkMemoryPropertyFlagBits properties, out uint typeIndex)
+        public bool TryFindMemoryType(uint typeFilter, VkMemoryPropertyFlags properties, out uint typeIndex)
         {
             typeIndex = 0;
 

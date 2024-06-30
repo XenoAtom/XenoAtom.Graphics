@@ -88,7 +88,7 @@ namespace XenoAtom.Graphics.Vk
                 if (_availableCommandBuffers.Count > 0)
                 {
                     VkCommandBuffer cachedCB = _availableCommandBuffers.Dequeue();
-                    VkResult resetResult = vkResetCommandBuffer(cachedCB, (VkCommandBufferResetFlagBits)0);
+                    VkResult resetResult = vkResetCommandBuffer(cachedCB, (VkCommandBufferResetFlags)0);
                     CheckResult(resetResult);
                     return cachedCB;
                 }
@@ -648,7 +648,7 @@ namespace XenoAtom.Graphics.Vk
                 _cb,
                 VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                (VkDependencyFlagBits)0,
+                (VkDependencyFlags)0,
                 0,
                 null,
                 0,
@@ -823,9 +823,9 @@ namespace XenoAtom.Graphics.Vk
                 VK_PIPELINE_STAGE_TRANSFER_BIT, needToProtectUniform ?
                     VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
                     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
-                    VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VkPipelineStageFlagBits.VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT
+                    VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT
                     : VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-                (VkDependencyFlagBits)0,
+                (VkDependencyFlags)0,
                 1, &barrier,
                 0, null,
                 0, null);
@@ -1278,7 +1278,7 @@ namespace XenoAtom.Graphics.Vk
                 _cb,
                 VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, // srcStageMask
                 VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, // dstStageMask
-                (VkDependencyFlagBits)0,
+                (VkDependencyFlags)0,
                 1,                                  // memoryBarrierCount
                 &memoryBarrier,                     // pMemoryBarriers
                 0, null,

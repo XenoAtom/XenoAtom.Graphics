@@ -118,8 +118,8 @@ namespace XenoAtom.Graphics.Vk
             barrier.subresourceRange.baseArrayLayer = baseArrayLayer;
             barrier.subresourceRange.layerCount = layerCount;
 
-            VkPipelineStageFlagBits srcStageFlags;
-            VkPipelineStageFlagBits dstStageFlags;
+            VkPipelineStageFlags srcStageFlags;
+            VkPipelineStageFlags dstStageFlags;
 
             barrier.srcAccessMask = GetDefaultTransitionImageLayoutFlags(oldLayout, out srcStageFlags, true);
             barrier.dstAccessMask = GetDefaultTransitionImageLayoutFlags(newLayout, out dstStageFlags, false);
@@ -146,16 +146,16 @@ namespace XenoAtom.Graphics.Vk
                 cb,
                 srcStageFlags,
                 dstStageFlags,
-                (VkDependencyFlagBits)0,
+                (VkDependencyFlags)0,
                 0, null,
                 0, null,
                 1, &barrier);
         }
 
-        private static VkAccessFlagBits GetDefaultTransitionImageLayoutFlags(VkImageLayout layout, out VkPipelineStageFlagBits stageFlags, bool isSrc)
+        private static VkAccessFlags GetDefaultTransitionImageLayoutFlags(VkImageLayout layout, out VkPipelineStageFlags stageFlags, bool isSrc)
         {
-            // Return VkAccessFlagBits and VkPipelineStageFlagBits according to layout
-            VkAccessFlagBits accessFlags;
+            // Return VkAccessFlags and VkPipelineStageFlags according to layout
+            VkAccessFlags accessFlags;
 
             // Switch
             switch (layout)

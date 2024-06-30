@@ -95,7 +95,7 @@ internal sealed unsafe class VkGraphicsManager : GraphicsManager
         if (availableInstanceExtensions.Contains(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME))
         {
             instanceExtensions.Add((nint)(byte*)VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-            instanceCI.flags |= (VkInstanceCreateFlagBits)VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+            instanceCI.flags |= (VkInstanceCreateFlags)VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
         }
 
         if (availableInstanceExtensions.Contains(VK_KHR_SURFACE_EXTENSION_NAME))
@@ -182,7 +182,7 @@ internal sealed unsafe class VkGraphicsManager : GraphicsManager
 
         VkDebugUtilsMessengerCreateInfoEXT debugUtilsCI = new VkDebugUtilsMessengerCreateInfoEXT
         {
-            pfnUserCallback = (delegate* unmanaged[Stdcall]<VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT, VkDebugUtilsMessengerCallbackDataEXT*, void*, VkBool32>)&DebugCallback,
+            pfnUserCallback = (delegate* unmanaged[Stdcall]<VkDebugUtilsMessageSeverityFlagsEXT, VkDebugUtilsMessageTypeFlagsEXT, VkDebugUtilsMessengerCallbackDataEXT*, void*, VkBool32>)&DebugCallback,
             pUserData = (void*)GCHandle.ToIntPtr(_thisGcHandle)
         };
 
@@ -294,7 +294,7 @@ internal sealed unsafe class VkGraphicsManager : GraphicsManager
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvStdcall)])]
     private static VkBool32 DebugCallback(
-        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+        VkDebugUtilsMessageSeverityFlagsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageTypes,
         VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData)

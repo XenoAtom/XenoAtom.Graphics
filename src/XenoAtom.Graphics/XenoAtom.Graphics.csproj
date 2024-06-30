@@ -54,7 +54,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="XenoAtom.Interop.vulkan" Version="1.0.0-alpha.13" PrivateAssets="contentfiles;analyzers;build;compile" />
+    <PackageReference Include="XenoAtom.Interop.vulkan" Version="1.0.0-alpha.14" PrivateAssets="contentfiles;analyzers;build;compile" />
     <PackageReference Include="XenoAtom.Interop" Version="1.5.0" />
     <!--<ProjectReference Include="..\..\..\Interop\src\common\XenoAtom.Interop.common\XenoAtom.Interop.common.csproj" />-->
     <!--<ProjectReference Include="..\..\..\Interop\src\vulkan\XenoAtom.Interop.vulkan\XenoAtom.Interop.vulkan.csproj" />-->

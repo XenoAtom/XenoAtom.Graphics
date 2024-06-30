@@ -22,7 +22,7 @@ namespace XenoAtom.Graphics.Vk
             imageViewCI.image = tex.OptimalDeviceImage;
             imageViewCI.format = VkFormats.VdToVkPixelFormat(Format, (Target.Usage & TextureUsage.DepthStencil) != 0);
 
-            VkImageAspectFlagBits aspectFlags;
+            VkImageAspectFlags aspectFlags;
             if ((description.Target.Usage & TextureUsage.DepthStencil) == TextureUsage.DepthStencil)
             {
                 aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;

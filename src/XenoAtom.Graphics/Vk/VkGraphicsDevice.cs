@@ -126,11 +126,11 @@ namespace XenoAtom.Graphics.Vk
             vkGetPhysicalDeviceQueueFamilyProperties(_vkPhysicalDevice, qfp);
 
             bool foundMainQueue = false;
-            const VkQueueFlagBits requiredQueue = VkQueueFlagBits.VK_QUEUE_GRAPHICS_BIT | VkQueueFlagBits.VK_QUEUE_COMPUTE_BIT;
+            const VkQueueFlags requiredQueue = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
             for (uint i = 0; i < qfp.Length; i++)
             {
                 ref var queueFamily = ref qfp[i];
-                var queueFlags = (VkQueueFlagBits)queueFamily.queueFlags;
+                var queueFlags = (VkQueueFlags)queueFamily.queueFlags;
 
                 if ((queueFlags & requiredQueue) == requiredQueue)
                 {
@@ -331,7 +331,7 @@ namespace XenoAtom.Graphics.Vk
             VkSubmitInfo si = new VkSubmitInfo();
             si.commandBufferCount = 1;
             si.pCommandBuffers = &vkCB;
-            VkPipelineStageFlags waitDstStageMask = VkPipelineStageFlagBits.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
             si.pWaitDstStageMask = &waitDstStageMask;
 
             si.pWaitSemaphores = waitSemaphoresPtr;
@@ -650,7 +650,7 @@ namespace XenoAtom.Graphics.Vk
 
         public override TextureSampleCount GetSampleCountLimit(PixelFormat format, bool depthFormat)
         {
-            VkImageUsageFlagBits usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT;
+            VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT;
             usageFlags |= depthFormat ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
             vkGetPhysicalDeviceImageFormatProperties(
@@ -659,10 +659,10 @@ namespace XenoAtom.Graphics.Vk
                 VK_IMAGE_TYPE_2D,
                 VK_IMAGE_TILING_OPTIMAL,
                 usageFlags,
-                (VkImageCreateFlagBits)0,
+                (VkImageCreateFlags)0,
                 out VkImageFormatProperties formatProperties);
 
-            VkSampleCountFlagBits vkSampleCounts = formatProperties.sampleCounts;
+            VkSampleCountFlags vkSampleCounts = formatProperties.sampleCounts;
             if ((vkSampleCounts & VK_SAMPLE_COUNT_32_BIT) == VK_SAMPLE_COUNT_32_BIT)
             {
                 return TextureSampleCount.Count32;
@@ -704,7 +704,7 @@ namespace XenoAtom.Graphics.Vk
                 vkType,
                 tiling,
                 vkUsage,
-                (VkImageCreateFlagBits)0,
+                (VkImageCreateFlags)0,
                 out VkImageFormatProperties vkProps);
 
             if (result == VK_ERROR_FORMAT_NOT_SUPPORTED)
@@ -720,7 +720,7 @@ namespace XenoAtom.Graphics.Vk
                vkProps.maxExtent.depth,
                vkProps.maxMipLevels,
                vkProps.maxArrayLayers,
-               vkProps.sampleCounts.Value);
+               (uint)vkProps.sampleCounts);
             return true;
         }
 
