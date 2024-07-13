@@ -417,6 +417,13 @@ namespace XenoAtom.Graphics
 
         private protected abstract void ClearColorTargetCore(uint index, RgbaFloat clearColor);
 
+        public void ClearTexture(Texture texture)
+        {
+            ClearTextureCore(texture);
+        }
+
+        private protected abstract void ClearTextureCore(Texture texture);
+
         /// <summary>
         /// Clears the depth-stencil target of the active <see cref="Framebuffer"/>.
         /// The active <see cref="Framebuffer"/> must have a depth attachment.
@@ -462,7 +469,7 @@ namespace XenoAtom.Graphics
             {
                 throw new GraphicsException($"Cannot use {nameof(SetFullViewports)}. There is no Framebuffer bound.");
             }
-            
+
             SetViewport(0, new Viewport(0, 0, _framebuffer.Width, _framebuffer.Height, 0, 1));
 
             for (uint index = 1; index < _framebuffer.ColorTargets.Length; index++)

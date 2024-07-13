@@ -295,7 +295,7 @@ namespace XenoAtom.Graphics.Tests
                 MipLevels,
                 1,
                 PixelFormat.R8_G8_B8_A8_UNorm,
-                TextureUsage.Sampled | TextureUsage.Storage | TextureUsage.Cubemap);
+                TextureUsage.Sampled | TextureUsage.Storage | TextureUsage.Cubemap | TextureUsage.RenderTarget);
             Texture computeOutput = GD.CreateTexture(texDesc);
 
             TextureView computeOutputMipLevel = GD.CreateTextureView(new TextureViewDescription(computeOutput, BoundMipLevel, 1, 0, 1));
@@ -318,6 +318,16 @@ namespace XenoAtom.Graphics.Tests
                 computeLayout,
                 32, 32, 1));
 
+            CommandList cl = GD.CreateCommandList();
+            cl.Begin();
+            cl.ClearTexture(computeOutput);
+            cl.End();
+            {
+                var fence = GD.CreateFence(false);
+                GD.SubmitCommands(cl, fence);
+                GD.WaitForFence(fence);
+            }
+
             using (var readback = GetReadback(computeOutput))
             {
                 for (uint mip = 0; mip < MipLevels; mip++)
@@ -338,7 +348,6 @@ namespace XenoAtom.Graphics.Tests
                 }
             }
 
-            CommandList cl = GD.CreateCommandList();
             cl.Begin();
             cl.SetPipeline(computePipeline);
             cl.SetComputeResourceSet(0, computeSet);
