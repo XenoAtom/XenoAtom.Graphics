@@ -740,13 +740,13 @@ namespace XenoAtom.Graphics.Vk
             bool isPersistentMapped = vkBuffer.Memory.IsPersistentMapped;
             if (isPersistentMapped)
             {
-                mappedPtr = (IntPtr)vkBuffer.Memory.Mapped!.MappedPointer;
+                mappedPtr = (IntPtr)vkBuffer.Memory.MappedPointerWithOffset;
                 destPtr = (byte*)mappedPtr + bufferOffsetInBytes;
             }
             else
             {
                 copySrcVkBuffer = GetFreeStagingBuffer(sizeInBytes);
-                mappedPtr = (IntPtr)copySrcVkBuffer.Memory.Mapped!.MappedPointer;
+                mappedPtr = (IntPtr)copySrcVkBuffer.Memory.MappedPointerWithOffset;
                 destPtr = (byte*)mappedPtr;
             }
 
@@ -809,7 +809,7 @@ namespace XenoAtom.Graphics.Vk
                 VkDeviceMemoryAllocation memBlock = vkTex.Memory;
                 uint subresource = texture.CalculateSubresource(mipLevel, arrayLayer);
                 VkSubresourceLayout layout = vkTex.GetSubresourceLayout(subresource);
-                byte* imageBasePtr = (byte*)memBlock.Mapped.MappedPointer+ layout.offset;
+                byte* imageBasePtr = (byte*)memBlock.MappedPointerWithOffset + layout.offset;
 
                 uint srcRowPitch = FormatHelpers.GetRowPitch(width, texture.Format);
                 uint srcDepthPitch = FormatHelpers.GetDepthPitch(srcRowPitch, height, texture.Format);

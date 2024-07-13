@@ -8,6 +8,11 @@ namespace XenoAtom.Graphics.Vk;
 
 public struct VkDeviceMemoryAllocationCreateInfo
 {
+    public VkDeviceMemoryAllocationCreateInfo()
+    {
+        MemoryTypeBits = uint.MaxValue;
+    }
+    
     public VkDeviceMemoryUsage Usage;
     public VkDeviceMemoryAllocationCreateFlags Flags;
     public vulkan.VkMemoryPropertyFlags RequiredFlags;

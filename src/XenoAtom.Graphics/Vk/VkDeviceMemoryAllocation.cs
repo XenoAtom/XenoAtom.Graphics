@@ -12,7 +12,7 @@ namespace XenoAtom.Graphics.Vk;
 [DebuggerDisplay("[Mem:{DeviceMemory}] Off:{Offset}, Size:{Size} End:{End}")]
 internal readonly unsafe struct VkDeviceMemoryAllocation : IEquatable<VkDeviceMemoryAllocation>
 {
-    public VkDeviceMemoryAllocation(int memoryTypeIndex, ulong offset, ulong size, uint alignment, vulkan.VkDeviceMemory deviceMemory, VkDeviceMemoryMappedState? mapped, TlsfAllocationToken token)
+    public VkDeviceMemoryAllocation(int memoryTypeIndex, ulong offset, ulong size, uint alignment, vulkan.VkDeviceMemory deviceMemory, VkDeviceMemoryMappedState? mapped, TlsfAllocationToken? token)
     {
         MemoryTypeIndex = memoryTypeIndex;
         DeviceMemory = deviceMemory;
@@ -26,13 +26,14 @@ internal readonly unsafe struct VkDeviceMemoryAllocation : IEquatable<VkDeviceMe
     public readonly int MemoryTypeIndex;
 
     public readonly vulkan.VkDeviceMemory DeviceMemory;
-    //public bool IsMapped => Mapped != null && Mapped.;
 
     public bool IsPersistentMapped => Mapped?.IsPersistentMapped ?? false;
 
     public readonly VkDeviceMemoryMappedState? Mapped;
 
-    public readonly TlsfAllocationToken Token;
+    public readonly TlsfAllocationToken? Token;
+
+    public nint MappedPointerWithOffset => Mapped?.MappedPointer + (nint)Offset ?? nint.Zero;
 
     public readonly ulong Offset;
 

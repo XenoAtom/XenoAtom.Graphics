@@ -2,6 +2,7 @@
 // Licensed under the BSD-Clause 2 license.
 // See license.txt file in the project root for full license information.
 
+using System.Diagnostics;
 using XenoAtom.Interop;
 using static XenoAtom.Interop.vulkan;
 
@@ -9,7 +10,7 @@ namespace XenoAtom.Graphics.Vk;
 
 internal class VkDeviceMemoryMappedState
 {
-    private uint _refCount;
+    private int _refCount;
 
     public bool IsPersistentMapped { get; set; }
 
@@ -35,14 +36,14 @@ internal class VkDeviceMemoryMappedState
     {
         lock (this)
         {
+            _refCount--;
+            Debug.Assert(_refCount >= 0);
+
             if (_refCount == 0)
             {
-                return;
+                vkUnmapMemory(device, memory);
+                MappedPointer = nint.Zero;
             }
-
-            _refCount--;
-            vkUnmapMemory(device, memory);
-            MappedPointer = nint.Zero;
         }
     }
 }

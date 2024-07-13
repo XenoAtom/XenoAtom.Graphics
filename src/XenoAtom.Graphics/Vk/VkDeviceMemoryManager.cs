@@ -66,8 +66,7 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
 
     public VkDeviceMemoryAllocation Allocate(vulkan.VkBuffer vkBuffer, in VkDeviceMemoryAllocationCreateInfo allocationCreateInfo)
     {
-        var memoryTypeBits = allocationCreateInfo.MemoryTypeBits != 0 ? allocationCreateInfo.MemoryTypeBits : uint.MaxValue;
-
+        var memoryTypeBits = allocationCreateInfo.MemoryTypeBits;
         while (TryFindMemoryTypeIndex(memoryTypeBits, in allocationCreateInfo, out int memoryTypeIndex))
         {
             VkBufferMemoryRequirementsInfo2 requirementsInfo = new() { buffer = vkBuffer };
@@ -106,7 +105,6 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
     public VkDeviceMemoryAllocation Allocate(VkImage vkImage, in VkDeviceMemoryAllocationCreateInfo allocationCreateInfo)
     {
         var memoryTypeBits = allocationCreateInfo.MemoryTypeBits;
-
         while (TryFindMemoryTypeIndex(memoryTypeBits, in allocationCreateInfo, out int memoryTypeIndex))
         {
 
@@ -144,12 +142,12 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
 
     public void Free(VkDeviceMemoryAllocation block)
     {
-        if (block.Token != default)
+        if (block.Token.HasValue)
         {
             var allocator = GetOrCreateAllocator(block.MemoryTypeIndex, block.Alignment);
             lock (allocator)
             {
-                allocator.Free(block.Token);
+                allocator.Free(block.Token.Value);
             }
         }
         else
@@ -231,14 +229,16 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
                 {
                     if (!_mappedMemory.TryGetValue(vkDeviceMemory, out mapped))
                     {
-                        mapped = new VkDeviceMemoryMappedState();
+                        mapped = new VkDeviceMemoryMappedState()
+                        {
+                            IsPersistentMapped = (allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_MAPPED_BIT) != 0
+                        };
                         _mappedMemory.Add(vkDeviceMemory, mapped);
                     }
                 }
             }
 
-            memoryBlock = new VkDeviceMemoryAllocation(memoryTypeIndex, 0, size, alignment, vkDeviceMemory, mapped, default);
-            return true;
+            memoryBlock = new VkDeviceMemoryAllocation(memoryTypeIndex, 0, size, alignment, vkDeviceMemory, mapped, null);
         }
         else
         {
@@ -258,29 +258,28 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
                 {
                     if (!_mappedMemory.TryGetValue(vkDeviceMemory, out mapped))
                     {
-                        mapped = new VkDeviceMemoryMappedState();
+                        mapped = new VkDeviceMemoryMappedState()
+                        {
+                            IsPersistentMapped = (allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_MAPPED_BIT) != 0
+                        };
                         _mappedMemory.Add(vkDeviceMemory, mapped);
                     }
                 }
             }
-
             memoryBlock = new VkDeviceMemoryAllocation(memoryTypeIndex, allocation.Address, size, alignment, vkDeviceMemory, mapped, allocation.Token);
-            if (mapped != null && mapped.IsPersistentMapped)
-            {
-                mapped.Map(_device, vkDeviceMemory);
-            }
-            return true;
         }
+
+        if (mapped != null && mapped.IsPersistentMapped)
+        {
+            mapped.Map(_device, vkDeviceMemory);
+        }
+
+        return true;
     }
     
     private bool TryFindMemoryTypeIndex(uint memoryTypeBits, in VkDeviceMemoryAllocationCreateInfo allocationCreateInfo, out int memoryTypeIndex)
     {
         memoryTypeBits &= GlobalMemoryTypeBits;
-
-        if (allocationCreateInfo.MemoryTypeBits != 0)
-        {
-            memoryTypeBits &= allocationCreateInfo.MemoryTypeBits;
-        }
 
         if (!FindMemoryPreferences(
                 IsIntegratedGpu,
@@ -495,7 +494,7 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
             memoryBlock.Mapped!.Map(_device, memoryBlock.DeviceMemory);
         }
 
-        return memoryBlock.Mapped!.MappedPointer;
+        return memoryBlock.Mapped!.MappedPointer + (nint)memoryBlock.Offset;
     }
 
     internal void Unmap(VkDeviceMemoryAllocation memoryBlock)
