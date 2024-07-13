@@ -814,17 +814,37 @@ namespace XenoAtom.Graphics.Vk
 
             bool needToProtectUniform = destination.Usage.HasFlag(BufferUsage.UniformBuffer);
 
-            VkMemoryBarrier barrier = new();
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = needToProtectUniform ? VK_ACCESS_UNIFORM_READ_BIT : VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-            barrier.pNext = null;
+            VkMemoryBarrier barrier = new()
+            {
+                srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                dstAccessMask = needToProtectUniform ? VK_ACCESS_UNIFORM_READ_BIT : VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
+                pNext = null
+            };
+
+            //Device.Features.GeometryShader
+            VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+            if (needToProtectUniform)
+            {
+                // TODO: this could be calculated at constructor time
+                stageMask = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+                            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
+                            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+                if (Device.Features.GeometryShader)
+                {
+                    stageMask |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+                }
+                else if (Device.Features.TessellationShaders)
+                {
+                    stageMask |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
+                                 VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+                }
+            }
+
             vkCmdPipelineBarrier(
                 _cb,
-                VK_PIPELINE_STAGE_TRANSFER_BIT, needToProtectUniform ?
-                    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
-                    VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT
-                    : VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                stageMask,
                 (VkDependencyFlags)0,
                 1, &barrier,
                 0, null,
