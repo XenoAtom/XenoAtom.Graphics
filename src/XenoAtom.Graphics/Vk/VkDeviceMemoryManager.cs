@@ -32,9 +32,6 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
     private readonly ulong _maxMemoryAllocationSize;
     private readonly bool _useAmdDeviceCoherentMemory = false;
     private readonly object _lock = new object();
-    private ulong _totalAllocatedBytes;
-
-    // https://blog.io7m.com/2023/11/11/vulkan-memory-allocation.xhtml
 
     public VkDeviceMemoryManager(
         VkDevice device,
@@ -71,7 +68,6 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
     public void DumpStatistics(StringBuilder writer)
     {
         writer.AppendLine("VkDeviceMemoryManager:");
-        writer.AppendLine($"  TotalAllocatedBytes: {_totalAllocatedBytes}");
         writer.AppendLine($"  MaxMemoryAllocationCount: {_maxMemoryAllocationCount}");
         writer.AppendLine($"  MaxMemoryAllocationSize: {_maxMemoryAllocationSize}");
         writer.AppendLine($"  BufferImageGranularity: {_bufferImageGranularity}");
@@ -93,30 +89,41 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
 
         if (chunkAllocators.Length > 0)
         {
-            writer.AppendLine();
-            writer.AppendLine($"  ChunkAllocators:");
+            int totalChunkAllocated = 0;
+            foreach (var allocator in chunkAllocators)
+            {
+                lock (allocator.Value)
+                {
+                    var chunkAllocator = allocator.Value;
+                    totalChunkAllocated += chunkAllocator.ChunkCount;
+                }
+            }
+            writer.AppendLine($"  TotalMemoryAllocationCount: {totalChunkAllocated}");
+
             foreach (var allocator in chunkAllocators)
             {
                 lock (allocator.Value)
                 {
                     var chunkAllocator = allocator.Value;
 
-                    writer.AppendLine("**************************************************************");
-                    writer.AppendLine($"{allocator.Key}, TotalAllocatedBytes: {chunkAllocator.TotalAllocatedBytes}");
-                    writer.AppendLine("**************************************************************");
+                    writer.AppendLine();
+                    writer.AppendLine("*******************************************************************************************************************");
+                    writer.AppendLine($"{allocator.Key}, AllocationCount: {chunkAllocator.ChunkCount}, TotalAllocatedBytes: {chunkAllocator.TotalAllocatedBytes}");
+                    writer.AppendLine("*******************************************************************************************************************");
 
                     var chunks = chunkAllocator.GetChunks();
+                    writer.AppendLine("  Chunks:");
                     foreach (var chunk in chunks)
                     {
-                        writer.AppendLine($"    {chunk}");
+                        writer.AppendLine($"    [0x{chunk.Item1:X}] {chunk.Item2}");
                     }
 
-                    writer.AppendLine();
-                    
-                    allocator.Value.TlsfAllocator?.Dump(writer);
+                    if (allocator.Value.TlsfAllocator != null)
+                    {
+                        writer.AppendLine();
+                        allocator.Value.TlsfAllocator?.Dump(writer);
+                    }
                 }
-
-                writer.AppendLine();
             }
         }
     }
@@ -169,10 +176,10 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
         ulong alignment = Math.Max(MinAlignment, requirements.memoryRequirements.alignment.Value);
         ulong size = requirements.memoryRequirements.size;
         var maxSize = (size + alignment - 1) & ~(alignment - 1);
-        if (maxSize > int.MaxValue)
+        var maxValue = Math.Min(_maxMemoryAllocationSize, int.MaxValue);
+        if (maxSize > maxValue)
         {
-            throw new InvalidOperationException(
-                $"Invalid size. The requested size {maxSize} bytes must be <= int.MaxValue");
+            throw new GraphicsException($"Exceeding size to allocate. The requested size {maxSize} bytes must be <= {maxValue} bytes");
         }
 
         var copyAllocationCreateInfo = allocationCreateInfo;
@@ -532,8 +539,8 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
         private readonly VkDevice _device;
         private readonly int _memoryTypeIndex;
         private uint _memorySize = 65536;
-        private int _index;
-        private UnsafeDictionary<int, VkDeviceMemoryChunk> _chunks;
+        private long _index;
+        private UnsafeDictionary<long, VkDeviceMemoryChunk> _chunks;
 
         public VkDeviceMemoryChunkAllocator(VkDevice device, int memoryTypeIndex)
         {
@@ -550,7 +557,10 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
 
         public int ChunkCount => _chunks.Count;
 
-        public VkDeviceMemoryChunk[] GetChunks() => _chunks.Values.ToArray();
+        public (long, VkDeviceMemoryChunk)[] GetChunks()
+        {
+            return _chunks.OrderBy(x => x.Key).Select(x => (x.Key, x.Value)).ToArray();
+        }
         
         public VkDeviceMemoryChunk GetChunk(int index) => _chunks[index];
         
