@@ -574,7 +574,7 @@ namespace XenoAtom.Graphics.Vk
 
         protected override MappedResource MapCore(IMappableResource resource, MapMode mode, uint subresource)
         {
-            VkMemoryBlock memoryBlock;
+            VkDeviceMemoryChunkRange memoryBlock;
             IntPtr mappedPtr = IntPtr.Zero;
             uint sizeInBytes;
             uint offset = 0;
@@ -598,14 +598,7 @@ namespace XenoAtom.Graphics.Vk
 
             if (memoryBlock.DeviceMemory.Value.Handle != 0)
             {
-                if (memoryBlock.IsPersistentMapped)
-                {
-                    mappedPtr = (IntPtr)memoryBlock.BlockMappedPointer;
-                }
-                else
-                {
-                    mappedPtr = _memoryManager.Map(memoryBlock);
-                }
+                mappedPtr = _memoryManager.Map(memoryBlock);
             }
 
             byte* dataPtr = (byte*)mappedPtr.ToPointer() + offset;
@@ -621,7 +614,7 @@ namespace XenoAtom.Graphics.Vk
 
         protected override void UnmapCore(IMappableResource resource, uint subresource)
         {
-            VkMemoryBlock memoryBlock;
+            VkDeviceMemoryChunkRange memoryBlock;
             if (resource is VkBuffer buffer)
             {
                 memoryBlock = buffer.Memory;
@@ -632,9 +625,9 @@ namespace XenoAtom.Graphics.Vk
                 memoryBlock = tex.Memory;
             }
 
-            if (memoryBlock.DeviceMemory.Value.Handle != 0 && !memoryBlock.IsPersistentMapped)
+            if (memoryBlock.DeviceMemory.Value.Handle != 0)
             {
-                vkUnmapMemory(_vkDevice, memoryBlock.DeviceMemory);
+                _memoryManager.Unmap(memoryBlock);
             }
         }
 
@@ -724,6 +717,11 @@ namespace XenoAtom.Graphics.Vk
             return true;
         }
 
+        private protected override void DumpStatisticsCore(StringBuilder builder)
+        {
+            _memoryManager.DumpStatistics(builder);
+        }
+
         internal VkFilter GetFormatFilter(VkFormat format)
         {
             if (!_filters.TryGetValue(format, out VkFilter filter))
@@ -747,13 +745,13 @@ namespace XenoAtom.Graphics.Vk
             bool isPersistentMapped = vkBuffer.Memory.IsPersistentMapped;
             if (isPersistentMapped)
             {
-                mappedPtr = (IntPtr)vkBuffer.Memory.BlockMappedPointer;
+                mappedPtr = (IntPtr)vkBuffer.Memory.MappedPointerWithOffset;
                 destPtr = (byte*)mappedPtr + bufferOffsetInBytes;
             }
             else
             {
                 copySrcVkBuffer = GetFreeStagingBuffer(sizeInBytes);
-                mappedPtr = (IntPtr)copySrcVkBuffer.Memory.BlockMappedPointer;
+                mappedPtr = (IntPtr)copySrcVkBuffer.Memory.MappedPointerWithOffset;
                 destPtr = (byte*)mappedPtr;
             }
 
@@ -792,28 +790,9 @@ namespace XenoAtom.Graphics.Vk
             return sharedPool;
         }
 
-        private IntPtr MapBuffer(VkBuffer buffer, uint numBytes)
-        {
-            if (buffer.Memory.IsPersistentMapped)
-            {
-                return (IntPtr)buffer.Memory.BlockMappedPointer;
-            }
-            else
-            {
-                void* mappedPtr;
-                vkMapMemory(VkDevice, buffer.Memory.DeviceMemory, buffer.Memory.Offset, numBytes, default, &mappedPtr)
-                    .VkCheck("Unable to map buffer memory");
-                return (IntPtr)mappedPtr;
-            }
-        }
+        private IntPtr MapBuffer(VkBuffer buffer, uint numBytes) => MemoryManager.Map(buffer.Memory);
 
-        private void UnmapBuffer(VkBuffer buffer)
-        {
-            if (!buffer.Memory.IsPersistentMapped)
-            {
-                vkUnmapMemory(VkDevice, buffer.Memory.DeviceMemory);
-            }
-        }
+        private void UnmapBuffer(VkBuffer buffer) => MemoryManager.Unmap(buffer.Memory);
 
         private protected override void UpdateTextureCore(
             Texture texture,
@@ -832,10 +811,10 @@ namespace XenoAtom.Graphics.Vk
             bool isStaging = (vkTex.Usage & TextureUsage.Staging) != 0;
             if (isStaging)
             {
-                VkMemoryBlock memBlock = vkTex.Memory;
+                VkDeviceMemoryChunkRange memBlock = vkTex.Memory;
                 uint subresource = texture.CalculateSubresource(mipLevel, arrayLayer);
                 VkSubresourceLayout layout = vkTex.GetSubresourceLayout(subresource);
-                byte* imageBasePtr = (byte*)memBlock.BlockMappedPointer + layout.offset;
+                byte* imageBasePtr = (byte*)memBlock.MappedPointerWithOffset + layout.offset;
 
                 uint srcRowPitch = FormatHelpers.GetRowPitch(width, texture.Format);
                 uint srcDepthPitch = FormatHelpers.GetDepthPitch(srcRowPitch, height, texture.Format);

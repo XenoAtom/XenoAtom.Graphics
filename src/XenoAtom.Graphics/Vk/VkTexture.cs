@@ -12,7 +12,7 @@ namespace XenoAtom.Graphics.Vk
         private new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
 
         private readonly VkImage _optimalImage;
-        private readonly VkMemoryBlock _memoryBlock;
+        private readonly VkDeviceMemoryChunkRange _memoryBlock;
         private readonly XenoAtom.Interop.vulkan.VkBuffer _stagingBuffer;
         private PixelFormat _format; // Static for regular images -- may change for shared staging images
         private readonly uint _actualImageArrayLayers;
@@ -43,7 +43,7 @@ namespace XenoAtom.Graphics.Vk
 
         public VkImage OptimalDeviceImage => _optimalImage;
         public XenoAtom.Interop.vulkan.VkBuffer StagingBuffer => _stagingBuffer;
-        public VkMemoryBlock Memory => _memoryBlock;
+        public VkDeviceMemoryChunkRange Memory => _memoryBlock;
 
         public VkFormat VkFormat { get; }
         public VkSampleCountFlags VkSampleCount { get; }
@@ -94,32 +94,13 @@ namespace XenoAtom.Graphics.Vk
                 }
 
                 uint subresourceCount = MipLevels * _actualImageArrayLayers * Depth;
-                VkResult result = vkCreateImage(gd.VkDevice, imageCI, null, out _optimalImage);
-                CheckResult(result);
-
-                VkMemoryRequirements memoryRequirements;
-                bool prefersDedicatedAllocation;
-                VkImageMemoryRequirementsInfo2 memReqsInfo2 = new VkImageMemoryRequirementsInfo2();
-                memReqsInfo2.image = _optimalImage;
-                VkMemoryRequirements2 memReqs2 = new VkMemoryRequirements2();
-                VkMemoryDedicatedRequirements dedicatedReqs = new VkMemoryDedicatedRequirements();
-                memReqs2.pNext = &dedicatedReqs;
-                vkGetImageMemoryRequirements2(Device, &memReqsInfo2, &memReqs2);
-                memoryRequirements = memReqs2.memoryRequirements;
-                prefersDedicatedAllocation = dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation;
-
-                VkMemoryBlock memoryToken = gd.MemoryManager.Allocate(
-                    memoryRequirements.memoryTypeBits,
-                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                    false,
-                    memoryRequirements.size,
-                    memoryRequirements.alignment,
-                    prefersDedicatedAllocation,
-                    _optimalImage,
-                    default);
-                _memoryBlock = memoryToken;
-                result = vkBindImageMemory(gd.VkDevice, _optimalImage, _memoryBlock.DeviceMemory, _memoryBlock.Offset);
-                CheckResult(result);
+                var allocInfo = new VkDeviceMemoryAllocationCreateInfo
+                {
+                    pNext = &imageCI,
+                    Usage = VkDeviceMemoryUsage.PreferDevice,
+                };
+                _memoryBlock = gd.MemoryManager.CreateBufferOrImage(allocInfo, out var optimalImage);
+                _optimalImage = new(new(optimalImage));
 
                 _imageLayouts = new VkImageLayout[subresourceCount];
                 for (int i = 0; i < _imageLayouts.Length; i++)
@@ -150,40 +131,17 @@ namespace XenoAtom.Graphics.Vk
                 VkBufferCreateInfo bufferCI = new VkBufferCreateInfo();
                 bufferCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
                 bufferCI.size = stagingSize;
-                VkResult result = vkCreateBuffer(Device, bufferCI, null, out _stagingBuffer);
-                CheckResult(result);
+
                 //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General, $"(StagingBuffer Texture) VkBuffer Created 0x{_stagingBuffer.Value.Handle:X16}");
 
-                VkMemoryRequirements bufferMemReqs;
-                bool prefersDedicatedAllocation;
-
-                VkBufferMemoryRequirementsInfo2 memReqInfo2 = new VkBufferMemoryRequirementsInfo2();
-                memReqInfo2.buffer = _stagingBuffer;
-                VkMemoryRequirements2 memReqs2 = new VkMemoryRequirements2();
-                VkMemoryDedicatedRequirements dedicatedReqs = new VkMemoryDedicatedRequirements();
-                memReqs2.pNext = &dedicatedReqs;
-                vkGetBufferMemoryRequirements2(Device, &memReqInfo2, &memReqs2);
-                bufferMemReqs = memReqs2.memoryRequirements;
-                prefersDedicatedAllocation = dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation;
-
-                // Use "host cached" memory when available, for better performance of GPU -> CPU transfers
-                var propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
-                if (!gd.MemoryManager.TryFindMemoryType(bufferMemReqs.memoryTypeBits, propertyFlags, out _))
+                var allocInfo = new VkDeviceMemoryAllocationCreateInfo
                 {
-                    propertyFlags ^= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
-                }
-                _memoryBlock = Device.MemoryManager.Allocate(
-                    bufferMemReqs.memoryTypeBits,
-                    propertyFlags,
-                    true,
-                    bufferMemReqs.size,
-                    bufferMemReqs.alignment,
-                    prefersDedicatedAllocation,
-                    default,
-                    _stagingBuffer);
-
-                result = vkBindBufferMemory(Device, _stagingBuffer, _memoryBlock.DeviceMemory, _memoryBlock.Offset);
-                CheckResult(result);
+                    pNext = &bufferCI,
+                    Usage = VkDeviceMemoryUsage.PreferHost,
+                    Flags = VkDeviceMemoryAllocationCreateFlags.MappeableForRandomAccess | VkDeviceMemoryAllocationCreateFlags.Mapped,
+                };
+                _memoryBlock = Device.MemoryManager.CreateBufferOrImage(allocInfo, out var stagingBuffer);
+                _stagingBuffer = new(new(stagingBuffer));
             }
 
             ClearIfRenderTarget();

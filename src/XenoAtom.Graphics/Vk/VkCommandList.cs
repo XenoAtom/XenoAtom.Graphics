@@ -69,7 +69,7 @@ namespace XenoAtom.Graphics.Vk
             vkCmdBeginDebugUtilsLabelExt = manager.vkCmdBeginDebugUtilsLabelExt;
             vkCmdEndDebugUtilsLabelExt = manager.vkCmdEndDebugUtilsLabelExt;
             vkCmdInsertDebugUtilsLabelExt = manager.vkCmdInsertDebugUtilsLabelExt;
-            
+
             var poolCInfo = new VkCommandPoolCreateInfo
             {
                 flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
@@ -212,6 +212,41 @@ namespace XenoAtom.Graphics.Vk
                 // Queue up the clear value for the next RenderPass.
                 _clearValues[index] = clearValue;
                 _validColorClearValues[index] = true;
+            }
+        }
+
+        private protected override void ClearTextureCore(Texture textureArg)
+        {
+            EnsureBegin();
+            var texture = Util.AssertSubtype<Texture, VkTexture>(textureArg);
+            if ((texture.Usage & TextureUsage.Staging) != 0)
+            {
+                var ptr = Device.MemoryManager.Map(texture.Memory);
+                var span = new Span<byte>((byte*)ptr, (int)texture.Memory.Size);
+                span.Clear();
+                Device.MemoryManager.Unmap(texture.Memory);
+            }
+            else
+            {
+                uint effectiveLayers = texture.ArrayLayers;
+                if ((texture.Usage & TextureUsage.Cubemap) != 0)
+                {
+                    effectiveLayers *= 6;
+                }
+
+                VkImageSubresourceRange range = new()
+                {
+                    aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    baseMipLevel = 0,
+                    levelCount = texture.MipLevels,
+                    baseArrayLayer = 0,
+                    layerCount = effectiveLayers
+                };
+                VkClearColorValue color = default;
+                texture.TransitionImageLayout(_cb, 0, texture.MipLevels, 0, effectiveLayers, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+                vkCmdClearColorImage(_cb, texture.OptimalDeviceImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (VkClearColorValue*)&color, 1, &range);
+                VkImageLayout colorLayout = texture.IsSwapchainTexture ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                texture.TransitionImageLayout(_cb, 0, texture.MipLevels, 0, effectiveLayers, colorLayout);
             }
         }
 
@@ -740,7 +775,7 @@ namespace XenoAtom.Graphics.Vk
         public override void SetScissorRect(uint index, uint x, uint y, uint width, uint height)
         {
             EnsureBegin();
-            
+
             if (index == 0 || Device.Features.MultipleViewports)
             {
                 VkRect2D scissor = new VkRect2D((int)x, (int)y, width, height);
@@ -755,7 +790,7 @@ namespace XenoAtom.Graphics.Vk
         public override void SetViewport(uint index, ref Viewport viewport)
         {
             EnsureBegin();
-            
+
             if (index == 0 || Device.Features.MultipleViewports)
             {
                 float vpY = Device.IsClipSpaceYInverted
@@ -814,17 +849,37 @@ namespace XenoAtom.Graphics.Vk
 
             bool needToProtectUniform = destination.Usage.HasFlag(BufferUsage.UniformBuffer);
 
-            VkMemoryBarrier barrier = new();
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = needToProtectUniform ? VK_ACCESS_UNIFORM_READ_BIT : VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-            barrier.pNext = null;
+            VkMemoryBarrier barrier = new()
+            {
+                srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                dstAccessMask = needToProtectUniform ? VK_ACCESS_UNIFORM_READ_BIT : VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
+                pNext = null
+            };
+
+            //Device.Features.GeometryShader
+            VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+            if (needToProtectUniform)
+            {
+                // TODO: this could be calculated at constructor time
+                stageMask = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+                            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
+                            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+                if (Device.Features.GeometryShader)
+                {
+                    stageMask |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+                }
+                else if (Device.Features.TessellationShaders)
+                {
+                    stageMask |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
+                                 VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+                }
+            }
+
             vkCmdPipelineBarrier(
                 _cb,
-                VK_PIPELINE_STAGE_TRANSFER_BIT, needToProtectUniform ?
-                    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
-                    VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT
-                    : VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                stageMask,
                 (VkDependencyFlags)0,
                 1, &barrier,
                 0, null,
@@ -1353,7 +1408,7 @@ namespace XenoAtom.Graphics.Vk
                 RecycleStagingInfo(_currentStagingInfo);
                 _currentStagingInfo = null;
             }
-            
+
             vkDestroyCommandPool(Device, _pool, null);
 
             Debug.Assert(_submittedStagingInfos.Count == 0);
@@ -1426,7 +1481,7 @@ namespace XenoAtom.Graphics.Vk
                 throw new InvalidOperationException($"Invalid call. Current Compute Pipeline is not set. The `{nameof(SetPipeline)}` method should have been called before.");
             }
         }
-        
+
         private class StagingResourceInfo
         {
             public readonly List<VkBuffer> BuffersUsed = new ();

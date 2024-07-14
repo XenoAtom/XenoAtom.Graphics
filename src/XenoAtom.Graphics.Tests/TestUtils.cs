@@ -106,6 +106,13 @@ namespace XenoAtom.Graphics.Tests
         public void Dispose()
         {
             GD.WaitForIdle();
+
+            // Uncomment to get more statistics about the memory manager
+
+            //var builder = new StringBuilder();
+            //GD.DumpStatistics(builder);
+            //_textOutputHelper.WriteLine(builder.ToString());
+
             _disposeCollector.DisposeAll();
             GD.Dispose();
 

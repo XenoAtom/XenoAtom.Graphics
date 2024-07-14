@@ -355,6 +355,7 @@ namespace XenoAtom.Graphics.Tests
 
             CommandList cl = GD.CreateCommandList();
             cl.Begin();
+            cl.ClearTexture(dst); // Clear the dest texture otherwise we will get garbage in the assert below
             for (uint face = 0; face < 6; face++)
                 cl.CopyTexture(src, dst, CopiedMip, face);
             cl.End();
@@ -457,6 +458,7 @@ namespace XenoAtom.Graphics.Tests
 
             CommandList cl = GD.CreateCommandList();
             cl.Begin();
+            cl.ClearTexture(dst); // need to clear otherwise we get garbage as we copy only a specific layer
             for (uint mip = 0; mip < MipLevels; mip++)
                 cl.CopyTexture(src, dst, mip, CopiedArrayLayer);
             cl.End();
