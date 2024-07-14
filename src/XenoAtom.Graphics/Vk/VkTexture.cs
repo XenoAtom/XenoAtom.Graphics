@@ -99,7 +99,7 @@ namespace XenoAtom.Graphics.Vk
 
                 var allocInfo = new VkDeviceMemoryAllocationCreateInfo
                 {
-                    Usage = VkDeviceMemoryUsage.AutoPreferDevice,
+                    Usage = VkDeviceMemoryUsage.PreferDevice,
                 };
                 _memoryBlock = gd.MemoryManager.Allocate(_optimalImage, allocInfo);
 
@@ -139,8 +139,8 @@ namespace XenoAtom.Graphics.Vk
 
                 var allocInfo = new VkDeviceMemoryAllocationCreateInfo
                 {
-                    Usage = VkDeviceMemoryUsage.AutoPreferHost,
-                    Flags = VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_MAPPED_BIT,
+                    Usage = VkDeviceMemoryUsage.PreferHost,
+                    Flags = VkDeviceMemoryAllocationCreateFlags.MappeableForRandomAccess | VkDeviceMemoryAllocationCreateFlags.Mapped,
                 };
                 _memoryBlock = Device.MemoryManager.Allocate(_stagingBuffer, allocInfo);
             }

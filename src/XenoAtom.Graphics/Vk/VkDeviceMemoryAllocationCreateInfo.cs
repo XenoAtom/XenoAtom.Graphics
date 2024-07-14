@@ -6,13 +6,13 @@ using XenoAtom.Interop;
 
 namespace XenoAtom.Graphics.Vk;
 
-public struct VkDeviceMemoryAllocationCreateInfo
+internal struct VkDeviceMemoryAllocationCreateInfo
 {
     public VkDeviceMemoryAllocationCreateInfo()
     {
         MemoryTypeBits = uint.MaxValue;
     }
-    
+
     public VkDeviceMemoryUsage Usage;
     public VkDeviceMemoryAllocationCreateFlags Flags;
     public vulkan.VkMemoryPropertyFlags RequiredFlags;

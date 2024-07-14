@@ -221,7 +221,6 @@ namespace XenoAtom.Graphics.Vk
             var texture = Util.AssertSubtype<Texture, VkTexture>(textureArg);
             if ((texture.Usage & TextureUsage.Staging) != 0)
             {
-                var buffer = texture.StagingBuffer;
                 var ptr = Device.MemoryManager.Map(texture.Memory);
                 var span = new Span<byte>((byte*)ptr, (int)texture.Memory.Size);
                 span.Clear();

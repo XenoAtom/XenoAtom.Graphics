@@ -4,9 +4,9 @@
 
 namespace XenoAtom.Graphics.Vk;
 
-public enum VkDeviceMemoryUsage
+internal enum VkDeviceMemoryUsage
 {
-    Auto,
-    AutoPreferDevice,
-    AutoPreferHost
+    Default,
+    PreferDevice,
+    PreferHost
 }

@@ -16,6 +16,8 @@ namespace XenoAtom.Graphics.Vk;
 
 internal unsafe class VkDeviceMemoryManager : IDisposable
 {
+    private const ulong MaxMemoryForNonDedicated = 256 * 1024 * 1024;
+    private const ulong MinAlignment = 64;
     private readonly VkDevice _device;
     private readonly VkPhysicalDevice _physicalDevice;
     private readonly VkPhysicalDeviceProperties _physicalDeviceProperties;
@@ -29,7 +31,7 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
     private readonly bool _useAmdDeviceCoherentMemory = false;
     private readonly object _lock = new object();
     private ulong _totalAllocatedBytes;
-        
+
     // https://blog.io7m.com/2023/11/11/vulkan-memory-allocation.xhtml
 
     public VkDeviceMemoryManager(
@@ -65,79 +67,74 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
     private bool IsIntegratedGpu => _physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
 
     public VkDeviceMemoryAllocation Allocate(vulkan.VkBuffer vkBuffer, in VkDeviceMemoryAllocationCreateInfo allocationCreateInfo)
-    {
-        var memoryTypeBits = allocationCreateInfo.MemoryTypeBits;
-        while (TryFindMemoryTypeIndex(memoryTypeBits, in allocationCreateInfo, out int memoryTypeIndex))
-        {
-            VkBufferMemoryRequirementsInfo2 requirementsInfo = new() { buffer = vkBuffer };
-            VkMemoryRequirements2 requirements = new();
+        => Allocate(false, vkBuffer.Value.Handle, allocationCreateInfo);
 
-            var dedicatedReqs = new VkMemoryDedicatedRequirements();
-            requirements.pNext = &dedicatedReqs;
-            
-            vkGetBufferMemoryRequirements2(_device, requirementsInfo, ref requirements);
-            ulong size = requirements.memoryRequirements.size;
-            ulong alignment = Math.Max(_bufferImageGranularity, requirements.memoryRequirements.alignment.Value);
-
-            var copyAllocationCreateInfo = allocationCreateInfo;
-            if (dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation)
-            {
-                copyAllocationCreateInfo.Flags |= VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-            }
-
-            var dedicated = (allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT) != 0;
-
-            if (TryAllocate(memoryTypeIndex, (uint)size, (uint)alignment, dedicated ? vkBuffer.Value.Handle : 0, 0, in copyAllocationCreateInfo, out VkDeviceMemoryAllocation memoryBlock))
-            {
-                vkBindBufferMemory(_device, vkBuffer, memoryBlock.DeviceMemory, memoryBlock.Offset)
-                    .VkCheck("Unable to bind allocated buffer memory");
-
-                return memoryBlock;
-            }
-
-            // Remove old memTypeIndex from list of possibilities.
-            memoryTypeBits &= ~(1u << memoryTypeIndex);
-        }
-
-        throw new GraphicsException("Unable to allocate sufficient Vulkan memory.");
-    }
-    
     public VkDeviceMemoryAllocation Allocate(VkImage vkImage, in VkDeviceMemoryAllocationCreateInfo allocationCreateInfo)
+        => Allocate(true, vkImage.Value.Handle, allocationCreateInfo);
+
+    private VkDeviceMemoryAllocation Allocate(bool isImage, nint handle, in VkDeviceMemoryAllocationCreateInfo allocationCreateInfo)
     {
+        var dedicatedReqs = new VkMemoryDedicatedRequirements();
+        VkMemoryRequirements2 requirements = new()
+        {
+            pNext = &dedicatedReqs
+        };
+        if (isImage)
+        {
+            VkImageMemoryRequirementsInfo2 requirementsInfo = new() { image = new(new(handle)) };
+            vkGetImageMemoryRequirements2(_device, requirementsInfo, ref requirements);
+        }
+        else
+        {
+            VkBufferMemoryRequirementsInfo2 requirementsInfo = new() { buffer = new(new(handle)) };
+            vkGetBufferMemoryRequirements2(_device, requirementsInfo, ref requirements);
+        }
+
+        ulong alignment = Math.Max(MinAlignment, Math.Max(_bufferImageGranularity, requirements.memoryRequirements.alignment.Value));
+        ulong size = requirements.memoryRequirements.size;
+        var maxSize = (size + alignment - 1) & ~(alignment - 1);
+        if (maxSize > int.MaxValue)
+        {
+            throw new InvalidOperationException(
+                $"Invalid size. The requested size {maxSize} bytes must be <= int.MaxValue");
+        }
+
+        var copyAllocationCreateInfo = allocationCreateInfo;
+        // Force dedicated allocation if the size is above the limit for the TLSF allocator or if it is explicitly requested
+        if (maxSize >= MaxMemoryForNonDedicated || (dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation))
+        {
+            copyAllocationCreateInfo.Flags |= VkDeviceMemoryAllocationCreateFlags.Dedicated;
+        }
+
         var memoryTypeBits = allocationCreateInfo.MemoryTypeBits;
+        bool triedToAllocate = false;
         while (TryFindMemoryTypeIndex(memoryTypeBits, in allocationCreateInfo, out int memoryTypeIndex))
         {
-
-            VkImageMemoryRequirementsInfo2 requirementsInfo = new() { image = vkImage };
-            VkMemoryRequirements2 requirements = new();
-            var dedicatedReqs = new VkMemoryDedicatedRequirements();
-            requirements.pNext = &dedicatedReqs;
-
-            vkGetImageMemoryRequirements2(_device, requirementsInfo, ref requirements);
-            ulong size = requirements.memoryRequirements.size;
-            ulong alignment = Math.Max(_bufferImageGranularity, requirements.memoryRequirements.alignment.Value);
-
-            var copyAllocationCreateInfo = allocationCreateInfo;
-            if (dedicatedReqs.prefersDedicatedAllocation || dedicatedReqs.requiresDedicatedAllocation)
+            if (TryAllocate(memoryTypeIndex, (uint)size, (uint)alignment, 0, handle, in copyAllocationCreateInfo, out VkDeviceMemoryAllocation memoryBlock))
             {
-                copyAllocationCreateInfo.Flags |= VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-            }
-
-            var dedicated = (allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT) != 0;
-
-            if (TryAllocate(memoryTypeIndex, (uint)size, (uint)alignment, 0, dedicated ? vkImage.Value.Handle : 0, in copyAllocationCreateInfo, out VkDeviceMemoryAllocation memoryBlock))
-            {
-                vkBindImageMemory(_device, vkImage, memoryBlock.DeviceMemory, memoryBlock.Offset)
-                    .VkCheck("Unable to bind allocated image memory");
+                if (isImage)
+                {
+                    vkBindImageMemory(_device, new(new(handle)), memoryBlock.DeviceMemory, memoryBlock.Offset)
+                        .VkCheck("Unable to bind allocated image memory");
+                }
+                else
+                {
+                    vkBindBufferMemory(_device, new(new(handle)), memoryBlock.DeviceMemory, memoryBlock.Offset)
+                        .VkCheck("Unable to bind allocated buffer memory");
+                }
 
                 return memoryBlock;
+            }
+            else
+            {
+                triedToAllocate = true;
             }
 
             // Remove old memTypeIndex from list of possibilities.
             memoryTypeBits &= ~(1u << memoryTypeIndex);
         }
 
-        throw new GraphicsException("Unable to allocate sufficient Vulkan memory.");
+        throw new GraphicsException(triedToAllocate ? "Unable to allocate sufficient Vulkan memory." : $"Unable to find a memory type with bits 0x{allocationCreateInfo.MemoryTypeBits:X8}.");
     }
 
     public void Free(VkDeviceMemoryAllocation block)
@@ -174,7 +171,7 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
             }
         }
     }
-    
+
     private VkDeviceMemoryChunkAllocator GetOrCreateDedicatedChunkAllocator(int memoryTypeIndex)
     {
         VkDeviceMemoryChunkAllocator chunkAllocator;
@@ -205,15 +202,15 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
         }
         return allocator;
     }
-    
+
     private bool TryAllocate(int memoryTypeIndex, uint size, uint alignment, nint dedicatedBuffer, nint dedicatedImage, in VkDeviceMemoryAllocationCreateInfo allocationCreateInfo, out VkDeviceMemoryAllocation memoryBlock)
     {
         VkDeviceMemory vkDeviceMemory;
         VkDeviceMemoryMappedState? mapped = null;
-        if ((allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT) != 0)
+        if ((allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.Dedicated) != 0)
         {
             var chunkAllocator = GetOrCreateDedicatedChunkAllocator(memoryTypeIndex);
-            
+
             MemoryChunk chunk;
             lock (chunkAllocator)
             {
@@ -225,13 +222,13 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
 
                 vkDeviceMemory = new(new((nint)chunk.Id.Value));
 
-                if ((allocationCreateInfo.Flags & (VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT)) != 0)
+                if ((allocationCreateInfo.Flags & (VkDeviceMemoryAllocationCreateFlags.MappeableForRandomAccess | VkDeviceMemoryAllocationCreateFlags.MappeableForSequentialWrite)) != 0)
                 {
                     if (!_mappedMemory.TryGetValue(vkDeviceMemory, out mapped))
                     {
                         mapped = new VkDeviceMemoryMappedState()
                         {
-                            IsPersistentMapped = (allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_MAPPED_BIT) != 0
+                            IsPersistentMapped = (allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.Mapped) != 0
                         };
                         _mappedMemory.Add(vkDeviceMemory, mapped);
                     }
@@ -254,13 +251,13 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
                 }
 
                 vkDeviceMemory = new(new((nint)allocation.ChunkId.Value));
-                if ((allocationCreateInfo.Flags & (VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT)) != 0)
+                if ((allocationCreateInfo.Flags & (VkDeviceMemoryAllocationCreateFlags.MappeableForRandomAccess | VkDeviceMemoryAllocationCreateFlags.MappeableForSequentialWrite)) != 0)
                 {
                     if (!_mappedMemory.TryGetValue(vkDeviceMemory, out mapped))
                     {
                         mapped = new VkDeviceMemoryMappedState()
                         {
-                            IsPersistentMapped = (allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_MAPPED_BIT) != 0
+                            IsPersistentMapped = (allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.Mapped) != 0
                         };
                         _mappedMemory.Add(vkDeviceMemory, mapped);
                     }
@@ -276,7 +273,7 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
 
         return true;
     }
-    
+
     private bool TryFindMemoryTypeIndex(uint memoryTypeBits, in VkDeviceMemoryAllocationCreateInfo allocationCreateInfo, out int memoryTypeIndex)
     {
         memoryTypeBits &= GlobalMemoryTypeBits;
@@ -341,7 +338,7 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
 
         return memoryTypeBits;
     }
-    
+
     private static bool FindMemoryPreferences(
         bool isIntegratedGPU,
         in VkDeviceMemoryAllocationCreateInfo allocCreateInfo,
@@ -355,17 +352,17 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
 
         switch (allocCreateInfo.Usage)
         {
-            case VkDeviceMemoryUsage.Auto:
-            case VkDeviceMemoryUsage.AutoPreferDevice:
-            case VkDeviceMemoryUsage.AutoPreferHost:
+            case VkDeviceMemoryUsage.Default:
+            case VkDeviceMemoryUsage.PreferDevice:
+            case VkDeviceMemoryUsage.PreferHost:
             {
                 // This relies on values of VK_IMAGE_USAGE_TRANSFER* being the same VK_BUFFER_IMAGE_TRANSFER*.
-                bool deviceAccess = (allocCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_DEVICE_ACCESS_BUFFER_OR_IMAGE_BIT) != 0;
-                bool hostAccessSequentialWrite = (allocCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT) != 0;
-                bool hostAccessRandom = (allocCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT) != 0;
-                bool hostAccessAllowTransferInstead = (allocCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0;
-                bool preferDevice = allocCreateInfo.Usage == VkDeviceMemoryUsage.AutoPreferDevice;
-                bool preferHost = allocCreateInfo.Usage == VkDeviceMemoryUsage.AutoPreferHost;
+                bool deviceAccess = (allocCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.RequiredTransfer) != 0;
+                bool hostAccessSequentialWrite = (allocCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.MappeableForSequentialWrite) != 0;
+                bool hostAccessRandom = (allocCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.MappeableForRandomAccess) != 0;
+                bool hostAccessAllowTransferInstead = (allocCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.AllowTransfer) != 0;
+                bool preferDevice = allocCreateInfo.Usage == VkDeviceMemoryUsage.PreferDevice;
+                bool preferHost = allocCreateInfo.Usage == VkDeviceMemoryUsage.PreferHost;
 
                 // CPU random access - e.g. a buffer written to or transferred from GPU to read back on CPU.
                 if (hostAccessRandom)
@@ -506,7 +503,7 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
             memoryBlock.Mapped!.Unmap(_device, memoryBlock.DeviceMemory);
         }
     }
-    
+
     private class VkDeviceMemoryChunkAllocator : IMemoryChunkAllocator
     {
         private readonly VkDevice _device;
@@ -519,9 +516,9 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
             _device = device;
             _memoryTypeIndex = memoryTypeIndex;
         }
-        
+
         public ulong TotalAllocatedBytes { get; private set; }
-        
+
         public bool TryAllocateChunk(MemorySize size, nint dedicatedBuffer, nint dedicatedImage, out MemoryChunk chunk)
         {
             var allocateInfo = new VkMemoryAllocateInfo
@@ -573,7 +570,7 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
             TotalAllocatedBytes += size;
             return true;
         }
-        
+
         public void FreeChunk(MemoryChunkId chunkId)
         {
             vkFreeMemory(_device, new VkDeviceMemory(new((nint)chunkId.Value)), null);

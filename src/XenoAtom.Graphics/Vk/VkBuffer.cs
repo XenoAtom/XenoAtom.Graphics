@@ -59,8 +59,8 @@ namespace XenoAtom.Graphics.Vk
 
             var allocInfo = new VkDeviceMemoryAllocationCreateInfo
             {
-                Usage = hostVisible ? VkDeviceMemoryUsage.AutoPreferHost : VkDeviceMemoryUsage.AutoPreferDevice,
-                Flags = isStaging ? VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VkDeviceMemoryAllocationCreateFlags.VMA_ALLOCATION_CREATE_MAPPED_BIT : VkDeviceMemoryAllocationCreateFlags.None
+                Usage = hostVisible ? VkDeviceMemoryUsage.PreferHost : VkDeviceMemoryUsage.PreferDevice,
+                Flags = isStaging ? VkDeviceMemoryAllocationCreateFlags.MappeableForRandomAccess | VkDeviceMemoryAllocationCreateFlags.Mapped : VkDeviceMemoryAllocationCreateFlags.None
             };
             _memory = gd.MemoryManager.Allocate(_deviceBuffer, allocInfo);
         }
