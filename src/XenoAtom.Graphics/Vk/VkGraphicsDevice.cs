@@ -717,6 +717,11 @@ namespace XenoAtom.Graphics.Vk
             return true;
         }
 
+        private protected override void DumpStatisticsCore(StringBuilder builder)
+        {
+            _memoryManager.DumpStatistics(builder);
+        }
+
         internal VkFilter GetFormatFilter(VkFormat format)
         {
             if (!_filters.TryGetValue(format, out VkFilter filter))

@@ -46,4 +46,9 @@ internal class VkDeviceMemoryMappedState
             }
         }
     }
+
+    public override string ToString()
+    {
+        return $"MappedPointer: {MappedPointer}, RefCount: {_refCount}";
+    }
 }

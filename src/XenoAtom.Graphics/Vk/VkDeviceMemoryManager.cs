@@ -3,9 +3,12 @@
 // See license.txt file in the project root for full license information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 using System.Threading;
 using XenoAtom.Allocators;
 using XenoAtom.Collections;
@@ -66,6 +69,61 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
     private uint GlobalMemoryTypeBits => CalculateGlobalMemoryTypeBits();
 
     private bool IsIntegratedGpu => _physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
+
+    public void DumpStatistics(StringBuilder writer)
+    {
+        writer.AppendLine("VkDeviceMemoryManager:");
+        writer.AppendLine($"  TotalAllocatedBytes: {_totalAllocatedBytes}");
+        writer.AppendLine($"  MaxMemoryAllocationCount: {_maxMemoryAllocationCount}");
+        writer.AppendLine($"  MaxMemoryAllocationSize: {_maxMemoryAllocationSize}");
+        writer.AppendLine($"  BufferImageGranularity: {_bufferImageGranularity}");
+        writer.AppendLine($"  UseAmdDeviceCoherentMemory: {_useAmdDeviceCoherentMemory}");
+        writer.AppendLine($"  MemoryTypeCount: {MemoryTypeCount}");
+        writer.AppendLine($"  GlobalMemoryTypeBits: {GlobalMemoryTypeBits}");
+        writer.AppendLine($"  IsIntegratedGpu: {IsIntegratedGpu}");
+        writer.AppendLine($"  MemoryProperties:");
+        for (int i = 0; i < MemoryTypeCount; i++)
+        {
+            writer.AppendLine($"    MemoryType[{i}]: {_memoryProperties.memoryTypes[i].propertyFlags}");
+        }
+
+        KeyValuePair<VkMemoryAllocatorKey, TlsfAllocator>[] allocators;
+        lock (_lock)
+        {
+            writer.AppendLine();
+            writer.AppendLine($"  MappedMemory:");
+            // TODO: lock is not correct for _mappedMemory
+            foreach (var mapped in _mappedMemory)
+            {
+                writer.AppendLine($"    0x{mapped.Key.Value.Handle:X16} -> {mapped.Value}");
+            }
+
+            writer.AppendLine();
+            writer.AppendLine($"  DedicatedAllocators:");
+            foreach (var dedicatedAllocator in _dedicatedAllocators)
+            {
+                writer.AppendLine($"    {dedicatedAllocator.Key} -> {dedicatedAllocator.Value.TotalAllocatedBytes} bytes allocated");
+            }
+
+            allocators = _allocators.ToArray();
+        }
+
+        writer.AppendLine();
+        writer.AppendLine($"  Allocators:");
+        foreach (var allocator in allocators)
+        {
+            writer.AppendLine("**************************************************************");
+            writer.AppendLine($"Chunk {allocator.Key}");
+            writer.AppendLine("**************************************************************");
+            lock (allocator.Value)
+            {
+                allocator.Value.Dump(writer);
+            }
+
+            writer.AppendLine();
+        }
+
+    }
 
     public VkDeviceMemoryAllocation CreateBufferOrImage(in VkDeviceMemoryAllocationCreateInfo allocationCreateInfo, out nint handle)
     {
@@ -318,7 +376,7 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
             {
                 VkMemoryPropertyFlags currFlags = _memoryProperties.memoryTypes[memTypeIndex].propertyFlags;
                 // This memory type contains requiredFlags.
-                if ((requiredFlags & ~currFlags) == 0)
+                if (currFlags != 0 && (requiredFlags & ~currFlags) == 0)
                 {
                     // Calculate cost as number of bits from preferredFlags not present in this memory type.
                     int currCost =
@@ -586,5 +644,11 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
     /// </summary>
     /// <param name="MemoryTypeIndex">The memory type index.</param>
     /// <param name="AlignmentAndLinear">The alignment >= 64 and combined with a flag indicating whether the resource is linear or not.</param>
-    private record struct VkMemoryAllocatorKey(int MemoryTypeIndex, uint AlignmentAndLinear);
+    private record struct VkMemoryAllocatorKey(int MemoryTypeIndex, uint AlignmentAndLinear)
+    {
+        public override string ToString()
+        {
+            return $"MemoryTypeIndex: {MemoryTypeIndex}, Alignment: {AlignmentAndLinear & ~1}, Linear: {(AlignmentAndLinear & 1) != 0}";
+        }
+    }
 }
