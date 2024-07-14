@@ -574,7 +574,7 @@ namespace XenoAtom.Graphics.Vk
 
         protected override MappedResource MapCore(IMappableResource resource, MapMode mode, uint subresource)
         {
-            VkDeviceMemoryAllocation memoryBlock;
+            VkDeviceMemoryChunkRange memoryBlock;
             IntPtr mappedPtr = IntPtr.Zero;
             uint sizeInBytes;
             uint offset = 0;
@@ -614,7 +614,7 @@ namespace XenoAtom.Graphics.Vk
 
         protected override void UnmapCore(IMappableResource resource, uint subresource)
         {
-            VkDeviceMemoryAllocation memoryBlock;
+            VkDeviceMemoryChunkRange memoryBlock;
             if (resource is VkBuffer buffer)
             {
                 memoryBlock = buffer.Memory;
@@ -811,7 +811,7 @@ namespace XenoAtom.Graphics.Vk
             bool isStaging = (vkTex.Usage & TextureUsage.Staging) != 0;
             if (isStaging)
             {
-                VkDeviceMemoryAllocation memBlock = vkTex.Memory;
+                VkDeviceMemoryChunkRange memBlock = vkTex.Memory;
                 uint subresource = texture.CalculateSubresource(mipLevel, arrayLayer);
                 VkSubresourceLayout layout = vkTex.GetSubresourceLayout(subresource);
                 byte* imageBasePtr = (byte*)memBlock.MappedPointerWithOffset + layout.offset;

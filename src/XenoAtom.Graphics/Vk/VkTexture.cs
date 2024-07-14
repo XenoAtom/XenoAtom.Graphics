@@ -12,7 +12,7 @@ namespace XenoAtom.Graphics.Vk
         private new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
 
         private readonly VkImage _optimalImage;
-        private readonly VkDeviceMemoryAllocation _memoryBlock;
+        private readonly VkDeviceMemoryChunkRange _memoryBlock;
         private readonly XenoAtom.Interop.vulkan.VkBuffer _stagingBuffer;
         private PixelFormat _format; // Static for regular images -- may change for shared staging images
         private readonly uint _actualImageArrayLayers;
@@ -43,7 +43,7 @@ namespace XenoAtom.Graphics.Vk
 
         public VkImage OptimalDeviceImage => _optimalImage;
         public XenoAtom.Interop.vulkan.VkBuffer StagingBuffer => _stagingBuffer;
-        public VkDeviceMemoryAllocation Memory => _memoryBlock;
+        public VkDeviceMemoryChunkRange Memory => _memoryBlock;
 
         public VkFormat VkFormat { get; }
         public VkSampleCountFlags VkSampleCount { get; }

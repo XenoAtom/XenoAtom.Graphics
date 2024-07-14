@@ -10,13 +10,13 @@ namespace XenoAtom.Graphics.Vk
         private new VkGraphicsDevice Device => Unsafe.As<GraphicsDevice, VkGraphicsDevice>(ref Unsafe.AsRef(in base.Device));
 
         private readonly XenoAtom.Interop.vulkan.VkBuffer _deviceBuffer;
-        private readonly VkDeviceMemoryAllocation _memory;
+        private readonly VkDeviceMemoryChunkRange _memory;
         
         public override uint SizeInBytes { get; }
         public override BufferUsage Usage { get; }
 
         public XenoAtom.Interop.vulkan.VkBuffer DeviceBuffer => _deviceBuffer;
-        public VkDeviceMemoryAllocation Memory => _memory;
+        public VkDeviceMemoryChunkRange Memory => _memory;
 
         public VkBuffer(VkGraphicsDevice gd, uint sizeInBytes, BufferUsage usage) : base(gd)
         {

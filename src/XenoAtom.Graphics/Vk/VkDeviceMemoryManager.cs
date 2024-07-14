@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -25,9 +26,7 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
     private readonly VkPhysicalDevice _physicalDevice;
     private readonly VkPhysicalDeviceProperties _physicalDeviceProperties;
     private readonly VkPhysicalDeviceMemoryProperties _memoryProperties;
-    private UnsafeDictionary<int, VkDeviceMemoryChunkAllocator> _dedicatedAllocators;
-    private UnsafeDictionary<VkDeviceMemory, VkDeviceMemoryMappedState> _mappedMemory;
-    private UnsafeDictionary<VkMemoryAllocatorKey, TlsfAllocator> _allocators;
+    private UnsafeDictionary<VkMemoryAllocatorKey, VkDeviceMemoryChunkAllocator> _chunkAllocators;
     private readonly ulong _bufferImageGranularity;
     private readonly uint _maxMemoryAllocationCount;
     private readonly ulong _maxMemoryAllocationSize;
@@ -59,9 +58,8 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
         vkGetPhysicalDeviceProperties2(physicalDevice, ref memoryProperties2);
         _maxMemoryAllocationSize = subProps3.maxMemoryAllocationSize;
 
-        _mappedMemory = new(128);
-        _dedicatedAllocators = new((int)VK_MAX_MEMORY_TYPES);
-        _allocators = new((int)VK_MAX_MEMORY_TYPES);
+        // Multiply by 3 to account for the different alignment and linear flags values (3 for alignment + 1 for linear)
+        _chunkAllocators = new((int)VK_MAX_MEMORY_TYPES * 4);
     }
 
     private uint MemoryTypeCount => _memoryProperties.memoryTypeCount;
@@ -87,45 +85,43 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
             writer.AppendLine($"    MemoryType[{i}]: {_memoryProperties.memoryTypes[i].propertyFlags}");
         }
 
-        KeyValuePair<VkMemoryAllocatorKey, TlsfAllocator>[] allocators;
+        KeyValuePair<VkMemoryAllocatorKey, VkDeviceMemoryChunkAllocator>[] chunkAllocators;
         lock (_lock)
         {
-            writer.AppendLine();
-            writer.AppendLine($"  MappedMemory:");
-            // TODO: lock is not correct for _mappedMemory
-            foreach (var mapped in _mappedMemory)
-            {
-                writer.AppendLine($"    0x{mapped.Key.Value.Handle:X16} -> {mapped.Value}");
-            }
-
-            writer.AppendLine();
-            writer.AppendLine($"  DedicatedAllocators:");
-            foreach (var dedicatedAllocator in _dedicatedAllocators)
-            {
-                writer.AppendLine($"    {dedicatedAllocator.Key} -> {dedicatedAllocator.Value.TotalAllocatedBytes} bytes allocated");
-            }
-
-            allocators = _allocators.ToArray();
+            chunkAllocators = _chunkAllocators.ToArray();
         }
 
-        writer.AppendLine();
-        writer.AppendLine($"  Allocators:");
-        foreach (var allocator in allocators)
+        if (chunkAllocators.Length > 0)
         {
-            writer.AppendLine("**************************************************************");
-            writer.AppendLine($"Chunk {allocator.Key}");
-            writer.AppendLine("**************************************************************");
-            lock (allocator.Value)
-            {
-                allocator.Value.Dump(writer);
-            }
-
             writer.AppendLine();
-        }
+            writer.AppendLine($"  ChunkAllocators:");
+            foreach (var allocator in chunkAllocators)
+            {
+                lock (allocator.Value)
+                {
+                    var chunkAllocator = allocator.Value;
 
+                    writer.AppendLine("**************************************************************");
+                    writer.AppendLine($"{allocator.Key}, TotalAllocatedBytes: {chunkAllocator.TotalAllocatedBytes}");
+                    writer.AppendLine("**************************************************************");
+
+                    var chunks = chunkAllocator.GetChunks();
+                    foreach (var chunk in chunks)
+                    {
+                        writer.AppendLine($"    {chunk}");
+                    }
+
+                    writer.AppendLine();
+                    
+                    allocator.Value.TlsfAllocator?.Dump(writer);
+                }
+
+                writer.AppendLine();
+            }
+        }
     }
 
-    public VkDeviceMemoryAllocation CreateBufferOrImage(in VkDeviceMemoryAllocationCreateInfo allocationCreateInfo, out nint handle)
+    public VkDeviceMemoryChunkRange CreateBufferOrImage(in VkDeviceMemoryAllocationCreateInfo allocationCreateInfo, out nint handle)
     {
         if (allocationCreateInfo.pNext == null)
         {
@@ -186,14 +182,20 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
             copyAllocationCreateInfo.Flags |= VkDeviceMemoryAllocationCreateFlags.Dedicated;
         }
 
+        bool hasDedicated = (copyAllocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.Dedicated) != 0;
+        if (hasDedicated)
+        {
+            isLinear = false;
+        }
+
         var memoryTypeBits = allocationCreateInfo.MemoryTypeBits;
         bool triedToAllocate = false;
         while (TryFindMemoryTypeIndex(memoryTypeBits, in allocationCreateInfo, out int memoryTypeIndex))
         {
             // Adjust alignment based on memory type (coherent/non-coherent)
-            var requestedAlignment = GetMemoryTypeMinAlignment(memoryTypeIndex, alignment);
+            var requestedAlignment = hasDedicated ? 0 : GetMemoryTypeMinAlignment(memoryTypeIndex, alignment);
 
-            if (TryAllocate(memoryTypeIndex, (uint)size, (uint)requestedAlignment, isLinear, vkBuffer, vkImage, in copyAllocationCreateInfo, out VkDeviceMemoryAllocation memoryBlock))
+            if (TryAllocate(memoryTypeIndex, (uint)size, (uint)requestedAlignment, isLinear, vkBuffer, vkImage, in copyAllocationCreateInfo, out VkDeviceMemoryChunkRange memoryBlock))
             {
                 if (isImage)
                 {
@@ -220,140 +222,100 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
         throw new GraphicsException(triedToAllocate ? "Unable to allocate sufficient Vulkan memory." : $"Unable to find a memory type with bits 0x{allocationCreateInfo.MemoryTypeBits:X8}.");
     }
 
-    public void Free(VkDeviceMemoryAllocation block)
+    public void Free(VkDeviceMemoryChunkRange block)
     {
-        if (block.Token.HasValue)
+        var chunk = block.Chunk;
+        if (block.Token.IsValid)
         {
-            var allocator = GetOrCreateAllocator(block.MemoryTypeIndex, block.IsLinear, block.Alignment);
-            lock (allocator)
-            {
-                allocator.Free(block.Token.Value);
-            }
+            var allocator = chunk.TlsfAllocator;
+            allocator?.Free(block.Token);
         }
         else
         {
-            vkFreeMemory(_device, block.DeviceMemory, null);
+            lock (_lock)
+            {
+                _chunkAllocators.Remove(new VkMemoryAllocatorKey(chunk.MemoryTypeIndex, 0));
+                chunk.Dispose(_device);
+            }
         }
     }
 
     public void Dispose()
     {
-        TlsfAllocator[] allocators;
         lock (_lock)
         {
-            allocators = _allocators.Values.ToArray();
-            _allocators.Clear();
-            _dedicatedAllocators.Clear();
-        }
-
-        foreach (var allocator in allocators)
-        {
-            lock (allocator)
+            foreach (var allocator in _chunkAllocators.Values)
             {
-                allocator.Reset();
+                allocator.Dispose();
             }
+
+            _chunkAllocators.Clear();
         }
     }
 
-    private VkDeviceMemoryChunkAllocator GetOrCreateDedicatedChunkAllocator(int memoryTypeIndex)
+    private VkDeviceMemoryChunkAllocator GetOrCreateChunkAllocator(int memoryTypeIndex, bool isLinear, uint alignment)
     {
-        VkDeviceMemoryChunkAllocator chunkAllocator;
         lock (_lock)
         {
-            ref var refChunkAllocator = ref _dedicatedAllocators.GetValueRefOrAddDefault(memoryTypeIndex, out var exists);
+            ref var refChunkAllocator = ref _chunkAllocators.GetValueRefOrAddDefault(new VkMemoryAllocatorKey(memoryTypeIndex, alignment | (isLinear ? 1U : 0)), out var exists);
             if (!exists)
             {
-                refChunkAllocator = new VkDeviceMemoryChunkAllocator(_device, memoryTypeIndex);
+                var chunkAllocator = new VkDeviceMemoryChunkAllocator(_device, memoryTypeIndex);
+                if (alignment != 0)
+                {
+                    chunkAllocator.TlsfAllocator = new TlsfAllocator(chunkAllocator, alignment);
+                }
+
+                refChunkAllocator = chunkAllocator;
+                return chunkAllocator;
             }
-            chunkAllocator = refChunkAllocator;
+
+            return refChunkAllocator;
         }
-        return chunkAllocator;
     }
 
-    private TlsfAllocator GetOrCreateAllocator(int memoryTypeIndex, bool isLinear, uint alignment)
+    private bool TryAllocate(int memoryTypeIndex, uint size, uint alignment, bool isLinear, vulkan.VkBuffer dedicatedBuffer, VkImage dedicatedImage, in VkDeviceMemoryAllocationCreateInfo allocationCreateInfo, out VkDeviceMemoryChunkRange memoryBlock)
     {
-        Debug.Assert(BitOperations.IsPow2(alignment));
-        TlsfAllocator allocator;
-        lock (_lock)
+        VkDeviceMemoryChunk? vkChunk;
+        ulong offset = 0;
+        TlsfAllocationToken token = default;
+
+        // Make sure that we are respecting some invariants
+        Debug.Assert(BitOperations.IsPow2(alignment) || (alignment == 0 && !isLinear && (allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.Dedicated) != 0));
+        var chunkAllocator = GetOrCreateChunkAllocator(memoryTypeIndex, isLinear, alignment);
+
+        lock (chunkAllocator)
         {
-            ref var refAllocator = ref _allocators.GetValueRefOrAddDefault(new VkMemoryAllocatorKey(memoryTypeIndex, alignment | (isLinear ? 1U : 0)), out var exists);
-            if (!exists)
+            if ((allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.Dedicated) != 0)
             {
-                var backend = new VkDeviceMemoryChunkAllocator(_device, memoryTypeIndex);
-                refAllocator = new TlsfAllocator(backend, alignment);
+                if (!chunkAllocator.TryAllocateDedicatedChunk(size, dedicatedBuffer, dedicatedImage, out vkChunk))
+                {
+                    memoryBlock = default;
+                    return false;
+                }
             }
-            allocator = refAllocator;
-        }
-        return allocator;
-    }
-
-    private bool TryAllocate(int memoryTypeIndex, uint size, uint alignment, bool isLinear, vulkan.VkBuffer dedicatedBuffer, VkImage dedicatedImage, in VkDeviceMemoryAllocationCreateInfo allocationCreateInfo, out VkDeviceMemoryAllocation memoryBlock)
-    {
-        VkDeviceMemory vkDeviceMemory;
-        VkDeviceMemoryMappedState? mapped = null;
-        if ((allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.Dedicated) != 0)
-        {
-            var chunkAllocator = GetOrCreateDedicatedChunkAllocator(memoryTypeIndex);
-
-            MemoryChunk chunk;
-            lock (chunkAllocator)
+            else
             {
-                if (!chunkAllocator.TryAllocateChunk(size, dedicatedBuffer, dedicatedImage, out chunk))
+                var tlsfAllocator = chunkAllocator.TlsfAllocator!;
+                if (!tlsfAllocator.TryAllocate(size, out var allocation))
                 {
                     memoryBlock = default;
                     return false;
                 }
 
-                vkDeviceMemory = new(new((nint)chunk.Id.Value));
-
-                if ((allocationCreateInfo.Flags & (VkDeviceMemoryAllocationCreateFlags.MappeableForRandomAccess | VkDeviceMemoryAllocationCreateFlags.MappeableForSequentialWrite)) != 0)
-                {
-                    if (!_mappedMemory.TryGetValue(vkDeviceMemory, out mapped))
-                    {
-                        mapped = new VkDeviceMemoryMappedState()
-                        {
-                            IsPersistentMapped = (allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.Mapped) != 0
-                        };
-                        _mappedMemory.Add(vkDeviceMemory, mapped);
-                    }
-                }
+                vkChunk = ((VkDeviceMemoryChunkAllocator)tlsfAllocator.ChunkAllocator).GetChunk((int)allocation.ChunkId.Value);
+                vkChunk.IsLinear = isLinear;
+                offset = allocation.Address;
+                token = allocation.Token;
             }
-
-            memoryBlock = new VkDeviceMemoryAllocation(memoryTypeIndex, 0, size, alignment, vkDeviceMemory, isLinear, mapped, null);
         }
-        else
+
+        if ((allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.Mapped) != 0)
         {
-            var allocator = GetOrCreateAllocator(memoryTypeIndex, isLinear, alignment);
-
-            TlsfAllocation allocation;
-            lock (allocator)
-            {
-                if (!allocator.TryAllocate(size, out allocation))
-                {
-                    memoryBlock = default;
-                    return false;
-                }
-
-                vkDeviceMemory = new(new((nint)allocation.ChunkId.Value));
-                if ((allocationCreateInfo.Flags & (VkDeviceMemoryAllocationCreateFlags.MappeableForRandomAccess | VkDeviceMemoryAllocationCreateFlags.MappeableForSequentialWrite)) != 0)
-                {
-                    if (!_mappedMemory.TryGetValue(vkDeviceMemory, out mapped))
-                    {
-                        mapped = new VkDeviceMemoryMappedState()
-                        {
-                            IsPersistentMapped = (allocationCreateInfo.Flags & VkDeviceMemoryAllocationCreateFlags.Mapped) != 0
-                        };
-                        _mappedMemory.Add(vkDeviceMemory, mapped);
-                    }
-                }
-            }
-            memoryBlock = new VkDeviceMemoryAllocation(memoryTypeIndex, allocation.Address, size, alignment, vkDeviceMemory, isLinear, mapped, allocation.Token);
+            vkChunk.InitializedMapped(_device);
         }
 
-        if (mapped != null && mapped.IsPersistentMapped)
-        {
-            mapped.Map(_device, vkDeviceMemory);
-        }
+        memoryBlock = new VkDeviceMemoryChunkRange(vkChunk, offset, size, alignment, token);
 
         return true;
     }
@@ -545,66 +507,81 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
             : alignment;
     }
 
-    internal IntPtr Map(VkDeviceMemoryAllocation memoryBlock)
+    internal IntPtr Map(in VkDeviceMemoryChunkRange memoryBlock)
     {
-        Debug.Assert(memoryBlock.Mapped != null);
-
-        if (!memoryBlock.IsPersistentMapped)
+        var chunk = memoryBlock.Chunk;
+        if (!chunk.IsPersistentMapped)
         {
-            memoryBlock.Mapped!.Map(_device, memoryBlock.DeviceMemory);
+            chunk.Map(_device);
         }
 
-        return memoryBlock.Mapped!.MappedPointer + (nint)memoryBlock.Offset;
+        return memoryBlock.MappedPointerWithOffset;
     }
 
-    internal void Unmap(VkDeviceMemoryAllocation memoryBlock)
+    internal void Unmap(in VkDeviceMemoryChunkRange memoryBlock)
     {
-        Debug.Assert(memoryBlock.Mapped != null);
-
-        if (!memoryBlock.IsPersistentMapped)
+        var chunk = memoryBlock.Chunk;
+        if (!chunk.IsPersistentMapped)
         {
-            memoryBlock.Mapped!.Unmap(_device, memoryBlock.DeviceMemory);
+            chunk!.Unmap(_device);
         }
     }
 
-    private class VkDeviceMemoryChunkAllocator : IMemoryChunkAllocator
+    private class VkDeviceMemoryChunkAllocator : IMemoryChunkAllocator, IDisposable
     {
         private readonly VkDevice _device;
         private readonly int _memoryTypeIndex;
         private uint _memorySize = 65536;
+        private int _index;
+        private UnsafeDictionary<int, VkDeviceMemoryChunk> _chunks;
 
         public VkDeviceMemoryChunkAllocator(VkDevice device, int memoryTypeIndex)
         {
             _device = device;
             _memoryTypeIndex = memoryTypeIndex;
+            _chunks = new(4);
         }
+
+        public int MemoryTypeIndex => _memoryTypeIndex;
 
         public ulong TotalAllocatedBytes { get; private set; }
 
-        public bool TryAllocateChunk(MemorySize size, vulkan.VkBuffer dedicatedBuffer, VkImage dedicatedImage, out MemoryChunk chunk)
-        {
-            var allocateInfo = new VkMemoryAllocateInfo
-            {
-                allocationSize = size.Value,
-                memoryTypeIndex = (uint)_memoryTypeIndex
-            };
+        public TlsfAllocator? TlsfAllocator { get; set; }
 
-            VkMemoryDedicatedAllocateInfo dedicatedAI;
-            dedicatedAI = new VkMemoryDedicatedAllocateInfo
+        public int ChunkCount => _chunks.Count;
+
+        public VkDeviceMemoryChunk[] GetChunks() => _chunks.Values.ToArray();
+        
+        public VkDeviceMemoryChunk GetChunk(int index) => _chunks[index];
+        
+        
+        public bool TryAllocateDedicatedChunk(MemorySize size, vulkan.VkBuffer dedicatedBuffer, VkImage dedicatedImage, [NotNullWhen(true)] out VkDeviceMemoryChunk? vkChunk)
+        {
+            var dedicatedAllocateInfo = new VkMemoryDedicatedAllocateInfo
             {
                 buffer = dedicatedBuffer,
                 image = dedicatedImage,
             };
-            allocateInfo.pNext = &dedicatedAI;
 
-            var result = vkAllocateMemory(_device, allocateInfo, null, out var _memory);
+            var allocateInfo = new VkMemoryAllocateInfo
+            {
+                allocationSize = size.Value,
+                memoryTypeIndex = (uint)_memoryTypeIndex,
+                pNext = &dedicatedAllocateInfo
+            };
+
+            var result = vkAllocateMemory(_device, allocateInfo, null, out var deviceMemory);
             if (result != VK_SUCCESS)
             {
-                chunk = default;
+                vkChunk = null;
                 return false;
             }
 
-            chunk = new MemoryChunk(new((ulong)_memory.Value.Handle), 0, size);
+            vkChunk = new VkDeviceMemoryChunk();
+            _index++;
+            _chunks.Add(_index, vkChunk);
+            vkChunk.Initialize(deviceMemory, _memoryTypeIndex, (int)size.Value);
+            
             TotalAllocatedBytes += size;
             return true;
         }
@@ -628,14 +605,36 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
             // Increase the size for the next chunk allocation
             _memorySize = Math.Min(_memorySize * 2, (uint)MaxMemoryForNonDedicated);
 
-            chunk = new MemoryChunk(new((ulong)vkMemory.Value.Handle), 0, size);
+            var vkChunk = new VkDeviceMemoryChunk();
+            vkChunk.Initialize(vkMemory, _memoryTypeIndex, (int)size);
+            _index++;
+            _chunks.Add(_index, vkChunk);
+            
+            chunk = new MemoryChunk(new((ulong)_index), 0, size);
             TotalAllocatedBytes += size;
             return true;
         }
 
         public void FreeChunk(MemoryChunkId chunkId)
         {
-            vkFreeMemory(_device, new VkDeviceMemory(new((nint)chunkId.Value)), null);
+            if (_chunks.TryGetValue((int)chunkId.Value, out var chunk))
+            {
+                chunk.Dispose(_device);
+                _chunks.Remove((int)chunkId.Value);
+                TotalAllocatedBytes -= (ulong)chunk.Size;
+            }
+        }
+
+        public void Dispose()
+        {
+            TlsfAllocator = null;
+            foreach (var chunk in _chunks.Values)
+            {
+                chunk.Dispose(_device);
+            }
+            _chunks.Clear();
+            _index = 0;
+            TotalAllocatedBytes = 0;
         }
     }
 
@@ -648,7 +647,9 @@ internal unsafe class VkDeviceMemoryManager : IDisposable
     {
         public override string ToString()
         {
-            return $"MemoryTypeIndex: {MemoryTypeIndex}, Alignment: {AlignmentAndLinear & ~1}, Linear: {(AlignmentAndLinear & 1) != 0}";
+            return AlignmentAndLinear == 0
+                ? $"DedicatedAllocator MemoryTypeIndex: {MemoryTypeIndex}"
+                : $"PooledAllocator MemoryTypeIndex: {MemoryTypeIndex}, Alignment: {AlignmentAndLinear & ~1}, Linear: {(AlignmentAndLinear & 1) != 0}";
         }
     }
 }
