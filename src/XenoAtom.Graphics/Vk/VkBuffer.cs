@@ -51,18 +51,19 @@ namespace XenoAtom.Graphics.Vk
                 size = sizeInBytes,
                 usage = vkUsage
             };
-            vkCreateBuffer(gd.VkDevice, bufferCI, null, out _deviceBuffer)
-                .VkCheck("Unable to create buffer");
             
             var isStaging = (usage & BufferUsage.Staging) == BufferUsage.Staging;
             var hostVisible = isStaging || (usage & BufferUsage.Dynamic) == BufferUsage.Dynamic;
 
             var allocInfo = new VkDeviceMemoryAllocationCreateInfo
             {
+                pNext = &bufferCI,
                 Usage = hostVisible ? VkDeviceMemoryUsage.PreferHost : VkDeviceMemoryUsage.PreferDevice,
                 Flags = isStaging ? VkDeviceMemoryAllocationCreateFlags.MappeableForRandomAccess | VkDeviceMemoryAllocationCreateFlags.Mapped : VkDeviceMemoryAllocationCreateFlags.None
             };
-            _memory = gd.MemoryManager.Allocate(_deviceBuffer, allocInfo);
+
+            _memory = gd.MemoryManager.CreateBufferOrImage(allocInfo, out var deviceBuffer);
+            _deviceBuffer = new(new(deviceBuffer));
         }
 
         internal override void Destroy()

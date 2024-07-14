@@ -13,6 +13,7 @@ internal struct VkDeviceMemoryAllocationCreateInfo
         MemoryTypeBits = uint.MaxValue;
     }
 
+    public unsafe void* pNext;
     public VkDeviceMemoryUsage Usage;
     public VkDeviceMemoryAllocationCreateFlags Flags;
     public vulkan.VkMemoryPropertyFlags RequiredFlags;

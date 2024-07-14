@@ -94,14 +94,13 @@ namespace XenoAtom.Graphics.Vk
                 }
 
                 uint subresourceCount = MipLevels * _actualImageArrayLayers * Depth;
-                vkCreateImage(gd.VkDevice, imageCI, null, out _optimalImage)
-                    .VkCheck("Unable to create image");
-
                 var allocInfo = new VkDeviceMemoryAllocationCreateInfo
                 {
+                    pNext = &imageCI,
                     Usage = VkDeviceMemoryUsage.PreferDevice,
                 };
-                _memoryBlock = gd.MemoryManager.Allocate(_optimalImage, allocInfo);
+                _memoryBlock = gd.MemoryManager.CreateBufferOrImage(allocInfo, out var optimalImage);
+                _optimalImage = new(new(optimalImage));
 
                 _imageLayouts = new VkImageLayout[subresourceCount];
                 for (int i = 0; i < _imageLayouts.Length; i++)
@@ -132,17 +131,17 @@ namespace XenoAtom.Graphics.Vk
                 VkBufferCreateInfo bufferCI = new VkBufferCreateInfo();
                 bufferCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
                 bufferCI.size = stagingSize;
-                vkCreateBuffer(Device, bufferCI, null, out _stagingBuffer)
-                    .VkCheck("Unable to create buffer");
 
                 //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General, $"(StagingBuffer Texture) VkBuffer Created 0x{_stagingBuffer.Value.Handle:X16}");
 
                 var allocInfo = new VkDeviceMemoryAllocationCreateInfo
                 {
+                    pNext = &bufferCI,
                     Usage = VkDeviceMemoryUsage.PreferHost,
                     Flags = VkDeviceMemoryAllocationCreateFlags.MappeableForRandomAccess | VkDeviceMemoryAllocationCreateFlags.Mapped,
                 };
-                _memoryBlock = Device.MemoryManager.Allocate(_stagingBuffer, allocInfo);
+                _memoryBlock = Device.MemoryManager.CreateBufferOrImage(allocInfo, out var stagingBuffer);
+                _stagingBuffer = new(new(stagingBuffer));
             }
 
             ClearIfRenderTarget();
