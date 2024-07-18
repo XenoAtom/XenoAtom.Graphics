@@ -404,6 +404,7 @@ namespace XenoAtom.Graphics.Vk
 
                     currentBatchCount = 0;
                     currentBatchFirstSet = currentSlot + 1;
+                    currentBatchDynamicOffsetCount = 0;
                 }
             }
         }
