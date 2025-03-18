@@ -43,12 +43,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MinVer" Version="5.0.0">
+    <PackageReference Include="MinVer" Version="6.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="XenoAtom.Allocators" Version="3.2.0" />
-    <PackageReference Include="XenoAtom.Collections" Version="1.1.0" />
+    <PackageReference Include="XenoAtom.Collections" Version="1.2.0" />
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
@@ -56,7 +56,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="XenoAtom.Interop.vulkan" Version="1.0.0-alpha.14" PrivateAssets="contentfiles;analyzers;build;compile" />
+    <PackageReference Include="XenoAtom.Interop.vulkan" Version="1.0.0" PrivateAssets="contentfiles;analyzers;build;compile" />
     <PackageReference Include="XenoAtom.Interop" Version="1.5.0" />
     <!--<ProjectReference Include="..\..\..\Interop\src\common\XenoAtom.Interop.common\XenoAtom.Interop.common.csproj" />-->
     <!--<ProjectReference Include="..\..\..\Interop\src\vulkan\XenoAtom.Interop.vulkan\XenoAtom.Interop.vulkan.csproj" />-->
