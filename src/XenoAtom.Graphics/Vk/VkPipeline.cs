@@ -3,6 +3,7 @@ using static XenoAtom.Interop.vulkan;
 using static XenoAtom.Graphics.Vk.VulkanUtil;
 using System;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using XenoAtom.Interop;
@@ -23,6 +24,8 @@ namespace XenoAtom.Graphics.Vk
         public uint ResourceSetCount { get; }
         public int DynamicOffsetsCount { get; }
         public bool ScissorTestEnabled { get; }
+
+        public override IntPtr Handle => _pipelineLayout.Value.Handle;
 
         public override bool IsComputePipeline { get; }
         
@@ -244,6 +247,20 @@ namespace XenoAtom.Graphics.Vk
             }
             pipelineLayoutCI.pSetLayouts = dsls;
 
+            VkPushConstantRange* pushConstantRanges = stackalloc VkPushConstantRange[description.PushConstantRanges.Length];
+            if (description.PushConstantRanges.Length > 0)
+            {
+                for (int i = 0; i < description.PushConstantRanges.Length; i++)
+                {
+                    var range = description.PushConstantRanges[i];
+                    pushConstantRanges[i].stageFlags = VkFormats.VdToVkShaderStages(range.ShaderStage);
+                    pushConstantRanges[i].offset = range.Offset;
+                    pushConstantRanges[i].size = range.Size;
+                }
+                pipelineLayoutCI.pushConstantRangeCount = (uint)description.PushConstantRanges.Length;
+                pipelineLayoutCI.pPushConstantRanges = pushConstantRanges;
+            }
+
             vkCreatePipelineLayout(Device, pipelineLayoutCI, null, out _pipelineLayout).VkCheck();
             pipelineCI.layout = _pipelineLayout;
 
@@ -342,6 +359,12 @@ namespace XenoAtom.Graphics.Vk
         public VkPipeline(VkGraphicsDevice gd, in ComputePipelineDescription description)
             : base(gd, description)
         {
+            // Verify RequestedSubgroupSize
+            if (description.RequestedSubgroupSize != 0)
+            {
+                if (!BitOperations.IsPow2(description.RequestedSubgroupSize)) throw new ArgumentException($"Invalid subgroup size {description.RequestedSubgroupSize}. The subgroup size must be a power of 2.", nameof(description));
+            }
+            
             IsComputePipeline = true;
 
             VkComputePipelineCreateInfo pipelineCI = new VkComputePipelineCreateInfo();
@@ -356,6 +379,20 @@ namespace XenoAtom.Graphics.Vk
                 dsls[i] = Util.AssertSubtype<ResourceLayout, VkResourceLayout>(resourceLayouts[i]).DescriptorSetLayout;
             }
             pipelineLayoutCI.pSetLayouts = dsls;
+            
+            VkPushConstantRange* pushConstantRanges = stackalloc VkPushConstantRange[description.PushConstantRanges.Length];
+            if (description.PushConstantRanges.Length > 0)
+            {
+                for (int i = 0; i < description.PushConstantRanges.Length; i++)
+                {
+                    var range = description.PushConstantRanges[i];
+                    pushConstantRanges[i].stageFlags = VkFormats.VdToVkShaderStages(range.ShaderStage);
+                    pushConstantRanges[i].offset = range.Offset;
+                    pushConstantRanges[i].size = range.Size;
+                }
+                pipelineLayoutCI.pushConstantRangeCount = (uint)description.PushConstantRanges.Length;
+                pipelineLayoutCI.pPushConstantRanges = pushConstantRanges;
+            }
 
             vkCreatePipelineLayout(Device, pipelineLayoutCI, null, out _pipelineLayout);
             pipelineCI.layout = _pipelineLayout;
@@ -391,7 +428,7 @@ namespace XenoAtom.Graphics.Vk
                 specializationInfo.mapEntryCount = (uint)specializationCount;
                 specializationInfo.pMapEntries = mapEntries;
             }
-
+            
             Shader shader = description.ComputeShader;
             VkShader vkShader = Util.AssertSubtype<Shader, VkShader>(shader);
             VkPipelineShaderStageCreateInfo stageCI = new VkPipelineShaderStageCreateInfo();
@@ -399,6 +436,15 @@ namespace XenoAtom.Graphics.Vk
             stageCI.stage = VkFormats.VdToVkShaderStages(shader.Stage);
             stageCI.pName = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference("main"u8)); // Meh
             stageCI.pSpecializationInfo = &specializationInfo;
+
+            VkPipelineShaderStageRequiredSubgroupSizeCreateInfo requiredSubgroupSizeCI = new VkPipelineShaderStageRequiredSubgroupSizeCreateInfo();
+            if (description.RequestedSubgroupSize != 0)
+            {
+                Debug.Assert(BitOperations.IsPow2(description.RequestedSubgroupSize));
+                requiredSubgroupSizeCI.requiredSubgroupSize = description.RequestedSubgroupSize;
+                stageCI.pNext = &requiredSubgroupSizeCI;
+            }
+            // Assign the stage to the pipeline
             pipelineCI.stage = stageCI;
 
             XenoAtom.Interop.vulkan.VkPipeline devicePipeline;

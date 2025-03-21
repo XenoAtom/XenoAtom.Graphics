@@ -26,7 +26,7 @@ namespace XenoAtom.Graphics.Vk
         public readonly object GraphicsQueueLock = new object();
 
         private readonly ConcurrentDictionary<VkFormat, VkFilter> _filters = new ConcurrentDictionary<VkFormat, VkFilter>();
-        private readonly BackendInfoVulkan _vulkanInfo;
+        private readonly GraphicsDeviceBackendInfoVulkan _vulkanInfo;
 
         private const int SharedCommandPoolCount = 4;
         private readonly Stack<SharedCommandPool> _sharedGraphicsCommandPools = new Stack<SharedCommandPool>();
@@ -75,6 +75,7 @@ namespace XenoAtom.Graphics.Vk
 
 
         public override GraphicsDeviceFeatures Features { get; }
+        public override GraphicsDeviceBackendInfo BackendInfo => _vulkanInfo;
 
         public VkInstance VkInstance => _vkInstance;
 
@@ -227,11 +228,43 @@ namespace XenoAtom.Graphics.Vk
                 deviceCreateInfo.ppEnabledLayerNames = (byte**)layerNames.Data;
             }
 
+            // ------------------
+            // TODO: TEMP LIST of features that we are forcing/enabling
+            // BEGIN
+            VkPhysicalDeviceVulkan11Features vulkan11Features = new()
+            {
+                sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+                storageBuffer16BitAccess = VK_TRUE
+            };
+
+            VkPhysicalDeviceVulkan12Features vulkan12Features = new()
+            {
+                sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+                pNext = &vulkan11Features,
+                bufferDeviceAddress = VK_TRUE,
+                shaderFloat16 = VK_TRUE,
+                shaderInt8 = VK_TRUE,
+                scalarBlockLayout = VK_TRUE,
+                vulkanMemoryModel = VK_TRUE,
+                vulkanMemoryModelDeviceScope = VK_TRUE
+            };
+
+            VkPhysicalDeviceVulkan13Features vulkan13Features = new()
+            {
+                sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+                maintenance4 = VK_TRUE,
+                subgroupSizeControl = VK_TRUE,
+                pNext = &vulkan12Features
+            };
+            // END
+            // ------------------
+
             // Create the logical device
             fixed (IntPtr* activeExtensionsPtr = activeExtensions)
             {
                 deviceCreateInfo.enabledExtensionCount = activeExtensionCount;
                 deviceCreateInfo.ppEnabledExtensionNames = (byte**)activeExtensionsPtr;
+                deviceCreateInfo.pNext = &vulkan13Features;
 
                 vkCreateDevice(_vkPhysicalDevice, deviceCreateInfo, null, out _vkDevice)
                     .VkCheck("Unable to create device.");
@@ -278,7 +311,12 @@ namespace XenoAtom.Graphics.Vk
                 subsetTextureView: true,
                 commandListDebugMarkers: Adapter.Manager.IsDebugActivated,
                 bufferRangeBinding: true,
-                shaderFloat64: physicalDeviceFeatures.shaderFloat64);
+                shaderFloat64: physicalDeviceFeatures.shaderFloat64)
+            {
+                SubgroupSize = Adapter.PhysicalDeviceVulkan11Properties.subgroupSize,
+                MinSubgroupSize = Adapter.PhysicalDeviceVulkan13Properties.minSubgroupSize,
+                MaxSubgroupSize = Adapter.PhysicalDeviceVulkan13Properties.maxSubgroupSize
+            };
 
             _descriptorPoolManager = new VkDescriptorPoolManager(this);
             CreateGraphicsCommandPool(out _graphicsCommandPool);
@@ -287,7 +325,7 @@ namespace XenoAtom.Graphics.Vk
                 _sharedGraphicsCommandPools.Push(new SharedCommandPool(this, true));
             }
 
-            _vulkanInfo = new BackendInfoVulkan(this);
+            _vulkanInfo = new GraphicsDeviceBackendInfoVulkan(this);
 
             PointSampler = CreateSampler(SamplerDescription.Point);
             LinearSampler = CreateSampler(SamplerDescription.Linear);
@@ -1112,3 +1150,4 @@ namespace XenoAtom.Graphics.Vk
         public static implicit operator VkDevice(VkGraphicsDevice gd) => gd._vkDevice;
     }
 }
+

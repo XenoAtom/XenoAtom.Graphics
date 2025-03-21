@@ -8,18 +8,28 @@ using static XenoAtom.Interop.vulkan;
 namespace XenoAtom.Graphics
 {
     /// <summary>
+    /// Exposes device specific backend info.
+    /// </summary>
+    public abstract class GraphicsDeviceBackendInfo
+    {
+        internal GraphicsDeviceBackendInfo()
+        {
+        }
+    }
+
+    /// <summary>
     /// Exposes Vulkan-specific functionality,
     /// useful for interoperating with native components which interface directly with Vulkan.
     /// Can only be used on <see cref="GraphicsBackend.Vulkan"/>.
     /// </summary>
-    public class BackendInfoVulkan
+    public class GraphicsDeviceBackendInfoVulkan : GraphicsDeviceBackendInfo
     {
         private readonly VkGraphicsDevice _gd;
         private readonly Lazy<ReadOnlyCollection<ReadOnlyMemoryUtf8>> _instanceLayers;
         private readonly ReadOnlyCollection<ReadOnlyMemoryUtf8> _instanceExtensions;
         private readonly Lazy<ReadOnlyCollection<ExtensionProperties>> _deviceExtensions;
 
-        internal BackendInfoVulkan(VkGraphicsDevice gd)
+        internal GraphicsDeviceBackendInfoVulkan(VkGraphicsDevice gd)
         {
             _gd = gd;
             _instanceLayers = new Lazy<ReadOnlyCollection<ReadOnlyMemoryUtf8>>(() => new ReadOnlyCollection<ReadOnlyMemoryUtf8>(VulkanUtil.EnumerateInstanceLayers()));

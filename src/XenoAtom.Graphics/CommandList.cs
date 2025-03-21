@@ -61,6 +61,14 @@ namespace XenoAtom.Graphics
         }
 
         /// <summary>
+        /// Gets the underlying native handle for this <see cref="CommandList"/>.
+        /// </summary>
+        /// <remarks>
+        /// For Vulkan, this is a <code>VkCommandBuffer</code>.
+        /// </remarks>
+        public abstract nint Handle { get; }
+
+        /// <summary>
         /// Puts this <see cref="CommandList"/> into the initial state.
         /// This function must be called before other graphics commands can be issued.
         /// Begin must only be called if it has not been previously called, if <see cref="End"/> has been called,
@@ -96,6 +104,11 @@ namespace XenoAtom.Graphics
 
             SetPipelineCore(pipeline);
         }
+
+        /// <summary>
+        /// Pushes a constant value to the active <see cref="Pipeline"/> for the given shader stage.
+        /// </summary>
+        public abstract void PushConstant(ShaderStages shaderStage, ReadOnlySpan<byte> buffer, uint offset = 0);
 
         private protected abstract void SetPipelineCore(Pipeline pipeline);
 

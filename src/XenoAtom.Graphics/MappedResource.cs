@@ -76,10 +76,8 @@ namespace XenoAtom.Graphics
     /// mapped resource.
     /// </summary>
     /// <typeparam name="T">The blittable value type which mapped data is viewed as.</typeparam>
-    public unsafe struct MappedResourceView<T> where T : struct
+    public unsafe struct MappedResourceView<T> where T : unmanaged
     {
-        private static readonly int s_sizeofT = Unsafe.SizeOf<T>();
-
         /// <summary>
         /// The <see cref="MappedResource"/> that this instance views.
         /// </summary>
@@ -102,8 +100,13 @@ namespace XenoAtom.Graphics
         {
             MappedResource = rawResource;
             SizeInBytes = rawResource.SizeInBytes;
-            Count = (int)(SizeInBytes / s_sizeofT);
+            Count = (int)(SizeInBytes / sizeof(T));
         }
+
+        /// <summary>
+        /// Gets a span which represents the entire mapped resource.
+        /// </summary>
+        public Span<T> Span => new Span<T>((void*)MappedResource.Data, Count);
 
         /// <summary>
         /// Gets a reference to the structure value at the given index.
@@ -120,7 +123,7 @@ namespace XenoAtom.Graphics
                         $"Given index ({index}) must be non-negative and less than Count ({Count}).");
                 }
 
-                byte* ptr = (byte*)MappedResource.Data + (index * s_sizeofT);
+                byte* ptr = (byte*)MappedResource.Data + (index * sizeof(T));
                 return ref Unsafe.AsRef<T>(ptr);
             }
         }
@@ -140,7 +143,7 @@ namespace XenoAtom.Graphics
                         $"Given index ({index}) must be less than Count ({Count}).");
                 }
 
-                byte* ptr = (byte*)MappedResource.Data + (index * s_sizeofT);
+                byte* ptr = (byte*)MappedResource.Data + (index * sizeof(T));
                 return ref Unsafe.AsRef<T>(ptr);
             }
         }
@@ -155,7 +158,7 @@ namespace XenoAtom.Graphics
         {
             get
             {
-                byte* ptr = (byte*)MappedResource.Data + (y * MappedResource.RowPitch) + (x * s_sizeofT);
+                byte* ptr = (byte*)MappedResource.Data + (y * MappedResource.RowPitch) + (x * sizeof(T));
                 return ref Unsafe.AsRef<T>(ptr);
             }
         }
@@ -170,7 +173,7 @@ namespace XenoAtom.Graphics
         {
             get
             {
-                byte* ptr = (byte*)MappedResource.Data + (y * MappedResource.RowPitch) + (x * s_sizeofT);
+                byte* ptr = (byte*)MappedResource.Data + (y * MappedResource.RowPitch) + (x * sizeof(T));
                 return ref Unsafe.AsRef<T>(ptr);
             }
         }
@@ -189,7 +192,7 @@ namespace XenoAtom.Graphics
                 byte* ptr = (byte*)MappedResource.Data
                     + (z * MappedResource.DepthPitch)
                     + (y * MappedResource.RowPitch)
-                    + (x * s_sizeofT);
+                    + (x * sizeof(T));
                 return ref Unsafe.AsRef<T>(ptr);
             }
         }
@@ -208,9 +211,15 @@ namespace XenoAtom.Graphics
                 byte* ptr = (byte*)MappedResource.Data
                     + (z * MappedResource.DepthPitch)
                     + (y * MappedResource.RowPitch)
-                    + (x * s_sizeofT);
+                    + (x * sizeof(T));
                 return ref Unsafe.AsRef<T>(ptr);
             }
         }
+
+        /// <summary>
+        /// Implicitly converts a <see cref="MappedResourceView{T}"/> to a <see cref="Span{T}"/> which represents the entire mapped resource.
+        /// </summary>
+        /// <param name="view">The mapped view</param>
+        public static implicit operator Span<T>(MappedResourceView<T> view) => view.Span;
     }
 }

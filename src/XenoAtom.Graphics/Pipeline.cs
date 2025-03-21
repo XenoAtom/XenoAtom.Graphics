@@ -29,6 +29,14 @@ namespace XenoAtom.Graphics
         }
 
         /// <summary>
+        /// Gets the handle to the underlying native object.
+        /// </summary>
+        /// <remarks>
+        /// For Vulkan, this is a <code>VkPipelineLayout</code>.
+        /// </remarks>
+        public abstract nint Handle { get; }
+
+        /// <summary>
         /// Gets a value indicating whether this instance represents a compute Pipeline.
         /// If false, this instance is a graphics pipeline.
         /// </summary>

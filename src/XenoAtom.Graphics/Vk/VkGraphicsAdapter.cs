@@ -14,6 +14,10 @@ internal sealed unsafe class VkGraphicsAdapter : GraphicsAdapter
 {
     public readonly VkPhysicalDevice PhysicalDevice;
     public readonly VkPhysicalDeviceProperties PhysicalDeviceProperties;
+    public readonly VkPhysicalDeviceVulkan11Properties PhysicalDeviceVulkan11Properties;
+    public readonly VkPhysicalDeviceVulkan12Properties PhysicalDeviceVulkan12Properties;
+    public readonly VkPhysicalDeviceVulkan13Properties PhysicalDeviceVulkan13Properties;
+
     public readonly VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
     public readonly VkPhysicalDeviceDriverProperties PhysicalDeviceDriverPropertie;
     public readonly VkPhysicalDeviceMemoryProperties PhysicalDeviceMemProperties;
@@ -29,15 +33,25 @@ internal sealed unsafe class VkGraphicsAdapter : GraphicsAdapter
 
         // Get the properties of the physical device
         VkPhysicalDeviceProperties2 deviceProps = new VkPhysicalDeviceProperties2();
+        VkPhysicalDeviceVulkan11Properties vulkan11Props = new VkPhysicalDeviceVulkan11Properties();
+        VkPhysicalDeviceVulkan12Properties vulkan12Props = new VkPhysicalDeviceVulkan12Properties();
+        VkPhysicalDeviceVulkan13Properties vulkan13Props = new VkPhysicalDeviceVulkan13Properties();
         VkPhysicalDeviceDriverProperties driverProps = new VkPhysicalDeviceDriverProperties();
         VkPhysicalDeviceIDProperties idProps = new VkPhysicalDeviceIDProperties();
+
         deviceProps.pNext = &idProps;
         idProps.pNext = &driverProps;
-
+        driverProps.pNext = &vulkan13Props;
+        vulkan13Props.pNext = &vulkan12Props;
+        vulkan12Props.pNext = &vulkan11Props;
+        
         vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProps);
         PhysicalDeviceProperties = deviceProps.properties;
         PhysicalDeviceDriverPropertie = driverProps;
-
+        PhysicalDeviceVulkan11Properties = vulkan11Props;
+        PhysicalDeviceVulkan12Properties = vulkan12Props;
+        PhysicalDeviceVulkan13Properties = vulkan13Props;
+        
         DeviceName = Encoding.UTF8.GetString(deviceProps.properties.deviceName, (int)VK_MAX_PHYSICAL_DEVICE_NAME_SIZE).TrimEnd('\0');
         DriverName = Encoding.UTF8.GetString(driverProps.driverName, (int)VK_MAX_DRIVER_NAME_SIZE).TrimEnd('\0');
         DriverInfo = Encoding.UTF8.GetString(driverProps.driverInfo, (int)VK_MAX_DRIVER_INFO_SIZE).TrimEnd('\0');

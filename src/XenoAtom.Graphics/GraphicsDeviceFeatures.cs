@@ -96,6 +96,21 @@ namespace XenoAtom.Graphics
         /// </summary>
         public bool ShaderFloat64 { get; }
 
+        /// <summary>
+        /// Gets the current subgroup size supported by the device.
+        /// </summary>
+        public required uint SubgroupSize { get; init; }
+
+        /// <summary>
+        /// Gets the minimum subgroup size supported by the device.
+        /// </summary>
+        public required uint MinSubgroupSize { get; init; }
+
+        /// <summary>
+        /// Gets the maximum subgroup size supported by the device.
+        /// </summary>
+        public required uint MaxSubgroupSize { get; init; }
+
         internal GraphicsDeviceFeatures(
             bool computeShader,
             bool geometryShader,

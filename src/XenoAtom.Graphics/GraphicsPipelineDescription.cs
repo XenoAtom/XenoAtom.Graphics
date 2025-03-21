@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
@@ -32,6 +32,10 @@ namespace XenoAtom.Graphics
         /// An array of <see cref="ResourceLayout"/>, which controls the layout of shader resources in the <see cref="Pipeline"/>.
         /// </summary>
         public ResourceLayout[] ResourceLayouts;
+        /// <summary>
+        /// Gets or sets the push constant ranges.
+        /// </summary>
+        public PushConstantRangeDescription[] PushConstantRanges;
         /// <summary>
         /// A description of the output attachments used by the <see cref="Pipeline"/>.
         /// </summary>
@@ -74,6 +78,7 @@ namespace XenoAtom.Graphics
             ResourceLayouts = resourceLayouts;
             Outputs = outputs;
             ResourceBindingModel = null;
+            PushConstantRanges = [];
         }
 
         /// <summary>
@@ -108,6 +113,7 @@ namespace XenoAtom.Graphics
             ResourceLayouts = new[] { resourceLayout };
             Outputs = outputs;
             ResourceBindingModel = null;
+            PushConstantRanges = [];
         }
 
         /// <summary>
@@ -145,6 +151,7 @@ namespace XenoAtom.Graphics
             ResourceLayouts = resourceLayouts;
             Outputs = outputs;
             ResourceBindingModel = resourceBindingModel;
+            PushConstantRanges = [];
         }
 
         /// <summary>

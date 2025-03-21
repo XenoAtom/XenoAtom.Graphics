@@ -78,7 +78,7 @@ internal sealed unsafe class VkGraphicsManager : GraphicsManager
         var instanceCI = new VkInstanceCreateInfo();
         var applicationInfo = new VkApplicationInfo
         {
-            apiVersion = VK_API_VERSION_1_1, // Requesting a minimum of Vulkan 1.1
+            apiVersion = VK_API_VERSION_1_3, // Requesting a minimum of Vulkan 1.3
             applicationVersion = new VkVersion(1, 0, 0),
             engineVersion = new VkVersion(1, 0, 0),
             pApplicationName = (byte*)(vkOptions.ApplicationName.IsNull ? DefaultAppName : vkOptions.ApplicationName),
@@ -228,7 +228,7 @@ internal sealed unsafe class VkGraphicsManager : GraphicsManager
 
         // Create VkInstance
         vkCreateInstance(instanceCI, null, out _instance)
-            .VkCheck("vkCreateInstance failed. It could be that Vulkan is not supported, installed for the minimum required version 1.1 is not supported");
+            .VkCheck("vkCreateInstance failed. It could be that Vulkan is not supported, installed for the minimum required version 1.3 is not supported");
 
         if (IsDebugActivated)
         {

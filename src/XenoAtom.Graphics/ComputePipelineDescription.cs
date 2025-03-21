@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace XenoAtom.Graphics
 {
@@ -34,6 +34,15 @@ namespace XenoAtom.Graphics
         /// constants specified in the <see cref="Shader"/>.
         /// </summary>
         public SpecializationConstant[]? Specializations;
+        /// <summary>
+        /// Gets or sets the push constant ranges.
+        /// </summary>
+        public PushConstantRangeDescription[] PushConstantRanges;
+
+        /// <summary>
+        /// This is the requested subgroup size for the compute shader. Must be a power of 2 and be in the range <see cref="GraphicsDeviceFeatures.MinSubgroupSize"/> and <see cref="GraphicsDeviceFeatures.MaxSubgroupSize"/>. Default is 0 means the default subgroup size <see cref="GraphicsDeviceFeatures.SubgroupSize"/>.
+        /// </summary>
+        public uint RequestedSubgroupSize { get; set; }
 
         /// <summary>
         /// Constructs a new ComputePipelineDescription.
@@ -57,6 +66,7 @@ namespace XenoAtom.Graphics
             ThreadGroupSizeY = threadGroupSizeY;
             ThreadGroupSizeZ = threadGroupSizeZ;
             Specializations = null;
+            PushConstantRanges = [];
         }
 
         /// <summary>
@@ -81,6 +91,7 @@ namespace XenoAtom.Graphics
             ThreadGroupSizeY = threadGroupSizeY;
             ThreadGroupSizeZ = threadGroupSizeZ;
             Specializations = null;
+            PushConstantRanges = [];
         }
 
         /// <summary>
@@ -109,6 +120,7 @@ namespace XenoAtom.Graphics
             ThreadGroupSizeY = threadGroupSizeY;
             ThreadGroupSizeZ = threadGroupSizeZ;
             Specializations = specializations;
+            PushConstantRanges = [];
         }
 
         /// <summary>

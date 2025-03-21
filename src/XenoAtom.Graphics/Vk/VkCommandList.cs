@@ -146,6 +146,8 @@ namespace XenoAtom.Graphics.Vk
             ReleaseReference();
         }
 
+        public override IntPtr Handle => _cb.Value.Handle;
+
         public override void Begin()
         {
             if (_commandBufferBegun)
@@ -711,6 +713,23 @@ namespace XenoAtom.Graphics.Vk
             VkBuffer vkBuffer = Util.AssertSubtype<DeviceBuffer, VkBuffer>(buffer);
             vkCmdBindIndexBuffer(_cb, vkBuffer.DeviceBuffer, offset, VkFormats.VdToVkIndexFormat(format));
             _currentStagingInfo!.AddResource(vkBuffer);
+        }
+
+        public override void PushConstant(ShaderStages shaderStage, ReadOnlySpan<byte> buffer, uint offset = 0)
+        {
+            EnsureBegin();
+
+            var pipeline = shaderStage == ShaderStages.Compute
+                ? _currentComputePipeline
+                : _currentGraphicsPipeline;
+
+            if (pipeline == null)
+            {
+                throw new InvalidOperationException($"Invalid call. The method `{nameof(SetPipeline)}` should have been called before");
+            }
+
+            fixed(void* pBuffer=  buffer) 
+                vkCmdPushConstants(_cb, pipeline.PipelineLayout, VkFormats.VdToVkShaderStages(shaderStage), offset, (uint)buffer.Length, (void*)pBuffer);
         }
 
         private protected override void SetPipelineCore(Pipeline pipeline)
