@@ -31,6 +31,7 @@ namespace XenoAtom.Graphics.Tests
         private readonly GraphicsDevice _gd;
         private readonly DisposeCollector _disposeCollector;
         private bool _hasWarningOrErrorLogs;
+        private readonly StringBuilder _logBuilder = new();
 
         public GraphicsDevice GD => _gd;
 
@@ -51,6 +52,7 @@ namespace XenoAtom.Graphics.Tests
             }
             _hasWarningOrErrorLogs = true;
             _textOutputHelper.WriteLine($"[{debugLogLevel}] {kind} - {message}");
+            _logBuilder.AppendLine($"[{debugLogLevel}] {kind} - {message}");
         }
 
         protected DeviceBuffer GetReadback(DeviceBuffer buffer)
@@ -119,7 +121,7 @@ namespace XenoAtom.Graphics.Tests
             var manager = GD.Adapter.Manager;
             manager.Dispose();
             
-            Assert.False(_hasWarningOrErrorLogs);
+            Assert.False(_hasWarningOrErrorLogs, $"There are unexpected warning/errors in the logs:\n{_logBuilder}");
         }
     }
 }

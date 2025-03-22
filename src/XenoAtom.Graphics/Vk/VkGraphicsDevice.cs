@@ -199,6 +199,16 @@ namespace XenoAtom.Graphics.Vk
                     {
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
                     }
+                    else if (extensionName == VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME)
+                    {
+                        // Compute Shader extensions (Vulkan 1.3)
+                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                    }
+                    else if (extensionName == VK_KHR_MAINTENANCE_4_EXTENSION_NAME)
+                    {
+                        // Required for the validation layer in 1.2 while it is 1.3.
+                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                    }
                 }
             }
 
@@ -249,13 +259,14 @@ namespace XenoAtom.Graphics.Vk
                 vulkanMemoryModelDeviceScope = VK_TRUE
             };
 
-            VkPhysicalDeviceVulkan13Features vulkan13Features = new()
-            {
-                sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-                maintenance4 = VK_TRUE,
-                subgroupSizeControl = VK_TRUE,
-                pNext = &vulkan12Features
-            };
+            //VkPhysicalDeviceVulkan13Features vulkan13Features = new()
+            //{
+            //    sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+            //    maintenance4 = VK_TRUE,
+            //    subgroupSizeControl = VK_TRUE,
+            //    pNext = &vulkan12Features
+            //};
+            
             // END
             // ------------------
 
@@ -264,7 +275,7 @@ namespace XenoAtom.Graphics.Vk
             {
                 deviceCreateInfo.enabledExtensionCount = activeExtensionCount;
                 deviceCreateInfo.ppEnabledExtensionNames = (byte**)activeExtensionsPtr;
-                deviceCreateInfo.pNext = &vulkan13Features;
+                deviceCreateInfo.pNext = &vulkan12Features;
 
                 vkCreateDevice(_vkPhysicalDevice, deviceCreateInfo, null, out _vkDevice)
                     .VkCheck("Unable to create device.");
@@ -277,7 +288,7 @@ namespace XenoAtom.Graphics.Vk
             vkGetPhysicalDeviceSurfaceFormatsKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfaceFormatsKHR>(VkInstance);
             vkGetPhysicalDeviceSurfacePresentModesKHR = vkGetInstanceProcAddr<PFN_vkGetPhysicalDeviceSurfacePresentModesKHR>(VkInstance);
             vkDestroySurfaceKHR = vkGetInstanceProcAddr<PFN_vkDestroySurfaceKHR>(VkInstance);
-
+            
             // VK_KHR_swapchain
             vkAcquireNextImageKHR = vkGetDeviceProcAddr<PFN_vkAcquireNextImageKHR>(_vkDevice);
             vkCreateSwapchainKHR = vkGetDeviceProcAddr<PFN_vkCreateSwapchainKHR>(VkDevice);
@@ -291,6 +302,15 @@ namespace XenoAtom.Graphics.Vk
                 Adapter.PhysicalDeviceProperties,
                 Adapter.PhysicalDeviceMemProperties);
 
+            var subgroupSize = Adapter.PhysicalDeviceVulkan11Properties.subgroupSize;
+            var minSubgroupSize = subgroupSize;
+            var maxSubgroupSize = minSubgroupSize;
+            if (Adapter.PhysicalDeviceSubgroupSizeControlFeatures.subgroupSizeControl)
+            {
+                minSubgroupSize = Adapter.PhysicalDeviceSubgroupSizeControlProperties.minSubgroupSize;
+                maxSubgroupSize = Adapter.PhysicalDeviceSubgroupSizeControlProperties.maxSubgroupSize;
+            }
+            
             ref readonly var physicalDeviceFeatures = ref Adapter.PhysicalDeviceFeatures;
             Features = new GraphicsDeviceFeatures(
                 computeShader: true,
@@ -313,9 +333,9 @@ namespace XenoAtom.Graphics.Vk
                 bufferRangeBinding: true,
                 shaderFloat64: physicalDeviceFeatures.shaderFloat64)
             {
-                SubgroupSize = Adapter.PhysicalDeviceVulkan11Properties.subgroupSize,
-                MinSubgroupSize = Adapter.PhysicalDeviceVulkan13Properties.minSubgroupSize,
-                MaxSubgroupSize = Adapter.PhysicalDeviceVulkan13Properties.maxSubgroupSize
+                SubgroupSize = subgroupSize,
+                MinSubgroupSize = minSubgroupSize,
+                MaxSubgroupSize = maxSubgroupSize
             };
 
             _descriptorPoolManager = new VkDescriptorPoolManager(this);
