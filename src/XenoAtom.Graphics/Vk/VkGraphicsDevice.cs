@@ -169,6 +169,8 @@ namespace XenoAtom.Graphics.Vk
             var activeExtensions = new nint[props.Length];
             uint activeExtensionCount = 0;
 
+            bool is_VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME_available = false;
+
             fixed (VkExtensionProperties* properties = props)
             {
                 for (int property = 0; property < props.Length; property++)
@@ -203,6 +205,7 @@ namespace XenoAtom.Graphics.Vk
                     {
                         // Compute Shader extensions (Vulkan 1.3)
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                        is_VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME_available = true;
                     }
                     else if (extensionName == VK_KHR_MAINTENANCE_4_EXTENSION_NAME)
                     {
@@ -247,6 +250,19 @@ namespace XenoAtom.Graphics.Vk
                 storageBuffer16BitAccess = VK_TRUE
             };
 
+
+            VkPhysicalDeviceSubgroupSizeControlFeatures subgroupSizeControlFeatures = new()
+            {
+                sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES,
+                subgroupSizeControl = VK_TRUE,
+                computeFullSubgroups = false // Not sure if this is needed
+            };
+
+            if (is_VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME_available)
+            {
+                vulkan11Features.pNext = &subgroupSizeControlFeatures;
+            }
+
             VkPhysicalDeviceVulkan12Features vulkan12Features = new()
             {
                 sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
@@ -258,7 +274,7 @@ namespace XenoAtom.Graphics.Vk
                 vulkanMemoryModel = VK_TRUE,
                 vulkanMemoryModelDeviceScope = VK_TRUE
             };
-
+            
             //VkPhysicalDeviceVulkan13Features vulkan13Features = new()
             //{
             //    sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
@@ -266,7 +282,7 @@ namespace XenoAtom.Graphics.Vk
             //    subgroupSizeControl = VK_TRUE,
             //    pNext = &vulkan12Features
             //};
-            
+
             // END
             // ------------------
 
