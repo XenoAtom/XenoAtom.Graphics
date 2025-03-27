@@ -193,6 +193,7 @@ namespace XenoAtom.Graphics
         {
             WaitForIdleCore();
             FlushDeferredDisposals();
+            Refresh();
         }
 
         private protected abstract void WaitForIdleCore();

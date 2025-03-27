@@ -33,6 +33,21 @@ namespace XenoAtom.Graphics
             ReleaseReference();
         }
 
+        /// <summary>
+        /// Forces the destruction of this object.
+        /// </summary>
+        /// <remarks>
+        /// Internally, this method will call <see cref="ReleaseReference"/> until the reference count reaches 0.
+        /// </remarks>
+        public void UnsafeDestroy()
+        {
+            int ret;
+            do
+            {
+                ret = ReleaseReference();
+            } while (ret > 0);
+        }
+
         internal int AddReference()
         {
             int ret = Interlocked.Increment(ref _refCount);
