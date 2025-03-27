@@ -10,7 +10,6 @@ namespace XenoAtom.Graphics.Vk
     {
         private static Lazy<bool> s_isVulkanLoaded = new Lazy<bool>(TryLoadVulkan);
 
-        [Conditional("DEBUG")]
         public static void CheckResult(VkResult result)
         {
             if (result != VK_SUCCESS)
