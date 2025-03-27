@@ -156,9 +156,11 @@ internal unsafe class VkCommandBufferPool : CommandBufferPool
 
         foreach (var commandBuffer in _commandBuffers.AsSpan())
         {
-            // We force the destruction of any command buffer, as we are destroying the pool below
-            // so the command buffer cannot be used anymore.
-            commandBuffer.UnsafeDestroy();
+            // We don't force the destruction of command buffers: We expect them to be destroyed via a ReleaseReference.
+            // If not (e.g. someone taking an additional reference on them), vkDestroyCommandPool will kill the underlying buffers,
+            // but it will crash later. Though, it is an expected misusage.
+            commandBuffer.ReleaseReference();
+            Debug.Assert(commandBuffer.IsDisposed);
         }
         _commandBuffers.Clear();
         _commandBufferCreatedCount = 0;

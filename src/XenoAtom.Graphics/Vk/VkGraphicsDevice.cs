@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using XenoAtom.Collections;
 using static XenoAtom.Interop.vulkan;
 using XenoAtom.Interop;
 
@@ -101,7 +102,8 @@ namespace XenoAtom.Graphics.Vk
 
         private readonly object _submittedFencesLock = new object();
         private readonly ConcurrentQueue<XenoAtom.Interop.vulkan.VkFence> _availableSubmissionFences = new ConcurrentQueue<XenoAtom.Interop.vulkan.VkFence>();
-        private readonly List<FenceSubmissionInfo> _submittedFences = new List<FenceSubmissionInfo>();
+        private UnsafeList<FenceSubmissionInfo> _submissionInfos = new();
+        private UnsafeList<XenoAtom.Interop.vulkan.VkFence> _submittedFences = new();
 
         private readonly PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT;
 
@@ -408,7 +410,7 @@ namespace XenoAtom.Graphics.Vk
             VkSemaphore* signalSemaphoresPtr,
             Fence? fence)
         {
-            CheckSubmittedFences();
+            CheckSubmittedFences(false);
 
             VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
             var si = new VkSubmitInfo
@@ -448,36 +450,52 @@ namespace XenoAtom.Graphics.Vk
                 }
             }
 
-            lock (_submittedFencesLock)
-            {
-                _submittedFences.Add(new FenceSubmissionInfo(submissionFence, vkCL, vkCB));
-            }
+            AddSubmissionInfo(submissionFence, vkCL, vkCB);
         }
 
-        private void CheckSubmittedFences()
+        private void AddSubmissionInfo(vulkan.VkFence vkFence, VkCommandBufferExt? vkCL, VkCommandBuffer vkCB)
         {
             lock (_submittedFencesLock)
             {
+                _submittedFences.Add(vkFence);
+                _submissionInfos.Add(new FenceSubmissionInfo(vkCL, vkCB));
+                Debug.Assert(_submittedFences.Count == _submissionInfos.Count);
+            }
+        }
+        
+        private void CheckSubmittedFences(bool waitForFences)
+        {
+            lock (_submittedFencesLock)
+            {
+                if (_submittedFences.Count == 0) return;
+
+                if (waitForFences)
+                {
+                    // We don't check for timeout here
+                    vkWaitForFences(VkDevice, _submittedFences.AsSpan(), VK_TRUE, (ulong)1e9); // TODO: 1s timeout, make it configurable on GraphicsDevice creation?
+                }
+
                 for (int i = 0; i < _submittedFences.Count; i++)
                 {
-                    FenceSubmissionInfo fsi = _submittedFences[i];
-                    if (vkGetFenceStatus(_vkDevice, fsi.Fence) == VK_SUCCESS)
+                    var fence = _submittedFences[i];
+                    if (vkGetFenceStatus(_vkDevice, fence) == VK_SUCCESS)
                     {
-                        CompleteFenceSubmission(fsi);
+                        CompleteFenceSubmission(fence, _submissionInfos[i]);
                         _submittedFences.RemoveAt(i);
-                        i -= 1;
+                        _submissionInfos.RemoveAt(i);
+                        i--;
                     }
                     else
                     {
+                        Debug.Assert(!waitForFences);
                         break; // Submissions are in order; later submissions cannot complete if this one hasn't.
                     }
                 }
             }
         }
 
-        private void CompleteFenceSubmission(FenceSubmissionInfo fsi)
+        private void CompleteFenceSubmission(vulkan.VkFence fence, FenceSubmissionInfo fsi)
         {
-            XenoAtom.Interop.vulkan.VkFence fence = fsi.Fence;
             VkCommandBuffer completedCB = fsi.CommandBuffer;
             fsi.CommandBufferImpl?.CommandBufferCompleted();
             vkResetFences(_vkDevice, 1, &fence)
@@ -725,7 +743,8 @@ namespace XenoAtom.Graphics.Vk
                 vkQueueWaitIdle(_vkGraphicsQueue);
             }
 
-            CheckSubmittedFences();
+            // Ensure all fences are completed
+            CheckSubmittedFences(true);
         }
 
         public override TextureSampleCount GetSampleCountLimit(PixelFormat format, bool depthFormat)
@@ -1074,7 +1093,7 @@ namespace XenoAtom.Graphics.Vk
         public override void Refresh()
         {
             // During a refresh, we update the submitted fences
-            CheckSubmittedFences();
+            CheckSubmittedFences(false);
         }
 
         internal void TransitionImageLayout(VkTexture texture, VkImageLayout layout)
@@ -1192,15 +1211,12 @@ namespace XenoAtom.Graphics.Vk
 
         private readonly struct FenceSubmissionInfo
         {
-            public readonly XenoAtom.Interop.vulkan.VkFence Fence;
-
             public readonly VkCommandBufferExt? CommandBufferImpl;
 
             public readonly VkCommandBuffer CommandBuffer;
 
-            public FenceSubmissionInfo(XenoAtom.Interop.vulkan.VkFence fence, VkCommandBufferExt? commandBufferImpl, VkCommandBuffer commandBuffer)
+            public FenceSubmissionInfo(VkCommandBufferExt? commandBufferImpl, VkCommandBuffer commandBuffer)
             {
-                Fence = fence;
                 CommandBufferImpl = commandBufferImpl;
                 CommandBuffer = commandBuffer;
             }
