@@ -5,8 +5,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using Xunit;
-using Xunit.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace XenoAtom.Graphics.Tests
 {
@@ -27,13 +26,11 @@ namespace XenoAtom.Graphics.Tests
     }
 
 
-    public abstract class ComputeTests : GraphicsDeviceTestBase
+    [TestClass]
+    public class ComputeTests : GraphicsDeviceTestBase
     {
-        protected ComputeTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
-        }
 
-        [Fact]
+        [TestMethod]
         public void ComputeShader3dTexture()
         {
             const float FillValue = 42.42f;
@@ -67,20 +64,23 @@ namespace XenoAtom.Graphics.Tests
                 computeTargetTextureView,
                 fillValueBuffer));
 
-            using CommandList cl = GD.CreateCommandList();
-            cl.Begin();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
 
-            cl.UpdateBuffer(fillValueBuffer, 0, new FillValueStruct(FillValue));
+                cb.UpdateBuffer(fillValueBuffer, 0, new FillValueStruct(FillValue));
 
-            // Use the compute shader to fill the texture.
-            cl.SetPipeline(computePipeline);
-            cl.SetComputeResourceSet(0, computeResourceSet);
-            const uint GroupDivisorXY = 16;
-            cl.Dispatch(OutputTextureSize / GroupDivisorXY, OutputTextureSize / GroupDivisorXY, OutputTextureSize);
+                // Use the compute shader to fill the texture.
+                cb.SetPipeline(computePipeline);
+                cb.SetComputeResourceSet(0, computeResourceSet);
+                const uint GroupDivisorXY = 16;
+                cb.Dispatch(OutputTextureSize / GroupDivisorXY, OutputTextureSize / GroupDivisorXY, OutputTextureSize);
 
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             // Read back from our texture and make sure it has been properly filled.
             for (uint depth = 0; depth < computeTargetTexture.Depth; depth++)
@@ -88,7 +88,7 @@ namespace XenoAtom.Graphics.Tests
                 RgbaFloat expectedFillValue = new RgbaFloat(new System.Numerics.Vector4(FillValue * (depth + 1)));
                 int notFilledCount = CountTexelsNotFilledAtDepth(GD, computeTargetTexture, expectedFillValue, depth);
 
-                Assert.Equal(0, notFilledCount);
+                Assert.AreEqual(0, notFilledCount);
             }
         }
 
@@ -105,21 +105,24 @@ namespace XenoAtom.Graphics.Tests
                 texture.Format, TextureUsage.Staging,
                 texture.Kind, texture.SampleCount));
 
-            using CommandList cl = GD.CreateCommandList();
-            cl.Begin();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
 
-            cl.CopyTexture(texture,
-                srcX: 0, srcY: 0, srcZ: depth,
-                srcMipLevel: 0, srcBaseArrayLayer: 0,
-                staging,
-                dstX: 0, dstY: 0, dstZ: 0,
-                dstMipLevel: 0, dstBaseArrayLayer: 0,
-                staging.Width, staging.Height,
-                depth: 1, layerCount: 1);
+                cb.CopyTexture(texture,
+                    srcX: 0, srcY: 0, srcZ: depth,
+                    srcMipLevel: 0, srcBaseArrayLayer: 0,
+                    staging,
+                    dstX: 0, dstY: 0, dstZ: 0,
+                    dstMipLevel: 0, dstBaseArrayLayer: 0,
+                    staging.Width, staging.Height,
+                    depth: 1, layerCount: 1);
 
-            cl.End();
-            device.SubmitCommands(cl);
-            device.WaitForIdle();
+                cb.End();
+                device.SubmitCommands(cb);
+                device.WaitForIdle();
+            }
 
             try
             {
@@ -156,10 +159,14 @@ namespace XenoAtom.Graphics.Tests
             private uint _padding2;
         }
 
-        [SkippableFact]
+        [TestMethod]
         public void BasicCompute()
         {
-            Skip.IfNot(GD.Features.ComputeShader);
+            if (!GD.Features.ComputeShader)
+            {
+                Assert.Inconclusive("Compute shaders are not supported on this device.");
+                return;
+            }
 
             ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("Params", ResourceKind.UniformBuffer, ShaderStages.Compute),
@@ -190,14 +197,17 @@ namespace XenoAtom.Graphics.Tests
                 layout,
                 16, 16, 1));
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.SetPipeline(pipeline);
-            cl.SetComputeResourceSet(0, rs);
-            cl.Dispatch(width / 16, width / 16, 1);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetPipeline(pipeline);
+                cb.SetComputeResourceSet(0, rs);
+                cb.Dispatch(width / 16, width / 16, 1);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             DeviceBuffer sourceReadback = GetReadback(sourceBuffer);
             DeviceBuffer destinationReadback = GetReadback(destinationBuffer);
@@ -208,18 +218,22 @@ namespace XenoAtom.Graphics.Tests
                 for (int x = 0; x < width; x++)
                 {
                     int index = y * (int)width + x;
-                    Assert.Equal(2 * sourceData[index], sourceReadView[index]);
-                    Assert.Equal(sourceData[index], destinationReadView[index]);
+                    Assert.AreEqual(2 * sourceData[index], sourceReadView[index]);
+                    Assert.AreEqual(sourceData[index], destinationReadView[index]);
                 }
 
             GD.Unmap(sourceReadback);
             GD.Unmap(destinationReadback);
         }
 
-        [SkippableFact]
+        [TestMethod]
         public void ComputeCubemapGeneration()
         {
-            Skip.IfNot(GD.Features.ComputeShader);
+            if (!GD.Features.ComputeShader)
+            {
+                Assert.Inconclusive("Compute shaders are not supported on this device.");
+                return;
+            }
 
             const int TexSize = 32;
             const uint MipLevels = 1;
@@ -250,14 +264,17 @@ namespace XenoAtom.Graphics.Tests
                 computeLayout,
                 32, 32, 1));
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.SetPipeline(computePipeline);
-            cl.SetComputeResourceSet(0, computeSet);
-            cl.Dispatch(TexSize / 32, TexSize / 32, 6);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetPipeline(computePipeline);
+                cb.SetComputeResourceSet(0, computeSet);
+                cb.Dispatch(TexSize / 32, TexSize / 32, 6);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             using (var readback = GetReadback(computeOutput))
             {
@@ -272,7 +289,7 @@ namespace XenoAtom.Graphics.Tests
                         for (int y = 0; y < mipSize; y++)
                             for (int x = 0; x < mipSize; x++)
                             {
-                                Assert.Equal(expectedColor, readView[x, y]);
+                                Assert.AreEqual(expectedColor, readView[x, y]);
                             }
                         GD.Unmap(readback, subresource);
                     }
@@ -280,10 +297,14 @@ namespace XenoAtom.Graphics.Tests
             }
         }
 
-        [SkippableFact]
+        [TestMethod]
         public void ComputeCubemapBindSingleTextureMipLevelOutput()
         {
-            Skip.IfNot(GD.Features.ComputeShader);
+            if (!GD.Features.ComputeShader)
+            {
+                Assert.Inconclusive("Compute shaders are not supported on this device.");
+                return;
+            }
 
             const int TexSize = 128;
             const uint MipLevels = 7;
@@ -318,13 +339,14 @@ namespace XenoAtom.Graphics.Tests
                 computeLayout,
                 32, 32, 1));
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.ClearTexture(computeOutput);
-            cl.End();
+            using var cbp = GD.CreateCommandBufferPool(new(CommandBufferPoolFlags.CanResetCommandBuffer));
+            using var cb = cbp.CreateCommandBuffer();
+            cb.Begin();
+            cb.ClearTexture(computeOutput);
+            cb.End();
             {
                 var fence = GD.CreateFence(false);
-                GD.SubmitCommands(cl, fence);
+                GD.SubmitCommands(cb, fence);
                 GD.WaitForFence(fence);
             }
 
@@ -341,19 +363,19 @@ namespace XenoAtom.Graphics.Tests
                         for (int y = 0; y < mipSize; y++)
                             for (int x = 0; x < mipSize; x++)
                             {
-                                Assert.Equal(expectedColor, readView[x, y]);
+                                Assert.AreEqual(expectedColor, readView[x, y]);
                             }
                         GD.Unmap(readback, subresource);
                     }
                 }
             }
 
-            cl.Begin();
-            cl.SetPipeline(computePipeline);
-            cl.SetComputeResourceSet(0, computeSet);
-            cl.Dispatch((TexSize >> (int)BoundMipLevel) / 32, (TexSize >> (int)BoundMipLevel) / 32, 6);
-            cl.End();
-            GD.SubmitCommands(cl);
+            cb.Begin();
+            cb.SetPipeline(computePipeline);
+            cb.SetComputeResourceSet(0, computeSet);
+            cb.Dispatch((TexSize >> (int)BoundMipLevel) / 32, (TexSize >> (int)BoundMipLevel) / 32, 6);
+            cb.End();
+            GD.SubmitCommands(cb);
             GD.WaitForIdle();
 
             using (var readback = GetReadback(computeOutput))
@@ -369,7 +391,7 @@ namespace XenoAtom.Graphics.Tests
                         for (int y = 0; y < mipSize; y++)
                             for (int x = 0; x < mipSize; x++)
                             {
-                                Assert.Equal(expectedColor, readView[x, y]);
+                                Assert.AreEqual(expectedColor, readView[x, y]);
                             }
                         GD.Unmap(readback, subresource);
                     }
@@ -377,12 +399,21 @@ namespace XenoAtom.Graphics.Tests
             }
         }
 
-        [SkippableTheory]
-        [MemberData(nameof(FillBuffer_WithOffsetsData))]
+        [TestMethod]
+        [DynamicData(nameof(FillBuffer_WithOffsetsData))]
         public void FillBuffer_WithOffsets(uint srcSetMultiple, uint srcBindingMultiple, uint dstSetMultiple, uint dstBindingMultiple, bool combinedLayout)
         {
-            Skip.IfNot(GD.Features.ComputeShader);
-            Skip.If(!GD.Features.BufferRangeBinding && (srcSetMultiple != 0 || srcBindingMultiple != 0 || dstSetMultiple != 0 || dstBindingMultiple != 0));
+            if (!GD.Features.ComputeShader)
+            {
+                Assert.Inconclusive("Compute shaders are not supported on this device.");
+                return;
+            }
+
+            if (!GD.Features.BufferRangeBinding && (srcSetMultiple != 0 || srcBindingMultiple != 0 || dstSetMultiple != 0 || dstBindingMultiple != 0))
+            {
+                Assert.Inconclusive("Buffer range binding is not supported on this device.");
+                return;
+            }
 
             Debug.Assert((GD.StructuredBufferMinOffsetAlignment % sizeof(uint)) == 0);
 
@@ -455,29 +486,33 @@ namespace XenoAtom.Graphics.Tests
             uint[] srcData = Enumerable.Range(0, (int)copySrc.SizeInBytes / sizeof(uint)).Select(i => (uint)i).ToArray();
             GD.UpdateBuffer(copySrc, 0, srcData);
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.SetPipeline(pipeline);
-            if (combinedLayout)
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
             {
-                uint[] offsets = new[]
+                cb.Begin();
+                cb.SetPipeline(pipeline);
+                if (combinedLayout)
                 {
-                    srcBindingMultiple * GD.StructuredBufferMinOffsetAlignment,
-                    dstBindingMultiple * GD.StructuredBufferMinOffsetAlignment
-                };
-                cl.SetComputeResourceSet(0, sets[0], offsets);
+                    uint[] offsets = new[]
+                    {
+                        srcBindingMultiple * GD.StructuredBufferMinOffsetAlignment,
+                        dstBindingMultiple * GD.StructuredBufferMinOffsetAlignment
+                    };
+                    cb.SetComputeResourceSet(0, sets[0], offsets);
+                }
+                else
+                {
+                    uint offset = srcBindingMultiple * GD.StructuredBufferMinOffsetAlignment;
+                    cb.SetComputeResourceSet(0, sets[0], 1, ref offset);
+                    offset = dstBindingMultiple * GD.StructuredBufferMinOffsetAlignment;
+                    cb.SetComputeResourceSet(1, sets[1], 1, ref offset);
+                }
+
+                cb.Dispatch(512, 1, 1);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
             }
-            else
-            {
-                uint offset = srcBindingMultiple * GD.StructuredBufferMinOffsetAlignment;
-                cl.SetComputeResourceSet(0, sets[0], 1, ref offset);
-                offset = dstBindingMultiple * GD.StructuredBufferMinOffsetAlignment;
-                cl.SetComputeResourceSet(1, sets[1], 1, ref offset);
-            }
-            cl.Dispatch(512, 1, 1);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
 
             DeviceBuffer readback = GetReadback(copyDst);
 
@@ -490,7 +525,7 @@ namespace XenoAtom.Graphics.Tests
                 uint dstIndex = totalDstAlignment / sizeof(uint) + i;
                 uint actual = readView[dstIndex];
 
-                Assert.Equal(expected, actual);
+                Assert.AreEqual(expected, actual);
             }
             GD.Unmap(readback);
         }
@@ -507,13 +542,5 @@ namespace XenoAtom.Graphics.Tests
                             }
         }
 
-    }
-
-    [Trait("Backend", "Vulkan")]
-    public class VulkanComputeTests : ComputeTests
-    {
-        public VulkanComputeTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
-        }
     }
 }

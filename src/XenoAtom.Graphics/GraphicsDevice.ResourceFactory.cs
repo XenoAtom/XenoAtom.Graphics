@@ -329,17 +329,17 @@ namespace XenoAtom.Graphics
         protected abstract Shader CreateShaderCore(in ShaderDescription description);
 
         /// <summary>
-        /// Creates a new <see cref="CommandList"/>.
+        /// Creates a new <see cref="CommandBuffer"/>.
         /// </summary>
-        /// <returns>A new <see cref="CommandList"/>.</returns>
-        public CommandList CreateCommandList() => CreateCommandList(new CommandListDescription());
+        /// <returns>A new <see cref="CommandBuffer"/>.</returns>
+        public CommandBufferPool CreateCommandBufferPool() => CreateCommandBufferPool(new CommandBufferPoolDescription());
 
         /// <summary>
-        /// Creates a new <see cref="CommandList"/>.
+        /// Creates a new <see cref="CommandBuffer"/>.
         /// </summary>
         /// <param name="description">The desired properties of the created object.</param>
-        /// <returns>A new <see cref="CommandList"/>.</returns>
-        public abstract CommandList CreateCommandList(in CommandListDescription description);
+        /// <returns>A new <see cref="CommandBuffer"/>.</returns>
+        public abstract CommandBufferPool CreateCommandBufferPool(in CommandBufferPoolDescription description);
 
         /// <summary>
         /// Creates a new <see cref="ResourceLayout"/>.

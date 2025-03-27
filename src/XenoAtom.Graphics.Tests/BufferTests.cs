@@ -2,18 +2,14 @@ using System;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using Xunit;
-using Xunit.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace XenoAtom.Graphics.Tests
 {
-    public abstract class BufferTestBase : GraphicsDeviceTestBase
+    [TestClass]
+    public class BufferTests : GraphicsDeviceTestBase
     {
-        protected BufferTestBase(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
-        }
-
-        [Fact]
+        [TestMethod]
         public void CreateBuffer_Succeeds()
         {
             uint expectedSize = 64;
@@ -21,11 +17,11 @@ namespace XenoAtom.Graphics.Tests
 
             DeviceBuffer buffer = GD.CreateBuffer(new BufferDescription(expectedSize, expectedUsage));
 
-            Assert.Equal(expectedUsage, buffer.Usage);
-            Assert.Equal(expectedSize, buffer.SizeInBytes);
+            Assert.AreEqual(expectedUsage, buffer.Usage);
+            Assert.AreEqual(expectedSize, buffer.SizeInBytes);
         }
 
-        [Fact]
+        [TestMethod]
         public void UpdateBuffer_NonDynamic_Succeeds()
         {
             DeviceBuffer buffer = CreateBuffer(64, BufferUsage.VertexBuffer);
@@ -33,7 +29,7 @@ namespace XenoAtom.Graphics.Tests
             GD.WaitForIdle();
         }
 
-        [Fact]
+        [TestMethod]
         public void UpdateBuffer_Span_Succeeds()
         {
             DeviceBuffer buffer = CreateBuffer(64, BufferUsage.VertexBuffer);
@@ -42,7 +38,7 @@ namespace XenoAtom.Graphics.Tests
             GD.WaitForIdle();
         }
 
-        [Fact]
+        [TestMethod]
         public void UpdateBuffer_ThenMapRead_Succeeds()
         {
             DeviceBuffer buffer = CreateBuffer(1024, BufferUsage.Staging);
@@ -52,11 +48,11 @@ namespace XenoAtom.Graphics.Tests
             MappedResourceView<int> view = GD.Map<int>(buffer, MapMode.Read);
             for (int i = 0; i < view.Count; i++)
             {
-                Assert.Equal(i * 2, view[i]);
+                Assert.AreEqual(i * 2, view[i]);
             }
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void Staging_Map_WriteThenRead()
         {
             DeviceBuffer buffer = CreateBuffer(256, BufferUsage.Staging);
@@ -73,16 +69,16 @@ namespace XenoAtom.Graphics.Tests
             dataPtr = (byte*)map.Data.ToPointer();
             for (int i = 0; i < map.SizeInBytes; i++)
             {
-                Assert.Equal((byte)i, dataPtr[i]);
+                Assert.AreEqual((byte)i, dataPtr[i]);
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void Staging_MapGeneric_WriteThenRead()
         {
             DeviceBuffer buffer = CreateBuffer(1024, BufferUsage.Staging);
             MappedResourceView<int> view = GD.Map<int>(buffer, MapMode.Write);
-            Assert.Equal(256, view.Count);
+            Assert.AreEqual(256, view.Count);
             for (int i = 0; i < view.Count; i++)
             {
                 view[i] = i * 10;
@@ -91,7 +87,7 @@ namespace XenoAtom.Graphics.Tests
             GD.Unmap(buffer);
 
             view = GD.Map<int>(buffer, MapMode.Read);
-            Assert.Equal(256, view.Count);
+            Assert.AreEqual(256, view.Count);
             for (int i = 0; i < view.Count; i++)
             {
                 view[i] = 1 * 10;
@@ -100,16 +96,16 @@ namespace XenoAtom.Graphics.Tests
             GD.Unmap(buffer);
         }
 
-        [Fact]
+        [TestMethod]
         public void MapGeneric_OutOfBounds_ThrowsIndexOutOfRange()
         {
             DeviceBuffer buffer = CreateBuffer(1024, BufferUsage.Staging);
             MappedResourceView<byte> view = GD.Map<byte>(buffer, MapMode.ReadWrite);
-            Assert.Throws<IndexOutOfRangeException>(() => view[1024]);
-            Assert.Throws<IndexOutOfRangeException>(() => view[-1]);
+            Assert.Throws<IndexOutOfRangeException>(() => _ = view[1024]);
+            Assert.Throws<IndexOutOfRangeException>(() => _ = view[-1]);
         }
 
-        [Fact]
+        [TestMethod]
         public void Map_WrongFlags_Throws()
         {
             DeviceBuffer buffer = CreateBuffer(1024, BufferUsage.VertexBuffer);
@@ -118,7 +114,7 @@ namespace XenoAtom.Graphics.Tests
             Assert.Throws<GraphicsException>(() => GD.Map(buffer, MapMode.ReadWrite));
         }
 
-        [Fact]
+        [TestMethod]
         public void CopyBuffer_Succeeds()
         {
             DeviceBuffer src = CreateBuffer(1024, BufferUsage.Staging);
@@ -127,22 +123,26 @@ namespace XenoAtom.Graphics.Tests
 
             DeviceBuffer dst = CreateBuffer(1024, BufferUsage.Staging);
 
-            CommandList copyCL = GD.CreateCommandList();
-            copyCL.Begin();
-            copyCL.CopyBuffer(src, 0, dst, 0, src.SizeInBytes);
-            copyCL.End();
-            GD.SubmitCommands(copyCL);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var copyCL = cbp.CreateCommandBuffer())
+            {
+                copyCL.Begin();
+                copyCL.CopyBuffer(src, 0, dst, 0, src.SizeInBytes);
+                copyCL.End();
+                GD.SubmitCommands(copyCL);
+                GD.WaitForIdle();
+            }
+
             src.Dispose();
 
             MappedResourceView<int> view = GD.Map<int>(dst, MapMode.Read);
             for (int i = 0; i < view.Count; i++)
             {
-                Assert.Equal(i * 2, view[i]);
+                Assert.AreEqual(i * 2, view[i]);
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void CopyBuffer_Chain_Succeeds()
         {
             DeviceBuffer src = CreateBuffer(1024, BufferUsage.Staging);
@@ -157,30 +157,33 @@ namespace XenoAtom.Graphics.Tests
                     .Select(i => GD.CreateBuffer(new BufferDescription(1024, BufferUsage.UniformBuffer)))
                     .ToArray();
 
-                CommandList copyCL = GD.CreateCommandList();
-                copyCL.Begin();
-                copyCL.CopyBuffer(src, 0, dsts[0], 0, src.SizeInBytes);
-                for (int i = 0; i < chainLength - 1; i++)
+                using (var cbp = GD.CreateCommandBufferPool())
+                using (var copyCL = cbp.CreateCommandBuffer())
                 {
-                    copyCL.CopyBuffer(dsts[i], 0, dsts[i + 1], 0, src.SizeInBytes);
-                }
+                    copyCL.Begin();
+                    copyCL.CopyBuffer(src, 0, dsts[0], 0, src.SizeInBytes);
+                    for (int i = 0; i < chainLength - 1; i++)
+                    {
+                        copyCL.CopyBuffer(dsts[i], 0, dsts[i + 1], 0, src.SizeInBytes);
+                    }
 
-                copyCL.CopyBuffer(dsts[dsts.Length - 1], 0, finalDst, 0, src.SizeInBytes);
-                copyCL.End();
-                GD.SubmitCommands(copyCL);
-                GD.WaitForIdle();
+                    copyCL.CopyBuffer(dsts[dsts.Length - 1], 0, finalDst, 0, src.SizeInBytes);
+                    copyCL.End();
+                    GD.SubmitCommands(copyCL);
+                    GD.WaitForIdle();
+                }
 
                 MappedResourceView<int> view = GD.Map<int>(finalDst, MapMode.Read);
                 for (int i = 0; i < view.Count; i++)
                 {
-                    Assert.Equal(i * 2, view[i]);
+                    Assert.AreEqual(i * 2, view[i]);
                 }
 
                 GD.Unmap(finalDst);
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void MapThenUpdate_Fails()
         {
             if (GD.BackendType == GraphicsBackend.Vulkan)
@@ -199,22 +202,22 @@ namespace XenoAtom.Graphics.Tests
             Assert.Throws<GraphicsException>(() => GD.UpdateBuffer(buffer, 0, data));
         }
 
-        [Fact]
+        [TestMethod]
         public void Map_MultipleTimes_Succeeds()
         {
             DeviceBuffer buffer = GD.CreateBuffer(new BufferDescription(1024, BufferUsage.Staging));
             MappedResource map = GD.Map(buffer, MapMode.ReadWrite);
             IntPtr dataPtr = map.Data;
             map = GD.Map(buffer, MapMode.ReadWrite);
-            Assert.Equal(map.Data, dataPtr);
+            Assert.AreEqual(map.Data, dataPtr);
             map = GD.Map(buffer, MapMode.ReadWrite);
-            Assert.Equal(map.Data, dataPtr);
+            Assert.AreEqual(map.Data, dataPtr);
             GD.Unmap(buffer);
             GD.Unmap(buffer);
             GD.Unmap(buffer);
         }
 
-        [Fact]
+        [TestMethod]
         public void Map_DifferentMode_Fails()
         {
             if (GD.BackendType == GraphicsBackend.Vulkan)
@@ -232,7 +235,7 @@ namespace XenoAtom.Graphics.Tests
             Assert.Throws<GraphicsException>(() => GD.Map(buffer, MapMode.Write));
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void UnusualSize()
         {
             DeviceBuffer src = GD.CreateBuffer(
@@ -243,20 +246,24 @@ namespace XenoAtom.Graphics.Tests
             byte[] data = Enumerable.Range(0, 208).Select(i => (byte)(i * 150)).ToArray();
             GD.UpdateBuffer(src, 0, data);
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyBuffer(src, 0, dst, 0, src.SizeInBytes);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyBuffer(src, 0, dst, 0, src.SizeInBytes);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
+
             MappedResource readMap = GD.Map(dst, MapMode.Read);
             for (int i = 0; i < readMap.SizeInBytes; i++)
             {
-                Assert.Equal((byte)(i * 150), ((byte*)readMap.Data)[i]);
+                Assert.AreEqual((byte)(i * 150), ((byte*)readMap.Data)[i]);
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void Update_Dynamic_NonZeroOffset()
         {
             DeviceBuffer dynamic = GD.CreateBuffer(
@@ -266,35 +273,39 @@ namespace XenoAtom.Graphics.Tests
             GD.UpdateBuffer(dynamic, 0, initialData);
 
             byte[] replacementData = Enumerable.Repeat((byte)255, 512).ToArray();
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.UpdateBuffer(dynamic, 512, replacementData);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            DeviceBuffer dst = GD.CreateBuffer(new BufferDescription(1024, BufferUsage.Staging));
 
-            DeviceBuffer dst = GD.CreateBuffer(
-                new BufferDescription(1024, BufferUsage.Staging));
+            using (var cbp = GD.CreateCommandBufferPool(new(CommandBufferPoolFlags.CanResetCommandBuffer)))
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
 
-            cl.Begin();
-            cl.CopyBuffer(dynamic, 0, dst, 0, dynamic.SizeInBytes);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+                cb.UpdateBuffer(dynamic, 512, replacementData);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+
+
+                cb.Begin();
+                cb.CopyBuffer(dynamic, 0, dst, 0, dynamic.SizeInBytes);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResourceView<byte> readView = GD.Map<byte>(dst, MapMode.Read);
             for (uint i = 0; i < 512; i++)
             {
-                Assert.Equal((byte)i, readView[i]);
+                Assert.AreEqual((byte)i, readView[i]);
             }
 
             for (uint i = 512; i < 1024; i++)
             {
-                Assert.Equal((byte)255, readView[i]);
+                Assert.AreEqual((byte)255, readView[i]);
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void Dynamic_MapRead_Fails()
         {
             DeviceBuffer dynamic = GD.CreateBuffer(
@@ -303,48 +314,51 @@ namespace XenoAtom.Graphics.Tests
             Assert.Throws<GraphicsException>(() => GD.Map(dynamic, MapMode.ReadWrite));
         }
 
-        [Fact]
+        [TestMethod]
         public void CommandList_Update_Staging()
         {
             DeviceBuffer staging = GD.CreateBuffer(
                 new BufferDescription(1024, BufferUsage.Staging));
             byte[] data = Enumerable.Range(0, 1024).Select(i => (byte)i).ToArray();
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.UpdateBuffer(staging, 0, data);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.UpdateBuffer(staging, 0, data);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResourceView<byte> readView = GD.Map<byte>(staging, MapMode.Read);
             for (uint i = 0; i < staging.SizeInBytes; i++)
             {
-                Assert.Equal((byte)i, readView[i]);
+                Assert.AreEqual((byte)i, readView[i]);
             }
         }
 
-        [Theory]
-        [InlineData(
-            60, BufferUsage.VertexBuffer, 1,
-            70, BufferUsage.VertexBuffer, 13,
-            11)]
-        [InlineData(
-            60, BufferUsage.Staging, 1,
-            70, BufferUsage.VertexBuffer, 13,
-            11)]
-        [InlineData(
-            60, BufferUsage.VertexBuffer, 1,
-            70, BufferUsage.Staging, 13,
-            11)]
-        [InlineData(
-            60, BufferUsage.Staging, 1,
-            70, BufferUsage.Staging, 13,
-            11)]
-        [InlineData(
-            5, BufferUsage.VertexBuffer, 3,
-            10, BufferUsage.VertexBuffer, 7,
-            2)]
+        [TestMethod]
+        [DataRow(
+            60u, BufferUsage.VertexBuffer, 1u,
+            70u, BufferUsage.VertexBuffer, 13u,
+            11u)]
+        [DataRow(
+            60u, BufferUsage.Staging, 1u,
+            70u, BufferUsage.VertexBuffer, 13u,
+            11u)]
+        [DataRow(
+            60u, BufferUsage.VertexBuffer, 1u,
+            70u, BufferUsage.Staging, 13u,
+            11u)]
+        [DataRow(
+            60u, BufferUsage.Staging, 1u,
+            70u, BufferUsage.Staging, 13u,
+            11u)]
+        [DataRow(
+            5u, BufferUsage.VertexBuffer, 3u,
+            10u, BufferUsage.VertexBuffer, 7u,
+            2u)]
         public void Copy_UnalignedRegion(
             uint srcBufferSize, BufferUsage srcUsage, uint srcCopyOffset,
             uint dstBufferSize, BufferUsage dstUsage, uint dstCopyOffset,
@@ -356,13 +370,16 @@ namespace XenoAtom.Graphics.Tests
             byte[] data = Enumerable.Range(0, (int)srcBufferSize).Select(i => (byte)i).ToArray();
             GD.UpdateBuffer(src, 0, data);
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyBuffer(src, srcCopyOffset, dst, dstCopyOffset, copySize);
-            cl.End();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyBuffer(src, srcCopyOffset, dst, dstCopyOffset, copySize);
+                cb.End();
 
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             DeviceBuffer readback = GetReadback(dst);
 
@@ -371,25 +388,28 @@ namespace XenoAtom.Graphics.Tests
             {
                 byte expected = data[i + srcCopyOffset];
                 byte actual = readView[i + dstCopyOffset];
-                Assert.Equal(expected, actual);
+                Assert.AreEqual(expected, actual);
             }
 
             GD.Unmap(readback);
         }
 
-        [Theory]
-        [InlineData(BufferUsage.VertexBuffer, 13, 5, 1)]
-        [InlineData(BufferUsage.Staging, 13, 5, 1)]
+        [DataTestMethod]
+        [DataRow(BufferUsage.VertexBuffer, 13U, 5U, 1U)]
+        [DataRow(BufferUsage.Staging, 13U, 5U, 1U)]
         public void CommandList_UpdateNonStaging_Unaligned(BufferUsage usage, uint bufferSize, uint dataSize, uint offset)
         {
             DeviceBuffer buffer = CreateBuffer(bufferSize, usage);
             byte[] data = Enumerable.Range(0, (int)dataSize).Select(i => (byte)i).ToArray();
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.UpdateBuffer(buffer, offset, data);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.UpdateBuffer(buffer, offset, data);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             DeviceBuffer readback = GetReadback(buffer);
             MappedResourceView<byte> readView = GD.Map<byte>(readback, MapMode.Read);
@@ -397,16 +417,16 @@ namespace XenoAtom.Graphics.Tests
             {
                 byte expected = data[i];
                 byte actual = readView[i + offset];
-                Assert.Equal(expected, actual);
+                Assert.AreEqual(expected, actual);
             }
 
             GD.Unmap(readback);
         }
 
-        [Theory]
-        [InlineData(BufferUsage.UniformBuffer | BufferUsage.Dynamic)]
-        [InlineData(BufferUsage.UniformBuffer)]
-        [InlineData(BufferUsage.Staging)]
+        [TestMethod]
+        [DataRow(BufferUsage.UniformBuffer | BufferUsage.Dynamic)]
+        [DataRow(BufferUsage.UniformBuffer)]
+        [DataRow(BufferUsage.Staging)]
         public void UpdateUniform_Offset_GraphicsDevice(BufferUsage usage)
         {
             DeviceBuffer buffer = CreateBuffer(128, usage);
@@ -417,51 +437,55 @@ namespace XenoAtom.Graphics.Tests
 
             DeviceBuffer readback = GetReadback(buffer);
             MappedResourceView<Matrix4x4> readView = GD.Map<Matrix4x4>(readback, MapMode.Read);
-            Assert.Equal(mat1, readView[0]);
-            Assert.Equal(mat2, readView[1]);
+            Assert.AreEqual(mat1, readView[0]);
+            Assert.AreEqual(mat2, readView[1]);
             GD.Unmap(readback);
         }
 
-        [Theory]
-        [InlineData(BufferUsage.UniformBuffer | BufferUsage.Dynamic)]
-        [InlineData(BufferUsage.UniformBuffer)]
-        [InlineData(BufferUsage.Staging)]
+        [TestMethod]
+        [DataRow(BufferUsage.UniformBuffer | BufferUsage.Dynamic)]
+        [DataRow(BufferUsage.UniformBuffer)]
+        [DataRow(BufferUsage.Staging)]
         public void UpdateUniform_Offset_CommandList(BufferUsage usage)
         {
             DeviceBuffer buffer = CreateBuffer(128, usage);
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
             Matrix4x4 mat1 = new Matrix4x4(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
-            cl.UpdateBuffer(buffer, 0, mat1);
             Matrix4x4 mat2 = new Matrix4x4(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2);
-            cl.UpdateBuffer(buffer, 64, mat2);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.UpdateBuffer(buffer, 0, mat1);
+                cb.UpdateBuffer(buffer, 64, mat2);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             DeviceBuffer readback = GetReadback(buffer);
             MappedResourceView<Matrix4x4> readView = GD.Map<Matrix4x4>(readback, MapMode.Read);
-            Assert.Equal(mat1, readView[0]);
-            Assert.Equal(mat2, readView[1]);
+            Assert.AreEqual(mat1, readView[0]);
+            Assert.AreEqual(mat2, readView[1]);
             GD.Unmap(readback);
         }
 
-        [Theory]
-        [InlineData(BufferUsage.UniformBuffer)]
-        [InlineData(BufferUsage.UniformBuffer | BufferUsage.Dynamic)]
-        [InlineData(BufferUsage.VertexBuffer)]
-        [InlineData(BufferUsage.VertexBuffer | BufferUsage.Dynamic)]
-        [InlineData(BufferUsage.IndexBuffer)]
-        [InlineData(BufferUsage.IndexBuffer | BufferUsage.Dynamic)]
-        [InlineData(BufferUsage.IndirectBuffer)]
-        [InlineData(BufferUsage.StructuredBufferReadOnly)]
-        [InlineData(BufferUsage.StructuredBufferReadOnly | BufferUsage.Dynamic)]
-        [InlineData(BufferUsage.StructuredBufferReadWrite)]
-        [InlineData(BufferUsage.VertexBuffer | BufferUsage.IndexBuffer)]
-        [InlineData(BufferUsage.VertexBuffer | BufferUsage.IndexBuffer | BufferUsage.Dynamic)]
-        [InlineData(BufferUsage.VertexBuffer | BufferUsage.IndexBuffer | BufferUsage.IndirectBuffer)]
-        [InlineData(BufferUsage.IndexBuffer | BufferUsage.IndirectBuffer)]
-        [InlineData(BufferUsage.Staging)]
+        [TestMethod]
+        [DataRow(BufferUsage.UniformBuffer)]
+        [DataRow(BufferUsage.UniformBuffer | BufferUsage.Dynamic)]
+        [DataRow(BufferUsage.VertexBuffer)]
+        [DataRow(BufferUsage.VertexBuffer | BufferUsage.Dynamic)]
+        [DataRow(BufferUsage.IndexBuffer)]
+        [DataRow(BufferUsage.IndexBuffer | BufferUsage.Dynamic)]
+        [DataRow(BufferUsage.IndirectBuffer)]
+        [DataRow(BufferUsage.StructuredBufferReadOnly)]
+        [DataRow(BufferUsage.StructuredBufferReadOnly | BufferUsage.Dynamic)]
+        [DataRow(BufferUsage.StructuredBufferReadWrite)]
+        [DataRow(BufferUsage.VertexBuffer | BufferUsage.IndexBuffer)]
+        [DataRow(BufferUsage.VertexBuffer | BufferUsage.IndexBuffer | BufferUsage.Dynamic)]
+        [DataRow(BufferUsage.VertexBuffer | BufferUsage.IndexBuffer | BufferUsage.IndirectBuffer)]
+        [DataRow(BufferUsage.IndexBuffer | BufferUsage.IndirectBuffer)]
+        [DataRow(BufferUsage.Staging)]
         public void CreateBuffer_UsageFlagsCoverage(BufferUsage usage)
         {
             if ((usage & BufferUsage.StructuredBufferReadOnly) != 0
@@ -481,19 +505,19 @@ namespace XenoAtom.Graphics.Tests
             GD.WaitForIdle();
         }
 
-        [Theory]
-        [InlineData(BufferUsage.UniformBuffer)]
-        [InlineData(BufferUsage.UniformBuffer | BufferUsage.Dynamic)]
-        [InlineData(BufferUsage.VertexBuffer)]
-        [InlineData(BufferUsage.VertexBuffer | BufferUsage.Dynamic)]
-        [InlineData(BufferUsage.IndexBuffer)]
-        [InlineData(BufferUsage.IndexBuffer | BufferUsage.Dynamic)]
-        [InlineData(BufferUsage.IndirectBuffer)]
-        [InlineData(BufferUsage.VertexBuffer | BufferUsage.IndexBuffer)]
-        [InlineData(BufferUsage.VertexBuffer | BufferUsage.IndexBuffer | BufferUsage.Dynamic)]
-        [InlineData(BufferUsage.VertexBuffer | BufferUsage.IndexBuffer | BufferUsage.IndirectBuffer)]
-        [InlineData(BufferUsage.IndexBuffer | BufferUsage.IndirectBuffer)]
-        [InlineData(BufferUsage.Staging)]
+        [TestMethod]
+        [DataRow(BufferUsage.UniformBuffer)]
+        [DataRow(BufferUsage.UniformBuffer | BufferUsage.Dynamic)]
+        [DataRow(BufferUsage.VertexBuffer)]
+        [DataRow(BufferUsage.VertexBuffer | BufferUsage.Dynamic)]
+        [DataRow(BufferUsage.IndexBuffer)]
+        [DataRow(BufferUsage.IndexBuffer | BufferUsage.Dynamic)]
+        [DataRow(BufferUsage.IndirectBuffer)]
+        [DataRow(BufferUsage.VertexBuffer | BufferUsage.IndexBuffer)]
+        [DataRow(BufferUsage.VertexBuffer | BufferUsage.IndexBuffer | BufferUsage.Dynamic)]
+        [DataRow(BufferUsage.VertexBuffer | BufferUsage.IndexBuffer | BufferUsage.IndirectBuffer)]
+        [DataRow(BufferUsage.IndexBuffer | BufferUsage.IndirectBuffer)]
+        [DataRow(BufferUsage.Staging)]
         public unsafe void CopyBuffer_ZeroSize(BufferUsage usage)
         {
             DeviceBuffer src = CreateBuffer(1024, usage);
@@ -504,39 +528,42 @@ namespace XenoAtom.Graphics.Tests
             GD.UpdateBuffer(src, 0, initialDataSrc);
             GD.UpdateBuffer(dst, 0, initialDataDst);
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyBuffer(src, 0, dst, 0, 0);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyBuffer(src, 0, dst, 0, 0);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             DeviceBuffer readback = GetReadback(dst);
 
             MappedResourceView<byte> readMap = GD.Map<byte>(readback, MapMode.Read);
             for (int i = 0; i < 1024; i++)
             {
-                Assert.Equal((byte)(i * 2), readMap[i]);
+                Assert.AreEqual((byte)(i * 2), readMap[i]);
             }
 
             GD.Unmap(readback);
         }
 
-        [Theory]
-        [InlineData(BufferUsage.UniformBuffer, false)]
-        [InlineData(BufferUsage.UniformBuffer, true)]
-        [InlineData(BufferUsage.UniformBuffer | BufferUsage.Dynamic, false)]
-        [InlineData(BufferUsage.UniformBuffer | BufferUsage.Dynamic, true)]
-        [InlineData(BufferUsage.VertexBuffer, false)]
-        [InlineData(BufferUsage.VertexBuffer, true)]
-        [InlineData(BufferUsage.VertexBuffer | BufferUsage.Dynamic, false)]
-        [InlineData(BufferUsage.VertexBuffer | BufferUsage.Dynamic, true)]
-        [InlineData(BufferUsage.IndexBuffer, false)]
-        [InlineData(BufferUsage.IndexBuffer, true)]
-        [InlineData(BufferUsage.IndirectBuffer, false)]
-        [InlineData(BufferUsage.IndirectBuffer, true)]
-        [InlineData(BufferUsage.Staging, false)]
-        [InlineData(BufferUsage.Staging, true)]
+        [TestMethod]
+        [DataRow(BufferUsage.UniformBuffer, false)]
+        [DataRow(BufferUsage.UniformBuffer, true)]
+        [DataRow(BufferUsage.UniformBuffer | BufferUsage.Dynamic, false)]
+        [DataRow(BufferUsage.UniformBuffer | BufferUsage.Dynamic, true)]
+        [DataRow(BufferUsage.VertexBuffer, false)]
+        [DataRow(BufferUsage.VertexBuffer, true)]
+        [DataRow(BufferUsage.VertexBuffer | BufferUsage.Dynamic, false)]
+        [DataRow(BufferUsage.VertexBuffer | BufferUsage.Dynamic, true)]
+        [DataRow(BufferUsage.IndexBuffer, false)]
+        [DataRow(BufferUsage.IndexBuffer, true)]
+        [DataRow(BufferUsage.IndirectBuffer, false)]
+        [DataRow(BufferUsage.IndirectBuffer, true)]
+        [DataRow(BufferUsage.Staging, false)]
+        [DataRow(BufferUsage.Staging, true)]
         public unsafe void UpdateBuffer_ZeroSize(BufferUsage usage, bool useCommandListUpdate)
         {
             DeviceBuffer buffer = CreateBuffer(1024, usage);
@@ -547,7 +574,8 @@ namespace XenoAtom.Graphics.Tests
 
             if (useCommandListUpdate)
             {
-                CommandList cl = GD.CreateCommandList();
+                using var cbp = GD.CreateCommandBufferPool();
+                using var cl = cbp.CreateCommandBuffer();
                 cl.Begin();
                 fixed (byte* dataPtr = otherData)
                 {
@@ -571,7 +599,7 @@ namespace XenoAtom.Graphics.Tests
             MappedResourceView<byte> readMap = GD.Map<byte>(readback, MapMode.Read);
             for (int i = 0; i < 1024; i++)
             {
-                Assert.Equal((byte)i, readMap[i]);
+                Assert.AreEqual((byte)i, readMap[i]);
             }
 
             GD.Unmap(readback);
@@ -580,14 +608,6 @@ namespace XenoAtom.Graphics.Tests
         private DeviceBuffer CreateBuffer(uint size, BufferUsage usage)
         {
             return GD.CreateBuffer(new BufferDescription(size, usage));
-        }
-    }
-
-    [Trait("Backend", "Vulkan")]
-    public class VulkanBufferTests : BufferTestBase
-    {
-        public VulkanBufferTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
         }
     }
 }

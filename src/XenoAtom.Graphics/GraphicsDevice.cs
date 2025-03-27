@@ -19,12 +19,18 @@ namespace XenoAtom.Graphics
         internal GraphicsDevice(GraphicsAdapter adapter)
         {
             Adapter = adapter;
+            PoolManager = new CommandBufferPoolManager(this);
         }
 
         /// <summary>
         /// Gets the <see cref="GraphicsAdapter"/> associated with this device.
         /// </summary>
         public readonly GraphicsAdapter Adapter;
+        
+        /// <summary>
+        /// Gets the default <see cref="CommandBufferPoolManager"/> associated with this device.
+        /// </summary>
+        public CommandBufferPoolManager PoolManager { get; }
 
         /// <summary>
         /// Gets a value identifying the specific graphics API used by this instance.
@@ -62,14 +68,14 @@ namespace XenoAtom.Graphics
 
         /// <summary>
         /// The required alignment, in bytes, for uniform buffer offsets. <see cref="DeviceBufferRange.Offset"/> must be a
-        /// multiple of this value. When binding a <see cref="ResourceSet"/> to a <see cref="CommandList"/> with an overload
+        /// multiple of this value. When binding a <see cref="ResourceSet"/> to a <see cref="CommandBuffer"/> with an overload
         /// accepting dynamic offsets, each offset must be a multiple of this value.
         /// </summary>
         public uint UniformBufferMinOffsetAlignment => GetUniformBufferMinOffsetAlignmentCore();
 
         /// <summary>
         /// The required alignment, in bytes, for structured buffer offsets. <see cref="DeviceBufferRange.Offset"/> must be a
-        /// multiple of this value. When binding a <see cref="ResourceSet"/> to a <see cref="CommandList"/> with an overload
+        /// multiple of this value. When binding a <see cref="ResourceSet"/> to a <see cref="CommandBuffer"/> with an overload
         /// accepting dynamic offsets, each offset must be a multiple of this value.
         /// </summary>
         public uint StructuredBufferMinOffsetAlignment => GetStructuredBufferMinOffsetAlignmentCore();
@@ -78,28 +84,33 @@ namespace XenoAtom.Graphics
         internal abstract uint GetStructuredBufferMinOffsetAlignmentCore();
 
         /// <summary>
-        /// Submits the given <see cref="CommandList"/> for execution by this device.
-        /// Commands submitted in this way may not be completed when this method returns.
-        /// Use <see cref="WaitForIdle"/> to wait for all submitted commands to complete.
-        /// <see cref="CommandList.End"/> must have been called on <paramref name="commandList"/> for this method to succeed.
+        /// Update the internal state of command buffers and other resources to reflect the current state of the device.
         /// </summary>
-        /// <param name="commandList">The completed <see cref="CommandList"/> to execute. <see cref="CommandList.End"/> must have
-        /// been previously called on this object.</param>
-        public void SubmitCommands(CommandList commandList) => SubmitCommandsCore(commandList, null);
+        public abstract void Refresh();
 
         /// <summary>
-        /// Submits the given <see cref="CommandList"/> for execution by this device.
+        /// Submits the given <see cref="CommandBuffer"/> for execution by this device.
         /// Commands submitted in this way may not be completed when this method returns.
         /// Use <see cref="WaitForIdle"/> to wait for all submitted commands to complete.
-        /// <see cref="CommandList.End"/> must have been called on <paramref name="commandList"/> for this method to succeed.
+        /// <see cref="CommandBuffer.End"/> must have been called on <paramref name="commandBuffer"/> for this method to succeed.
         /// </summary>
-        /// <param name="commandList">The completed <see cref="CommandList"/> to execute. <see cref="CommandList.End"/> must have
+        /// <param name="commandBuffer">The completed <see cref="CommandBuffer"/> to execute. <see cref="CommandBuffer.End"/> must have
+        /// been previously called on this object.</param>
+        public void SubmitCommands(CommandBuffer commandBuffer) => SubmitCommandsCore(commandBuffer, null);
+
+        /// <summary>
+        /// Submits the given <see cref="CommandBuffer"/> for execution by this device.
+        /// Commands submitted in this way may not be completed when this method returns.
+        /// Use <see cref="WaitForIdle"/> to wait for all submitted commands to complete.
+        /// <see cref="CommandBuffer.End"/> must have been called on <paramref name="commandBuffer"/> for this method to succeed.
+        /// </summary>
+        /// <param name="commandBuffer">The completed <see cref="CommandBuffer"/> to execute. <see cref="CommandBuffer.End"/> must have
         /// been previously called on this object.</param>
         /// <param name="fence">A <see cref="Fence"/> which will become signaled after this submission fully completes
         /// execution.</param>
-        public void SubmitCommands(CommandList commandList, Fence fence) => SubmitCommandsCore(commandList, fence);
+        public void SubmitCommands(CommandBuffer commandBuffer, Fence fence) => SubmitCommandsCore(commandBuffer, fence);
 
-        private protected abstract void SubmitCommandsCore(CommandList commandList,
+        private protected abstract void SubmitCommandsCore(CommandBuffer commandBuffer,
             Fence? fence);
 
         /// <summary>
@@ -176,7 +187,7 @@ namespace XenoAtom.Graphics
         public abstract void ResetFence(Fence fence);
 
         /// <summary>
-        /// A blocking method that returns when all submitted <see cref="CommandList"/> objects have fully completed.
+        /// A blocking method that returns when all submitted <see cref="CommandBuffer"/> objects have fully completed.
         /// </summary>
         public void WaitForIdle()
         {

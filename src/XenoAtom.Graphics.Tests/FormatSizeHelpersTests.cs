@@ -1,11 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Xunit;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace XenoAtom.Graphics.Tests
 {
+    [TestClass]
     public class FormatSizeHelpersTests : IDisposable
     {
         private TraceListener[] _traceListeners;
@@ -25,12 +26,12 @@ namespace XenoAtom.Graphics.Tests
             Trace.Listeners.AddRange(_traceListeners);
         }
 
-        [Fact]
+        [TestMethod]
         public void GetSizeInBytes_DefinedForAllVertexElementFormats()
         {
             foreach (VertexElementFormat format in System.Enum.GetValues(typeof(VertexElementFormat)))
             {
-                Assert.True(0 < FormatSizeHelpers.GetSizeInBytes(format));
+                Assert.IsTrue(0 < FormatSizeHelpers.GetSizeInBytes(format));
             }
         }
 
@@ -65,18 +66,18 @@ namespace XenoAtom.Graphics.Tests
         public static IEnumerable<object[]> CompressedPixelFormatMemberData => CompressedPixelFormats.Select(format => new object[] { format });
         public static IEnumerable<object[]> UncompressedPixelFormatMemberData => UncompressedPixelFormats.Select(format => new object[] { format });
 
-        [Theory]
-        [MemberData(nameof(UncompressedPixelFormatMemberData))]
+        [TestMethod]
+        [DynamicData(nameof(UncompressedPixelFormatMemberData))]
         public void GetSizeInBytes_DefinedForAllNonCompressedPixelFormats(PixelFormat format)
         {
-            Assert.True(0 < FormatSizeHelpers.GetSizeInBytes(format));
+            Assert.IsTrue(0 < FormatSizeHelpers.GetSizeInBytes(format));
         }
 
-        [Theory]
-        [MemberData(nameof(CompressedPixelFormatMemberData))]
+        [TestMethod]
+        [DynamicData(nameof(CompressedPixelFormatMemberData))]
         public void GetSizeInBytes_ThrowsForAllCompressedPixelFormats(PixelFormat format)
         {
-            Assert.ThrowsAny<GraphicsException>(() => FormatSizeHelpers.GetSizeInBytes(format));
+            Assert.Throws<GraphicsException>(() => FormatSizeHelpers.GetSizeInBytes(format));
         }
     }
 }

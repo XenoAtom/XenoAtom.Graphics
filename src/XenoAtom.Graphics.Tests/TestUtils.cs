@@ -2,9 +2,8 @@ using System;
 using System.IO;
 using System.Text;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using XenoAtom.Graphics.Utilities;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace XenoAtom.Graphics.Tests
 {
@@ -27,7 +26,6 @@ namespace XenoAtom.Graphics.Tests
 
     public abstract class GraphicsDeviceTestBase : IDisposable
     {
-        private readonly ITestOutputHelper _textOutputHelper;
         private readonly GraphicsDevice _gd;
         private readonly DisposeCollector _disposeCollector;
         private bool _hasWarningOrErrorLogs;
@@ -35,9 +33,11 @@ namespace XenoAtom.Graphics.Tests
 
         public GraphicsDevice GD => _gd;
 
-        public GraphicsDeviceTestBase(ITestOutputHelper textOutputHelper)
+        public TestContext TestContext { get; set; }
+
+
+        public GraphicsDeviceTestBase()
         {
-            _textOutputHelper = textOutputHelper;
             _disposeCollector = new DisposeCollector();
             _gd = TestUtils.CreateVulkanDevice(DebugLogImpl, o => _disposeCollector.Add(o));
         }
@@ -51,7 +51,7 @@ namespace XenoAtom.Graphics.Tests
                 return;
             }
             _hasWarningOrErrorLogs = true;
-            _textOutputHelper.WriteLine($"[{debugLogLevel}] {kind} - {message}");
+            TestContext.WriteLine($"[{debugLogLevel}] {kind} - {message}");
             _logBuilder.AppendLine($"[{debugLogLevel}] {kind} - {message}");
         }
 
@@ -65,12 +65,15 @@ namespace XenoAtom.Graphics.Tests
             else
             {
                 readback = GD.CreateBuffer(new BufferDescription(buffer.SizeInBytes, BufferUsage.Staging));
-                CommandList cl = GD.CreateCommandList();
-                cl.Begin();
-                cl.CopyBuffer(buffer, 0, readback, 0, buffer.SizeInBytes);
-                cl.End();
-                GD.SubmitCommands(cl);
-                GD.WaitForIdle();
+                using (var cbp = GD.CreateCommandBufferPool())
+                using (var cb = cbp.CreateCommandBuffer())
+                {
+                    cb.Begin();
+                    cb.CopyBuffer(buffer, 0, readback, 0, buffer.SizeInBytes);
+                    cb.End();
+                    GD.SubmitCommands(cb);
+                    GD.WaitForIdle();
+                }
             }
 
             return readback;
@@ -95,12 +98,16 @@ namespace XenoAtom.Graphics.Tests
                     texture.Format,
                     TextureUsage.Staging, texture.Kind);
                 Texture readback = GD.CreateTexture(desc);
-                CommandList cl = GD.CreateCommandList();
-                cl.Begin();
-                cl.CopyTexture(texture, readback);
-                cl.End();
-                GD.SubmitCommands(cl);
-                GD.WaitForIdle();
+                using (var cbp = GD.CreateCommandBufferPool())
+                using (var cb = cbp.CreateCommandBuffer())
+                {
+                    cb.Begin();
+                    cb.CopyTexture(texture, readback);
+                    cb.End();
+                    GD.SubmitCommands(cb);
+                    GD.WaitForIdle();
+                }
+
                 return readback;
             }
         }
@@ -121,7 +128,7 @@ namespace XenoAtom.Graphics.Tests
             var manager = GD.Adapter.Manager;
             manager.Dispose();
             
-            Assert.False(_hasWarningOrErrorLogs, $"There are unexpected warning/errors in the logs:\n{_logBuilder}");
+            Assert.IsFalse(_hasWarningOrErrorLogs, $"There are unexpected warning/errors in the logs:\n{_logBuilder}");
         }
     }
 }

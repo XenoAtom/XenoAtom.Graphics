@@ -1,65 +1,102 @@
-using Xunit;
-using Xunit.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace XenoAtom.Graphics.Tests
 {
-    public abstract class DisposalTestBase : GraphicsDeviceTestBase
+    [TestClass]
+    public class DisposalTestBase : GraphicsDeviceTestBase
     {
-        protected DisposalTestBase(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
-        }
-
-        [Fact]
+        [TestMethod]
         public void Dispose_Buffer()
         {
             DeviceBuffer b = GD.CreateBuffer(new BufferDescription(256, BufferUsage.VertexBuffer));
             b.Dispose();
-            Assert.True(b.IsDisposed);
+            Assert.IsTrue(b.IsDisposed);
         }
 
-        [Fact]
+        [TestMethod]
         public void Dispose_Texture()
         {
             Texture t = GD.CreateTexture(TextureDescription.Texture2D(1, 1, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.Sampled));
             TextureView tv = GD.CreateTextureView(t);
             GD.WaitForIdle(); // Required currently by Vulkan backend.
             tv.Dispose();
-            Assert.True(tv.IsDisposed);
-            Assert.False(t.IsDisposed);
+            Assert.IsTrue(tv.IsDisposed);
+            Assert.IsFalse(t.IsDisposed);
             t.Dispose();
-            Assert.True(t.IsDisposed);
+            Assert.IsTrue(t.IsDisposed);
         }
 
-        [Fact]
+        [TestMethod]
         public void Dispose_Framebuffer()
         {
             Texture t = GD.CreateTexture(TextureDescription.Texture2D(1, 1, 1, 1, PixelFormat.R32_G32_B32_A32_Float, TextureUsage.RenderTarget));
             Framebuffer fb = GD.CreateFramebuffer(new FramebufferDescription(null, t));
             GD.WaitForIdle(); // Required currently by Vulkan backend.
             fb.Dispose();
-            Assert.True(fb.IsDisposed);
-            Assert.False(t.IsDisposed);
+            Assert.IsTrue(fb.IsDisposed);
+            Assert.IsFalse(t.IsDisposed);
             t.Dispose();
-            Assert.True(t.IsDisposed);
+            Assert.IsTrue(t.IsDisposed);
         }
 
-        [Fact]
-        public void Dispose_CommandList()
+        [TestMethod]
+        public void Dispose_CommandBuffer_And_Pool()
         {
-            CommandList cl = GD.CreateCommandList();
-            cl.Dispose();
-            Assert.True(cl.IsDisposed);
+            var cbp = GD.CreateCommandBufferPool();
+            var cb = cbp.CreateCommandBuffer();
+            cb.Dispose();
+            Assert.IsFalse(cb.IsDisposed);
+            cbp.Dispose();
+            Assert.IsTrue(cbp.IsDisposed);
+            Assert.IsTrue(cb.IsDisposed);
         }
 
-        [Fact]
+        [TestMethod]
+        public void Dispose_CommandBufferPoolManager_Rent()
+        {
+            CommandBufferPool pool;
+            {
+                pool = GD.PoolManager.Rent();
+                Assert.AreEqual(CommandBufferPoolState.Ready, pool.State);
+                using var cb = pool.CreateCommandBuffer();
+                Assert.AreEqual(CommandBufferPoolState.Ready, pool.State);
+                Assert.AreEqual(CommandBufferState.Ready, cb.State);
+                cb.Begin();
+                Assert.AreEqual(CommandBufferState.Recording, cb.State);
+                Assert.AreEqual(CommandBufferPoolState.InUse, pool.State);
+                cb.End();
+                Assert.AreEqual(CommandBufferState.Recorded, cb.State);
+                Assert.AreEqual(CommandBufferPoolState.Ready, pool.State);
+                GD.SubmitCommands(cb);
+                Assert.AreEqual(CommandBufferState.Submitted, cb.State);
+                Assert.AreEqual(CommandBufferPoolState.InUse, pool.State);
+                GD.WaitForIdle();
+                GD.Refresh();
+                Assert.AreEqual(CommandBufferState.Unallocated, cb.State);
+                Assert.AreEqual(CommandBufferPoolState.InPool, pool.State);
+                pool.Dispose();
+            }
+            Assert.AreEqual(CommandBufferPoolState.InPool, pool.State);
+
+            CommandBufferPool newPool;
+            {
+                newPool = GD.PoolManager.Rent();
+                Assert.IsTrue(object.ReferenceEquals(pool, newPool), "Invalid state, we should have reused the previous pool");
+                Assert.AreEqual(CommandBufferPoolState.Ready, newPool.State);
+                GD.PoolManager.Return(newPool);
+                Assert.AreEqual(CommandBufferPoolState.InPool, newPool.State);
+            }
+        }
+
+        [TestMethod]
         public void Dispose_Sampler()
         {
             Sampler s = GD.CreateSampler(SamplerDescription.Point);
             s.Dispose();
-            Assert.True(s.IsDisposed);
+            Assert.IsTrue(s.IsDisposed);
         }
 
-        [Fact]
+        [TestMethod]
         public void Dispose_Pipeline()
         {
             Shader[] shaders = TestShaders.LoadVertexFragment(GD, "UIntVertexAttribs");
@@ -86,21 +123,21 @@ namespace XenoAtom.Graphics.Tests
                 new OutputDescription(null, new OutputAttachmentDescription(PixelFormat.R32_G32_B32_A32_Float)));
             Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
             pipeline.Dispose();
-            Assert.True(pipeline.IsDisposed);
-            Assert.False(shaders[0].IsDisposed);
-            Assert.False(shaders[1].IsDisposed);
-            Assert.False(layout.IsDisposed);
+            Assert.IsTrue(pipeline.IsDisposed);
+            Assert.IsFalse(shaders[0].IsDisposed);
+            Assert.IsFalse(shaders[1].IsDisposed);
+            Assert.IsFalse(layout.IsDisposed);
             layout.Dispose();
-            Assert.True(layout.IsDisposed);
-            Assert.False(shaders[0].IsDisposed);
-            Assert.False(shaders[1].IsDisposed);
+            Assert.IsTrue(layout.IsDisposed);
+            Assert.IsFalse(shaders[0].IsDisposed);
+            Assert.IsFalse(shaders[1].IsDisposed);
             shaders[0].Dispose();
-            Assert.True(shaders[0].IsDisposed);
+            Assert.IsTrue(shaders[0].IsDisposed);
             shaders[1].Dispose();
-            Assert.True(shaders[1].IsDisposed);
+            Assert.IsTrue(shaders[1].IsDisposed);
         }
 
-        [Fact]
+        [TestMethod]
         public void Dispose_ResourceSet()
         {
             ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
@@ -112,26 +149,18 @@ namespace XenoAtom.Graphics.Tests
 
             ResourceSet rs = GD.CreateResourceSet(new ResourceSetDescription(layout, ub0, ub1));
             rs.Dispose();
-            Assert.True(rs.IsDisposed);
-            Assert.False(ub0.IsDisposed);
-            Assert.False(ub1.IsDisposed);
-            Assert.False(layout.IsDisposed);
+            Assert.IsTrue(rs.IsDisposed);
+            Assert.IsFalse(ub0.IsDisposed);
+            Assert.IsFalse(ub1.IsDisposed);
+            Assert.IsFalse(layout.IsDisposed);
             layout.Dispose();
-            Assert.True(layout.IsDisposed);
-            Assert.False(ub0.IsDisposed);
-            Assert.False(ub1.IsDisposed);
+            Assert.IsTrue(layout.IsDisposed);
+            Assert.IsFalse(ub0.IsDisposed);
+            Assert.IsFalse(ub1.IsDisposed);
             ub0.Dispose();
-            Assert.True(ub0.IsDisposed);
+            Assert.IsTrue(ub0.IsDisposed);
             ub1.Dispose();
-            Assert.True(ub1.IsDisposed);
-        }
-    }
-
-    [Trait("Backend", "Vulkan")]
-    public class VulkanDisposalTests : DisposalTestBase
-    {
-        public VulkanDisposalTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
+            Assert.IsTrue(ub1.IsDisposed);
         }
     }
 }

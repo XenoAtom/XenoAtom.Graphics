@@ -1,18 +1,17 @@
-using Xunit;
-using Xunit.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace XenoAtom.Graphics.Tests
 {
     public abstract class SwapchainTests : GraphicsDeviceTestBase
     {
         /*
-        [Theory]
-        [InlineData(PixelFormat.R16_UNorm, false)]
-        [InlineData(PixelFormat.R16_UNorm, true)]
-        [InlineData(PixelFormat.R32_Float, false)]
-        [InlineData(PixelFormat.R32_Float, true)]
-        [InlineData(null, false)]
-        [InlineData(null, true)]
+        [TestMethod]
+        [DataRow(PixelFormat.R16_UNorm, false)]
+        [DataRow(PixelFormat.R16_UNorm, true)]
+        [DataRow(PixelFormat.R32_Float, false)]
+        [DataRow(PixelFormat.R32_Float, true)]
+        [DataRow(null, false)]
+        [DataRow(null, true)]
         public void Ctor_SetsProperties(PixelFormat? depthFormat, bool syncToVerticalBlank)
         {
             //Sdl2Window window = new Sdl2Window("SwapchainTestWindow", 0, 0, 100, 100, SDL_WindowFlags.Hidden, false);
@@ -27,56 +26,41 @@ namespace XenoAtom.Graphics.Tests
             //else
             //{
             //    Assert.NotNull(swapchain.Framebuffer.DepthTarget);
-            //    Assert.Equal(depthFormat, swapchain.Framebuffer.DepthTarget.Value.Target.Format);
+            //    Assert.AreEqual(depthFormat, swapchain.Framebuffer.DepthTarget.Value.Target.Format);
             //}
 
-            //Assert.Equal(syncToVerticalBlank, swapchain.SyncToVerticalBlank);
+            //Assert.AreEqual(syncToVerticalBlank, swapchain.SyncToVerticalBlank);
 
             //window.Close();
         }
         */
-        protected SwapchainTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
-        }
     }
 
     public abstract class MainSwapchainTests : GraphicsDeviceTestBase
     {
-        protected MainSwapchainTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
-        }
-
-        //[Fact]
+        //[TestMethod]
         //public void Textures_Properties_Correct()
         //{
         //    Texture colorTarget = GD.MainSwapchain.Framebuffer.ColorTargets[0].Target;
-        //    Assert.Equal(TextureType.Texture2D, colorTarget.Type);
+        //    Assert.AreEqual(TextureType.Texture2D, colorTarget.Type);
         //    Assert.InRange(colorTarget.Width, 1u, uint.MaxValue);
         //    Assert.InRange(colorTarget.Height, 1u, uint.MaxValue);
-        //    Assert.Equal(1u, colorTarget.Depth);
-        //    Assert.Equal(1u, colorTarget.ArrayLayers);
-        //    Assert.Equal(1u, colorTarget.MipLevels);
-        //    Assert.Equal(TextureUsage.RenderTarget, colorTarget.Usage);
-        //    Assert.Equal(TextureSampleCount.Count1, colorTarget.SampleCount);
+        //    Assert.AreEqual(1u, colorTarget.Depth);
+        //    Assert.AreEqual(1u, colorTarget.ArrayLayers);
+        //    Assert.AreEqual(1u, colorTarget.MipLevels);
+        //    Assert.AreEqual(TextureUsage.RenderTarget, colorTarget.Usage);
+        //    Assert.AreEqual(TextureSampleCount.Count1, colorTarget.SampleCount);
 
         //    Texture depthTarget = GD.MainSwapchain.Framebuffer.DepthTarget.Value.Target;
-        //    Assert.Equal(TextureType.Texture2D, depthTarget.Type);
-        //    Assert.Equal(colorTarget.Width, depthTarget.Width);
-        //    Assert.Equal(colorTarget.Height, depthTarget.Height);
-        //    Assert.Equal(1u, depthTarget.Depth);
-        //    Assert.Equal(1u, depthTarget.ArrayLayers);
-        //    Assert.Equal(1u, depthTarget.MipLevels);
-        //    Assert.Equal(TextureUsage.DepthStencil, depthTarget.Usage);
-        //    Assert.Equal(TextureSampleCount.Count1, depthTarget.SampleCount);
+        //    Assert.AreEqual(TextureType.Texture2D, depthTarget.Type);
+        //    Assert.AreEqual(colorTarget.Width, depthTarget.Width);
+        //    Assert.AreEqual(colorTarget.Height, depthTarget.Height);
+        //    Assert.AreEqual(1u, depthTarget.Depth);
+        //    Assert.AreEqual(1u, depthTarget.ArrayLayers);
+        //    Assert.AreEqual(1u, depthTarget.MipLevels);
+        //    Assert.AreEqual(TextureUsage.DepthStencil, depthTarget.Usage);
+        //    Assert.AreEqual(TextureSampleCount.Count1, depthTarget.SampleCount);
         //}
 
-    }
-
-    [Trait("Backend", "Vulkan")]
-    public class VulkanSwapchainTests : SwapchainTests
-    {
-        public VulkanSwapchainTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
-        }
     }
 }

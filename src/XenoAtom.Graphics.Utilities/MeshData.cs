@@ -15,7 +15,7 @@ namespace XenoAtom.Graphics.Utilities
         /// <param name="device"></param>
         /// <param name="cl"></param>
         /// <returns></returns>
-        DeviceBuffer CreateVertexBuffer(GraphicsDevice device, CommandList cl);
+        DeviceBuffer CreateVertexBuffer(GraphicsDevice device, CommandBuffer cl);
 
         /// <summary>
         /// Constructs a <see cref="IndexBuffer"/> from this <see cref="MeshData"/>.
@@ -24,7 +24,7 @@ namespace XenoAtom.Graphics.Utilities
         /// <param name="cl"></param>
         /// <param name="indexCount"></param>
         /// <returns></returns>
-        DeviceBuffer CreateIndexBuffer(GraphicsDevice device, CommandList cl, out int indexCount);
+        DeviceBuffer CreateIndexBuffer(GraphicsDevice device, CommandBuffer cl, out int indexCount);
 
         /// <summary>
         /// Gets a centered <see cref="BoundingSphere"/> which completely encapsulates the vertices of this mesh.

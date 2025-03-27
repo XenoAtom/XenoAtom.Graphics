@@ -4,8 +4,8 @@ namespace XenoAtom.Graphics.Vk
 {
     partial class VkGraphicsDevice
     {
-        public override CommandList CreateCommandList(in CommandListDescription description)
-            => LogResourceCreated(new VkCommandList(this, description));
+        public override CommandBufferPool CreateCommandBufferPool(in CommandBufferPoolDescription description)
+            => LogResourceCreated(new VkCommandBufferPool(this, description));
 
         public override Framebuffer CreateFramebuffer(in FramebufferDescription description)
             => LogResourceCreated(new VkFramebuffer(this, description, false));

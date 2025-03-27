@@ -11,43 +11,33 @@ namespace XenoAtom.Graphics
     /// A device resource which allows the recording of graphics commands, which can later be executed by a
     /// <see cref="GraphicsDevice"/>.
     /// Before graphics commands can be issued, the <see cref="Begin"/> method must be invoked.
-    /// When the <see cref="CommandList"/> is ready to be executed, <see cref="End"/> must be invoked, and then
-    /// <see cref="GraphicsDevice.SubmitCommands(CommandList)"/> should be used.
-    /// NOTE: The use of <see cref="CommandList"/> is not thread-safe. Access to the <see cref="CommandList"/> must be
+    /// When the <see cref="CommandBuffer"/> is ready to be executed, <see cref="End"/> must be invoked, and then
+    /// <see cref="GraphicsDevice.SubmitCommands(CommandBuffer)"/> should be used.
+    /// NOTE: The use of <see cref="CommandBuffer"/> is not thread-safe. Access to the <see cref="CommandBuffer"/> must be
     /// externally synchronized.
     /// There are some limitations dictating proper usage and ordering of graphics commands. For example, a
     /// <see cref="Framebuffer"/>, <see cref="Pipeline"/>, vertex buffer, and index buffer must all be
     /// bound before a call to <see cref="DrawIndexed(uint, uint, uint, int, uint)"/> will succeed.
     /// These limitations are described in each function, where applicable.
-    /// <see cref="CommandList"/> instances cannot be executed multiple times per-recording. When executed by a
+    /// <see cref="CommandBuffer"/> instances cannot be executed multiple times per-recording. When executed by a
     /// <see cref="GraphicsDevice"/>, they must be reset and commands must be issued again.
-    /// See <see cref="CommandListDescription"/>.
     /// </summary>
-    public abstract class CommandList : GraphicsDeviceObject
+    public abstract class CommandBuffer : GraphicsDeviceObject
     {
-        private readonly GraphicsDeviceFeatures _features;
-        private readonly uint _uniformBufferAlignment;
-        private readonly uint _structuredBufferAlignment;
-
         private protected Framebuffer? _framebuffer;
         private protected Pipeline? _graphicsPipeline;
         private protected Pipeline? _computePipeline;
+        private CommandBufferState _previousState;
+        private CommandBufferState _state;
 
 #if VALIDATE_USAGE
         private DeviceBuffer? _indexBuffer;
         private IndexFormat _indexFormat;
 #endif
 
-        internal CommandList(
-            GraphicsDevice device,
-            in CommandListDescription description,
-            GraphicsDeviceFeatures features,
-            uint uniformAlignment,
-            uint structuredAlignment) : base(device)
+        internal CommandBuffer(CommandBufferPool pool) : base(pool.Device)
         {
-            _features = features;
-            _uniformBufferAlignment = uniformAlignment;
-            _structuredBufferAlignment = structuredAlignment;
+            Pool = pool;
         }
 
         internal void ClearCachedState()
@@ -60,8 +50,34 @@ namespace XenoAtom.Graphics
 #endif
         }
 
+
         /// <summary>
-        /// Gets the underlying native handle for this <see cref="CommandList"/>.
+        /// Gets the current state of this <see cref="CommandBuffer"/>.
+        /// </summary>
+        public CommandBufferState State
+        {
+            get => _state;
+            private protected set
+            {
+                if (_state == value) return;
+                _previousState = _state;
+                _state = value;
+                Pool.NotifyBufferStateChanged(this);
+            }
+        }
+
+        /// <summary>
+        /// Gets the previous state of this <see cref="CommandBuffer"/>.
+        /// </summary>
+        internal CommandBufferState PreviousState => _previousState;
+
+        /// <summary>
+        /// Gets the <see cref="CommandBufferPool"/> that owns this <see cref="CommandBuffer"/>.
+        /// </summary>
+        public CommandBufferPool Pool { get; }
+
+        /// <summary>
+        /// Gets the underlying native handle for this <see cref="CommandBuffer"/>.
         /// </summary>
         /// <remarks>
         /// For Vulkan, this is a <code>VkCommandBuffer</code>.
@@ -69,12 +85,36 @@ namespace XenoAtom.Graphics
         public abstract nint Handle { get; }
 
         /// <summary>
-        /// Puts this <see cref="CommandList"/> into the initial state.
+        /// Resets this <see cref="CommandBuffer"/> to its initial state.
+        /// </summary>
+        /// <remarks>
+        /// This can be called only if the <see cref="CommandBufferPool"/> was created with <see cref="CommandBufferPoolFlags.CanResetCommandBuffer"/> bit set.
+        /// </remarks>
+        public void Reset() => Reset(false);
+
+        /// <summary>
+        /// Reset this <see cref="CommandBuffer"/> to its initial state.
+        /// </summary>
+        /// <remarks>
+        /// This can be called only if the <see cref="CommandBufferPool"/> was created with <see cref="CommandBufferPoolFlags.CanResetCommandBuffer"/> bit set.
+        /// </remarks>
+        public abstract void Reset(bool allowReleasingSystemResources);
+
+        /// <summary>
+        /// Puts this <see cref="CommandBuffer"/> into the initial state.
         /// This function must be called before other graphics commands can be issued.
         /// Begin must only be called if it has not been previously called, if <see cref="End"/> has been called,
-        /// or if <see cref="GraphicsDevice.SubmitCommands(CommandList)"/> has been called on this instance.
+        /// or if <see cref="GraphicsDevice.SubmitCommands(CommandBuffer)"/> has been called on this instance.
         /// </summary>
-        public abstract void Begin();
+        public void Begin() => Begin(CommandBufferBeginFlags.None);
+
+        /// <summary>
+        /// Puts this <see cref="CommandBuffer"/> into the initial state.
+        /// This function must be called before other graphics commands can be issued.
+        /// Begin must only be called if it has not been previously called, if <see cref="End"/> has been called,
+        /// or if <see cref="GraphicsDevice.SubmitCommands(CommandBuffer)"/> has been called on this instance.
+        /// </summary>
+        public abstract void Begin(CommandBufferBeginFlags flags);
 
         /// <summary>
         /// Completes this list of graphics commands, putting it into an executable state for a <see cref="GraphicsDevice"/>.
@@ -272,8 +312,8 @@ namespace XenoAtom.Graphics
                 if ((layoutDesc.Elements[i].Options & ResourceLayoutElementOptions.DynamicBinding) != 0)
                 {
                     uint requiredAlignment = layoutDesc.Elements[i].Kind == ResourceKind.UniformBuffer
-                        ? _uniformBufferAlignment
-                        : _structuredBufferAlignment;
+                        ? Device.UniformBufferMinOffsetAlignment
+                        : Device.StructuredBufferMinOffsetAlignment;
                     uint desiredOffset = Unsafe.Add(ref dynamicOffsets, (int)dynamicOffsetIndex);
                     dynamicOffsetIndex += 1;
                     DeviceBufferRange range = Util.GetBufferRange(rs.Resources[i], desiredOffset);
@@ -586,13 +626,13 @@ namespace XenoAtom.Graphics
         private protected abstract void DrawCore(uint vertexCount, uint instanceCount, uint vertexStart, uint instanceStart);
 
         /// <summary>
-        /// Draws indexed primitives from the currently-bound state in this <see cref="CommandList"/>.
+        /// Draws indexed primitives from the currently-bound state in this <see cref="CommandBuffer"/>.
         /// </summary>
         /// <param name="indexCount">The number of indices.</param>
         public void DrawIndexed(uint indexCount) => DrawIndexed(indexCount, 1, 0, 0, 0);
 
         /// <summary>
-        /// Draws indexed primitives from the currently-bound state in this <see cref="CommandList"/>.
+        /// Draws indexed primitives from the currently-bound state in this <see cref="CommandBuffer"/>.
         /// </summary>
         /// <param name="indexCount">The number of indices.</param>
         /// <param name="instanceCount">The number of instances.</param>
@@ -605,11 +645,11 @@ namespace XenoAtom.Graphics
             PreDrawValidation();
 
 #if VALIDATE_USAGE
-            if (!_features.DrawBaseVertex && vertexOffset != 0)
+            if (!Device.Features.DrawBaseVertex && vertexOffset != 0)
             {
                 throw new GraphicsException("Drawing with a non-zero base vertex is not supported on this device.");
             }
-            if (!_features.DrawBaseInstance && instanceStart != 0)
+            if (!Device.Features.DrawBaseInstance && instanceStart != 0)
             {
                 throw new GraphicsException("Drawing with a non-zero base instance is not supported on this device.");
             }
@@ -694,7 +734,7 @@ namespace XenoAtom.Graphics
         [Conditional("VALIDATE_USAGE")]
         private void ValidateDrawIndirectSupport()
         {
-            if (!_features.DrawIndirect)
+            if (!Device.Features.DrawIndirect)
             {
                 throw new GraphicsException($"Indirect drawing is not supported by this device.");
             }
@@ -1164,7 +1204,7 @@ namespace XenoAtom.Graphics
         private protected abstract void GenerateMipmapsCore(Texture texture);
 
         /// <summary>
-        /// Pushes a debug group at the current position in the <see cref="CommandList"/>. This allows subsequent commands to be
+        /// Pushes a debug group at the current position in the <see cref="CommandBuffer"/>. This allows subsequent commands to be
         /// categorized and filtered when viewed in external debugging tools. This method can be called multiple times in order
         /// to create nested debug groupings. Each call to PushDebugGroup must be followed by a matching call to
         /// <see cref="PopDebugGroup"/>.
@@ -1181,7 +1221,7 @@ namespace XenoAtom.Graphics
         }
 
         /// <summary>
-        /// Pushes a debug group at the current position in the <see cref="CommandList"/>. This allows subsequent commands to be
+        /// Pushes a debug group at the current position in the <see cref="CommandBuffer"/>. This allows subsequent commands to be
         /// categorized and filtered when viewed in external debugging tools. This method can be called multiple times in order
         /// to create nested debug groupings. Each call to PushDebugGroup must be followed by a matching call to
         /// <see cref="PopDebugGroup"/>.
@@ -1225,7 +1265,7 @@ namespace XenoAtom.Graphics
 #if VALIDATE_USAGE
             if (_indexBuffer == null)
             {
-                throw new GraphicsException($"An index buffer must be bound before {nameof(CommandList)}.{nameof(DrawIndexed)} can be called.");
+                throw new GraphicsException($"An index buffer must be bound before {nameof(CommandBuffer)}.{nameof(DrawIndexed)} can be called.");
             }
 
             uint indexFormatSize = _indexFormat == IndexFormat.UInt16 ? 2u : 4u;

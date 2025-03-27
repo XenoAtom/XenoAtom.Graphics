@@ -4,8 +4,7 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Xunit;
-using Xunit.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace XenoAtom.Graphics.Tests
 {
@@ -41,9 +40,10 @@ namespace XenoAtom.Graphics.Tests
         public Vector4 D_V4;
     }
 
-    public abstract class RenderTests : GraphicsDeviceTestBase
+    [TestClass]
+    public class RenderTests : GraphicsDeviceTestBase
     {
-        [Fact]
+        [TestMethod]
         public void Points_WithUIntColor()
         {
             Texture target = GD.CreateTexture(TextureDescription.Texture2D(
@@ -141,21 +141,23 @@ namespace XenoAtom.Graphics.Tests
             GD.UpdateBuffer(vb, 0, vertices);
             GD.UpdateBuffer(infoBuffer, 0, new UIntVertexAttribsInfo { ColorNormalizationFactor = colorNormalizationFactor });
 
-            CommandList cl = GD.CreateCommandList();
-
-            cl.Begin();
-            cl.SetFramebuffer(framebuffer);
-            cl.SetFullViewports();
-            cl.SetFullScissorRects();
-            cl.ClearColorTarget(0, RgbaFloat.Black);
-            cl.SetPipeline(pipeline);
-            cl.SetVertexBuffer(0, vb);
-            cl.SetGraphicsResourceSet(0, set);
-            cl.Draw((uint)vertices.Length);
-            cl.CopyTexture(target, staging);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetFramebuffer(framebuffer);
+                cb.SetFullViewports();
+                cb.SetFullScissorRects();
+                cb.ClearColorTarget(0, RgbaFloat.Black);
+                cb.SetPipeline(pipeline);
+                cb.SetVertexBuffer(0, vb);
+                cb.SetGraphicsResourceSet(0, set);
+                cb.Draw((uint)vertices.Length);
+                cb.CopyTexture(target, staging);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResourceView<RgbaFloat> readView = GD.Map<RgbaFloat>(staging, MapMode.Read);
 
@@ -173,12 +175,12 @@ namespace XenoAtom.Graphics.Tests
                     vertex.Color_Int.Y / (float)colorNormalizationFactor,
                     vertex.Color_Int.Z / (float)colorNormalizationFactor,
                     1);
-                Assert.Equal(expectedColor, readView[x, y], RgbaFloatFuzzyComparer.Instance);
+                Assert.AreEqual(expectedColor, readView[x, y], RgbaFloatFuzzyComparer.Instance);
             }
             GD.Unmap(staging);
         }
 
-        [Fact]
+        [TestMethod]
         public void Points_WithUShortNormColor()
         {
             Texture target = GD.CreateTexture(TextureDescription.Texture2D(
@@ -259,21 +261,23 @@ namespace XenoAtom.Graphics.Tests
                 new BufferDescription((uint)(Unsafe.SizeOf<VertexCPU_UShortNorm>() * vertices.Length), BufferUsage.VertexBuffer));
             GD.UpdateBuffer(vb, 0, vertices);
 
-            CommandList cl = GD.CreateCommandList();
-
-            cl.Begin();
-            cl.SetFramebuffer(framebuffer);
-            cl.SetFullViewports();
-            cl.SetFullScissorRects();
-            cl.ClearColorTarget(0, RgbaFloat.Black);
-            cl.SetPipeline(pipeline);
-            cl.SetVertexBuffer(0, vb);
-            cl.SetGraphicsResourceSet(0, set);
-            cl.Draw((uint)vertices.Length);
-            cl.CopyTexture(target, staging);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetFramebuffer(framebuffer);
+                cb.SetFullViewports();
+                cb.SetFullScissorRects();
+                cb.ClearColorTarget(0, RgbaFloat.Black);
+                cb.SetPipeline(pipeline);
+                cb.SetVertexBuffer(0, vb);
+                cb.SetGraphicsResourceSet(0, set);
+                cb.Draw((uint)vertices.Length);
+                cb.CopyTexture(target, staging);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResourceView<RgbaFloat> readView = GD.Map<RgbaFloat>(staging, MapMode.Read);
 
@@ -291,7 +295,7 @@ namespace XenoAtom.Graphics.Tests
                     vertex.G / (float)ushort.MaxValue,
                     vertex.B / (float)ushort.MaxValue,
                     1);
-                Assert.Equal(expectedColor, readView[x, y], RgbaFloatFuzzyComparer.Instance);
+                Assert.AreEqual(expectedColor, readView[x, y], RgbaFloatFuzzyComparer.Instance);
             }
             GD.Unmap(staging);
         }
@@ -320,7 +324,7 @@ namespace XenoAtom.Graphics.Tests
             return (ushort)(normalizedValue * ushort.MaxValue);
         }
 
-        [Fact]
+        [TestMethod]
         public void Points_WithUShortColor()
         {
             Texture target = GD.CreateTexture(TextureDescription.Texture2D(
@@ -406,21 +410,23 @@ namespace XenoAtom.Graphics.Tests
             GD.UpdateBuffer(vb, 0, vertices);
             GD.UpdateBuffer(infoBuffer, 0, new UIntVertexAttribsInfo { ColorNormalizationFactor = colorNormalizationFactor });
 
-            CommandList cl = GD.CreateCommandList();
-
-            cl.Begin();
-            cl.SetFramebuffer(framebuffer);
-            cl.SetFullViewports();
-            cl.SetFullScissorRects();
-            cl.ClearColorTarget(0, RgbaFloat.Black);
-            cl.SetPipeline(pipeline);
-            cl.SetVertexBuffer(0, vb);
-            cl.SetGraphicsResourceSet(0, set);
-            cl.Draw((uint)vertices.Length);
-            cl.CopyTexture(target, staging);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetFramebuffer(framebuffer);
+                cb.SetFullViewports();
+                cb.SetFullScissorRects();
+                cb.ClearColorTarget(0, RgbaFloat.Black);
+                cb.SetPipeline(pipeline);
+                cb.SetVertexBuffer(0, vb);
+                cb.SetGraphicsResourceSet(0, set);
+                cb.Draw((uint)vertices.Length);
+                cb.CopyTexture(target, staging);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResourceView<RgbaFloat> readView = GD.Map<RgbaFloat>(staging, MapMode.Read);
 
@@ -438,12 +444,12 @@ namespace XenoAtom.Graphics.Tests
                     vertex.G / (float)colorNormalizationFactor,
                     vertex.B / (float)colorNormalizationFactor,
                     1);
-                Assert.Equal(expectedColor, readView[x, y], RgbaFloatFuzzyComparer.Instance);
+                Assert.AreEqual(expectedColor, readView[x, y], RgbaFloatFuzzyComparer.Instance);
             }
             GD.Unmap(staging);
         }
 
-        [Fact]
+        [TestMethod]
         public void Points_WithFloat16Color()
         {
             Texture target = GD.CreateTexture(TextureDescription.Texture2D(
@@ -560,21 +566,23 @@ namespace XenoAtom.Graphics.Tests
             GD.UpdateBuffer(vb, 0, vertices);
             GD.UpdateBuffer(infoBuffer, 0, new UIntVertexAttribsInfo { ColorNormalizationFactor = colorNormalizationFactor });
 
-            CommandList cl = GD.CreateCommandList();
-
-            cl.Begin();
-            cl.SetFramebuffer(framebuffer);
-            cl.SetFullViewports();
-            cl.SetFullScissorRects();
-            cl.ClearColorTarget(0, RgbaFloat.Black);
-            cl.SetPipeline(pipeline);
-            cl.SetVertexBuffer(0, vb);
-            cl.SetGraphicsResourceSet(0, set);
-            cl.Draw((uint)vertices.Length);
-            cl.CopyTexture(target, staging);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetFramebuffer(framebuffer);
+                cb.SetFullViewports();
+                cb.SetFullScissorRects();
+                cb.ClearColorTarget(0, RgbaFloat.Black);
+                cb.SetPipeline(pipeline);
+                cb.SetVertexBuffer(0, vb);
+                cb.SetGraphicsResourceSet(0, set);
+                cb.Draw((uint)vertices.Length);
+                cb.CopyTexture(target, staging);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResourceView<RgbaFloat> readView = GD.Map<RgbaFloat>(staging, MapMode.Read);
 
@@ -589,14 +597,14 @@ namespace XenoAtom.Graphics.Tests
                 }
 
                 RgbaFloat expectedColor = expectedColors[i];
-                Assert.Equal(expectedColor, readView[x, y], RgbaFloatFuzzyComparer.Instance);
+                Assert.AreEqual(expectedColor, readView[x, y], RgbaFloatFuzzyComparer.Instance);
             }
             GD.Unmap(staging);
         }
 
-        [InlineData(false)]
-        [InlineData(true)]
-        [Theory]
+        [DataRow(false)]
+        [DataRow(true)]
+        [TestMethod]
         public unsafe void Points_WithTexture_UpdateUnrelated(bool useTextureView)
         {
             // This is a regression test for the case where a user modifies an unrelated texture
@@ -676,37 +684,39 @@ namespace XenoAtom.Graphics.Tests
                 new BufferDescription((uint)(Unsafe.SizeOf<Vector2>() * vertices.Length), BufferUsage.VertexBuffer));
             GD.UpdateBuffer(vb, 0, vertices);
 
-            CommandList cl = GD.CreateCommandList();
-
-            for (int i = 0; i < 2; i++)
+            using (var cbp = GD.CreateCommandBufferPool(new(CommandBufferPoolFlags.CanResetCommandBuffer)))
+            using (var cb = cbp.CreateCommandBuffer())
             {
-                cl.Begin();
-                cl.SetFramebuffer(framebuffer);
-                cl.ClearColorTarget(0, RgbaFloat.Black);
-                cl.SetPipeline(pipeline);
-                cl.SetVertexBuffer(0, vb);
-                cl.SetGraphicsResourceSet(0, set);
+                for (int i = 0; i < 2; i++)
+                {
+                    cb.Begin();
+                    cb.SetFramebuffer(framebuffer);
+                    cb.ClearColorTarget(0, RgbaFloat.Black);
+                    cb.SetPipeline(pipeline);
+                    cb.SetVertexBuffer(0, vb);
+                    cb.SetGraphicsResourceSet(0, set);
 
-                // Modify an unrelated texture.
-                // This must have no observable effect on the next draw call.
-                RgbaFloat pink = RgbaFloat.Pink;
-                GD.UpdateTexture(shouldntBeSampledTexture,
-                    (IntPtr)(&pink), (uint)Unsafe.SizeOf<RgbaFloat>(),
-                    0, 0, 0,
-                    1, 1, 1,
-                    0, 0);
+                    // Modify an unrelated texture.
+                    // This must have no observable effect on the next draw call.
+                    RgbaFloat pink = RgbaFloat.Pink;
+                    GD.UpdateTexture(shouldntBeSampledTexture,
+                        (IntPtr)(&pink), (uint)Unsafe.SizeOf<RgbaFloat>(),
+                        0, 0, 0,
+                        1, 1, 1,
+                        0, 0);
 
-                cl.Draw((uint)vertices.Length);
-                cl.End();
-                GD.SubmitCommands(cl);
+                    cb.Draw((uint)vertices.Length);
+                    cb.End();
+                    GD.SubmitCommands(cb);
+                    GD.WaitForIdle();
+                }
+
+                cb.Begin();
+                cb.CopyTexture(target, staging);
+                cb.End();
+                GD.SubmitCommands(cb);
                 GD.WaitForIdle();
             }
-
-            cl.Begin();
-            cl.CopyTexture(target, staging);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
 
             MappedResourceView<RgbaFloat> readView = GD.Map<RgbaFloat>(staging, MapMode.Read);
 
@@ -719,12 +729,12 @@ namespace XenoAtom.Graphics.Tests
                     y = framebuffer.Height - y - 1;
                 }
 
-                Assert.Equal(white, readView[x, y], RgbaFloatFuzzyComparer.Instance);
+                Assert.AreEqual(white, readView[x, y], RgbaFloatFuzzyComparer.Instance);
             }
             GD.Unmap(staging);
         }
 
-        [Fact]
+        [TestMethod]
         public void ComputeGeneratedVertices()
         {
             if (!GD.Features.ComputeShader)
@@ -769,35 +779,42 @@ namespace XenoAtom.Graphics.Tests
                 graphicsLayout,
                 framebuffer.OutputDescription));
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.SetPipeline(computePipeline);
-            cl.SetComputeResourceSet(0, computeSet);
-            cl.Dispatch(1, 1, 1);
-            cl.SetFramebuffer(framebuffer);
-            cl.ClearColorTarget(0, new RgbaFloat());
-            cl.SetPipeline(graphicsPipeline);
-            cl.SetGraphicsResourceSet(0, graphicsSet);
-            cl.Draw(4);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetPipeline(computePipeline);
+                cb.SetComputeResourceSet(0, computeSet);
+                cb.Dispatch(1, 1, 1);
+                cb.SetFramebuffer(framebuffer);
+                cb.ClearColorTarget(0, new RgbaFloat());
+                cb.SetPipeline(graphicsPipeline);
+                cb.SetGraphicsResourceSet(0, graphicsSet);
+                cb.Draw(4);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             Texture readback = GetReadback(output);
             MappedResourceView<RgbaFloat> readView = GD.Map<RgbaFloat>(readback, MapMode.Read);
             for (uint y = 0; y < height; y++)
                 for (uint x = 0; x < width; x++)
                 {
-                    Assert.Equal(RgbaFloat.Red, readView[x, y]);
+                    Assert.AreEqual(RgbaFloat.Red, readView[x, y]);
                 }
             GD.Unmap(readback);
         }
 
-        [SkippableFact]
+        [TestMethod]
         public void ComputeGeneratedTexture()
         {
-            Skip.IfNot(GD.Features.ComputeShader);
-
+            if (!GD.Features.ComputeShader)
+            {
+                Assert.Inconclusive("Compute shaders are not supported on this device.");
+                return;
+            }
+            
             uint width = 4;
             uint height = 1;
             TextureDescription texDesc = TextureDescription.Texture2D(
@@ -836,35 +853,42 @@ namespace XenoAtom.Graphics.Tests
                 graphicsLayout,
                 framebuffer.OutputDescription));
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.SetPipeline(computePipeline);
-            cl.SetComputeResourceSet(0, computeSet);
-            cl.Dispatch(1, 1, 1);
-            cl.SetFramebuffer(framebuffer);
-            cl.ClearColorTarget(0, new RgbaFloat());
-            cl.SetPipeline(graphicsPipeline);
-            cl.SetGraphicsResourceSet(0, graphicsSet);
-            cl.Draw(4);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetPipeline(computePipeline);
+                cb.SetComputeResourceSet(0, computeSet);
+                cb.Dispatch(1, 1, 1);
+                cb.SetFramebuffer(framebuffer);
+                cb.ClearColorTarget(0, new RgbaFloat());
+                cb.SetPipeline(graphicsPipeline);
+                cb.SetGraphicsResourceSet(0, graphicsSet);
+                cb.Draw(4);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             Texture readback = GetReadback(finalOutput);
             MappedResourceView<RgbaFloat> readView = GD.Map<RgbaFloat>(readback, MapMode.Read);
-            Assert.Equal(RgbaFloat.Red, readView[0, 0]);
-            Assert.Equal(RgbaFloat.Green, readView[1, 0]);
-            Assert.Equal(RgbaFloat.Blue, readView[2, 0]);
-            Assert.Equal(RgbaFloat.White, readView[3, 0]);
+            Assert.AreEqual(RgbaFloat.Red, readView[0, 0]);
+            Assert.AreEqual(RgbaFloat.Green, readView[1, 0]);
+            Assert.AreEqual(RgbaFloat.Blue, readView[2, 0]);
+            Assert.AreEqual(RgbaFloat.White, readView[3, 0]);
             GD.Unmap(readback);
         }
 
-        [SkippableTheory]
-        [InlineData(2)]
-        [InlineData(6)]
+        [TestMethod]
+        [DataRow(2u)]
+        [DataRow(6u)]
         public void ComputeBindTextureWithArrayLayersAsWriteable(uint ArrayLayers)
         {
-            Skip.IfNot(GD.Features.ComputeShader);
+            if (!GD.Features.ComputeShader)
+            {
+                Assert.Inconclusive("Compute shaders are not supported on this device.");
+                return;
+            }
 
             uint TexSize = 32;
             uint MipLevels = 1;
@@ -885,14 +909,17 @@ namespace XenoAtom.Graphics.Tests
                 computeLayout,
                 32, 32, 1));
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.SetPipeline(computePipeline);
-            cl.SetComputeResourceSet(0, computeSet);
-            cl.Dispatch(TexSize / 32, TexSize / 32, ArrayLayers);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetPipeline(computePipeline);
+                cb.SetComputeResourceSet(0, computeSet);
+                cb.Dispatch(TexSize / 32, TexSize / 32, ArrayLayers);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             float sideColorStep = (float)Math.Floor(1.0f / ArrayLayers);
             Texture readback = GetReadback(computeOutput);
@@ -906,24 +933,22 @@ namespace XenoAtom.Graphics.Tests
                     var expectedColor = (byte)255.0f * ((layer + 1) * sideColorStep);
                     var map = GD.Map<byte>(readback, MapMode.Read, subresource);
 
-                    Assert.All(
-                        from x in Enumerable.Range(0, (int)mipSize)
-                        from y in Enumerable.Range(0, (int)mipSize)
-                        select (X: x, Y: y),
-                        (xy) =>
+                    foreach (var x in Enumerable.Range(0, (int)mipSize))
+                    {
+                        foreach (var y in Enumerable.Range(0, (int)mipSize))
                         {
-                            Assert.Equal(map[xy.X, xy.Y], expectedColor);
+                            Assert.AreEqual(map[x, y], expectedColor);
                         }
-                    );
+                    }
 
                     GD.Unmap(readback, subresource);
                 }
             }
         }
 
-        [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
         public void SampleTexture1D(bool arrayTexture)
         {
             if (!GD.Features.Texture1D) { return; }
@@ -964,30 +989,32 @@ namespace XenoAtom.Graphics.Tests
 
             Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
-            CommandList cl = GD.CreateCommandList();
-
-            cl.Begin();
-            cl.SetFramebuffer(framebuffer);
-            cl.SetFullViewports();
-            cl.SetFullScissorRects();
-            cl.ClearColorTarget(0, RgbaFloat.Black);
-            cl.SetPipeline(pipeline);
-            cl.SetGraphicsResourceSet(0, set);
-            cl.Draw(3);
-            cl.CopyTexture(target, staging);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetFramebuffer(framebuffer);
+                cb.SetFullViewports();
+                cb.SetFullScissorRects();
+                cb.ClearColorTarget(0, RgbaFloat.Black);
+                cb.SetPipeline(pipeline);
+                cb.SetGraphicsResourceSet(0, set);
+                cb.Draw(3);
+                cb.CopyTexture(target, staging);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResourceView<RgbaFloat> readView = GD.Map<RgbaFloat>(staging, MapMode.Read);
             for (int x = 0; x < staging.Width; x++)
             {
-                Assert.Equal(RgbaFloat.Pink, readView[x, 0]);
+                Assert.AreEqual(RgbaFloat.Pink, readView[x, 0]);
             }
             GD.Unmap(staging);
         }
 
-        [Fact]
+        [TestMethod]
         public void BindTextureAcrossMultipleDrawCalls()
         {
             using Texture target1 = GD.CreateTexture(TextureDescription.Texture2D(
@@ -1060,58 +1087,60 @@ namespace XenoAtom.Graphics.Tests
                 Array.Empty<ResourceLayout>(),
                 framebuffer2.OutputDescription));
 
-            using CommandList cl = GD.CreateCommandList();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetFramebuffer(framebuffer1);
+                cb.SetFullViewports();
+                cb.SetFullScissorRects();
 
-            cl.Begin();
-            cl.SetFramebuffer(framebuffer1);
-            cl.SetFullViewports();
-            cl.SetFullScissorRects();
+                // First pass using texture shader
+                cb.SetPipeline(texturePipeline);
+                cb.ClearColorTarget(0, RgbaFloat.Black);
+                cb.SetGraphicsResourceSet(0, textureSet);
+                cb.Draw(3);
+                cb.CopyTexture(target1, staging1);
 
-            // First pass using texture shader
-            cl.SetPipeline(texturePipeline);
-            cl.ClearColorTarget(0, RgbaFloat.Black);
-            cl.SetGraphicsResourceSet(0, textureSet);
-            cl.Draw(3);
-            cl.CopyTexture(target1, staging1);
+                //  Second pass using dummy shader
+                cb.SetPipeline(quadPipeline);
+                cb.SetFramebuffer(framebuffer2);
+                cb.ClearColorTarget(0, RgbaFloat.Blue);
+                cb.SetVertexBuffer(0, vertexBuffer);
+                cb.Draw(3);
+                cb.CopyTexture(target2, staging2);
 
-            //  Second pass using dummy shader
-            cl.SetPipeline(quadPipeline);
-            cl.SetFramebuffer(framebuffer2);
-            cl.ClearColorTarget(0, RgbaFloat.Blue);
-            cl.SetVertexBuffer(0, vertexBuffer);
-            cl.Draw(3);
-            cl.CopyTexture(target2, staging2);
+                // Third pass using texture shader again
+                cb.SetPipeline(texturePipeline);
+                cb.SetFramebuffer(framebuffer1);
+                cb.ClearColorTarget(0, RgbaFloat.Black);
+                cb.SetGraphicsResourceSet(0, textureSet);
+                cb.Draw(3);
+                cb.CopyTexture(target1, staging3);
 
-            // Third pass using texture shader again
-            cl.SetPipeline(texturePipeline);
-            cl.SetFramebuffer(framebuffer1);
-            cl.ClearColorTarget(0, RgbaFloat.Black);
-            cl.SetGraphicsResourceSet(0, textureSet);
-            cl.Draw(3);
-            cl.CopyTexture(target1, staging3);
-
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResourceView<RgbaFloat> readView1 = GD.Map<RgbaFloat>(staging1, MapMode.Read);
             MappedResourceView<RgbaFloat> readView2 = GD.Map<RgbaFloat>(staging2, MapMode.Read);
             MappedResourceView<RgbaFloat> readView3 = GD.Map<RgbaFloat>(staging3, MapMode.Read);
             for (int x = 0; x < staging1.Width; x++)
             {
-                Assert.Equal(RgbaFloat.Pink, readView1[x, 0]);
-                Assert.Equal(RgbaFloat.Blue, readView2[x, 0]);
-                Assert.Equal(RgbaFloat.Blue, readView3[x, 0]);
+                Assert.AreEqual(RgbaFloat.Pink, readView1[x, 0]);
+                Assert.AreEqual(RgbaFloat.Blue, readView2[x, 0]);
+                Assert.AreEqual(RgbaFloat.Blue, readView3[x, 0]);
             }
             GD.Unmap(staging1);
             GD.Unmap(staging2);
             GD.Unmap(staging3);
         }
 
-        [Theory]
-        [InlineData(2, 0)]
-        [InlineData(5, 3)]
-        [InlineData(32, 31)]
+        [TestMethod]
+        [DataRow(2u, 0u)]
+        [DataRow(5u, 3u)]
+        [DataRow(32u, 31u)]
         public void FramebufferArrayLayer(uint layerCount, uint targetLayer)
         {
             Texture target = GD.CreateTexture(TextureDescription.Texture2D(
@@ -1148,37 +1177,38 @@ namespace XenoAtom.Graphics.Tests
                 framebuffer.OutputDescription);
 
             Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
-
-            CommandList cl = GD.CreateCommandList();
-
-            cl.Begin();
-            cl.SetFramebuffer(framebuffer);
-            cl.SetFullViewports();
-            cl.SetFullScissorRects();
-            cl.ClearColorTarget(0, RgbaFloat.Black);
-            cl.SetPipeline(pipeline);
-            cl.SetGraphicsResourceSet(0, set);
-            cl.Draw(3);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetFramebuffer(framebuffer);
+                cb.SetFullViewports();
+                cb.SetFullScissorRects();
+                cb.ClearColorTarget(0, RgbaFloat.Black);
+                cb.SetPipeline(pipeline);
+                cb.SetGraphicsResourceSet(0, set);
+                cb.Draw(3);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             Texture staging = GetReadback(target);
             MappedResourceView<RgbaFloat> readView = GD.Map<RgbaFloat>(staging, MapMode.Read, targetLayer);
             for (int x = 0; x < staging.Width; x++)
             {
-                Assert.Equal(RgbaFloat.Pink, readView[x, 0]);
+                Assert.AreEqual(RgbaFloat.Pink, readView[x, 0]);
             }
             GD.Unmap(staging, targetLayer);
         }
 
-        [Theory]
-        [InlineData(1, 0, 0)]
-        [InlineData(1, 0, 3)]
-        [InlineData(1, 0, 5)]
-        [InlineData(4, 2, 0)]
-        [InlineData(4, 2, 3)]
-        [InlineData(4, 2, 5)]
+        [TestMethod]
+        [DataRow(1u, 0u, 0u)]
+        [DataRow(1u, 0u, 3u)]
+        [DataRow(1u, 0u, 5u)]
+        [DataRow(4u, 2u, 0u)]
+        [DataRow(4u, 2u, 3u)]
+        [DataRow(4u, 2u, 5u)]
         public void RenderToCubemapFace(uint layerCount, uint targetLayer, uint targetFace)
         {
             Texture target = GD.CreateTexture(TextureDescription.Texture2D(
@@ -1219,30 +1249,32 @@ namespace XenoAtom.Graphics.Tests
 
             Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
-            CommandList cl = GD.CreateCommandList();
-
-            cl.Begin();
-            cl.SetFramebuffer(framebuffer);
-            cl.SetFullViewports();
-            cl.SetFullScissorRects();
-            cl.ClearColorTarget(0, RgbaFloat.Black);
-            cl.SetPipeline(pipeline);
-            cl.SetGraphicsResourceSet(0, set);
-            cl.Draw(3);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetFramebuffer(framebuffer);
+                cb.SetFullViewports();
+                cb.SetFullScissorRects();
+                cb.ClearColorTarget(0, RgbaFloat.Black);
+                cb.SetPipeline(pipeline);
+                cb.SetGraphicsResourceSet(0, set);
+                cb.Draw(3);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             Texture staging = GetReadback(target);
             MappedResourceView<RgbaFloat> readView = GD.Map<RgbaFloat>(staging, MapMode.Read, (targetLayer * 6) + targetFace);
             for (int x = 0; x < staging.Width; x++)
             {
-                Assert.Equal(RgbaFloat.Pink, readView[x, 0]);
+                Assert.AreEqual(RgbaFloat.Pink, readView[x, 0]);
             }
             GD.Unmap(staging, (targetLayer * 6) + targetFace);
         }
 
-        [Fact]
+        [TestMethod]
         public void WriteFragmentDepth()
         {
             Texture depthTarget = GD.CreateTexture(
@@ -1272,19 +1304,21 @@ namespace XenoAtom.Graphics.Tests
 
             Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
-            CommandList cl = GD.CreateCommandList();
-
-            cl.Begin();
-            cl.SetFramebuffer(framebuffer);
-            cl.SetFullViewports();
-            cl.SetFullScissorRects();
-            cl.ClearDepthStencil(0f);
-            cl.SetPipeline(pipeline);
-            cl.SetGraphicsResourceSet(0, rs);
-            cl.Draw(3);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetFramebuffer(framebuffer);
+                cb.SetFullViewports();
+                cb.SetFullScissorRects();
+                cb.ClearDepthStencil(0f);
+                cb.SetPipeline(pipeline);
+                cb.SetGraphicsResourceSet(0, rs);
+                cb.Draw(3);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             Texture readback = GetReadback(depthTarget);
 
@@ -1297,13 +1331,13 @@ namespace XenoAtom.Graphics.Tests
                     float yComp = y * readback.Width;
                     float val = (yComp + xComp) / (readback.Width * readback.Height);
 
-                    Assert.Equal(val, readView[x, y], 2.0f);
+                    Assert.AreEqual(val, readView[x, y], 2.0f);
                 }
             }
             GD.Unmap(readback);
         }
 
-        [Fact]
+        [TestMethod]
         public void UseBlendFactor()
         {
             const uint width = 512;
@@ -1361,16 +1395,17 @@ namespace XenoAtom.Graphics.Tests
                 framebuffer.OutputDescription);
 
             using (var pipeline1 = GD.CreateGraphicsPipeline(pipelineDesc))
-            using (var cl = GD.CreateCommandList())
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
             {
-                cl.Begin();
-                cl.SetFramebuffer(framebuffer);
-                cl.ClearColorTarget(0, RgbaFloat.Clear);
-                cl.SetPipeline(pipeline1);
-                cl.SetGraphicsResourceSet(0, graphicsSet);
-                cl.Draw((uint)vertices.Length);
-                cl.End();
-                GD.SubmitCommands(cl);
+                cb.Begin();
+                cb.SetFramebuffer(framebuffer);
+                cb.ClearColorTarget(0, RgbaFloat.Clear);
+                cb.SetPipeline(pipeline1);
+                cb.SetGraphicsResourceSet(0, graphicsSet);
+                cb.Draw((uint)vertices.Length);
+                cb.End();
+                GD.SubmitCommands(cb);
                 GD.WaitForIdle();
             }
 
@@ -1380,7 +1415,7 @@ namespace XenoAtom.Graphics.Tests
                 for (uint y = 0; y < height; y++)
                     for (uint x = 0; x < width; x++)
                     {
-                        Assert.Equal(new RgbaFloat(0.25f, 0.5f, 0.75f, 1), readView[x, y]);
+                        Assert.AreEqual(new RgbaFloat(0.25f, 0.5f, 0.75f, 1), readView[x, y]);
                     }
                 GD.Unmap(readback);
             }
@@ -1391,15 +1426,16 @@ namespace XenoAtom.Graphics.Tests
             pipelineDesc.BlendState = blendDesc;
 
             using (var pipeline2 = GD.CreateGraphicsPipeline(pipelineDesc))
-            using (var cl = GD.CreateCommandList())
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
             {
-                cl.Begin();
-                cl.SetFramebuffer(framebuffer);
-                cl.SetPipeline(pipeline2);
-                cl.SetGraphicsResourceSet(0, graphicsSet);
-                cl.Draw((uint)vertices.Length);
-                cl.End();
-                GD.SubmitCommands(cl);
+                cb.Begin();
+                cb.SetFramebuffer(framebuffer);
+                cb.SetPipeline(pipeline2);
+                cb.SetGraphicsResourceSet(0, graphicsSet);
+                cb.Draw((uint)vertices.Length);
+                cb.End();
+                GD.SubmitCommands(cb);
                 GD.WaitForIdle();
             }
 
@@ -1409,13 +1445,13 @@ namespace XenoAtom.Graphics.Tests
                 for (uint y = 0; y < height; y++)
                     for (uint x = 0; x < width; x++)
                     {
-                        Assert.Equal(new RgbaFloat(0.25f, 1, 0.875f, 1), readView[x, y]);
+                        Assert.AreEqual(new RgbaFloat(0.25f, 1, 0.875f, 1), readView[x, y]);
                     }
                 GD.Unmap(readback);
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void UseColorWriteMask()
         {
             Texture output = GD.CreateTexture(
@@ -1471,16 +1507,17 @@ namespace XenoAtom.Graphics.Tests
                 framebuffer.OutputDescription);
 
             using (var pipeline1 = GD.CreateGraphicsPipeline(pipelineDesc))
-            using (var cl = GD.CreateCommandList())
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
             {
-                cl.Begin();
-                cl.SetFramebuffer(framebuffer);
-                cl.ClearColorTarget(0, RgbaFloat.Clear);
-                cl.SetPipeline(pipeline1);
-                cl.SetGraphicsResourceSet(0, graphicsSet);
-                cl.Draw((uint)vertices.Length);
-                cl.End();
-                GD.SubmitCommands(cl);
+                cb.Begin();
+                cb.SetFramebuffer(framebuffer);
+                cb.ClearColorTarget(0, RgbaFloat.Clear);
+                cb.SetPipeline(pipeline1);
+                cb.SetGraphicsResourceSet(0, graphicsSet);
+                cb.Draw((uint)vertices.Length);
+                cb.End();
+                GD.SubmitCommands(cb);
                 GD.WaitForIdle();
             }
 
@@ -1490,7 +1527,7 @@ namespace XenoAtom.Graphics.Tests
                 for (uint y = 0; y < output.Height; y++)
                     for (uint x = 0; x < output.Width; x++)
                     {
-                        Assert.Equal(RgbaFloat.White, readView[x, y]);
+                        Assert.AreEqual(RgbaFloat.White, readView[x, y]);
                     }
 
                 GD.Unmap(readback);
@@ -1502,16 +1539,17 @@ namespace XenoAtom.Graphics.Tests
                 pipelineDesc.BlendState = blendDesc;
 
                 using (var maskedPipeline = GD.CreateGraphicsPipeline(pipelineDesc))
-                using (var cl = GD.CreateCommandList())
+                using (var cbp = GD.CreateCommandBufferPool())
+                using (var cb = cbp.CreateCommandBuffer())
                 {
-                    cl.Begin();
-                    cl.SetFramebuffer(framebuffer);
-                    cl.ClearColorTarget(0, new RgbaFloat(0.25f, 0.25f, 0.25f, 0.25f));
-                    cl.SetPipeline(maskedPipeline);
-                    cl.SetGraphicsResourceSet(0, graphicsSet);
-                    cl.Draw((uint)vertices.Length);
-                    cl.End();
-                    GD.SubmitCommands(cl);
+                    cb.Begin();
+                    cb.SetFramebuffer(framebuffer);
+                    cb.ClearColorTarget(0, new RgbaFloat(0.25f, 0.25f, 0.25f, 0.25f));
+                    cb.SetPipeline(maskedPipeline);
+                    cb.SetGraphicsResourceSet(0, graphicsSet);
+                    cb.Draw((uint)vertices.Length);
+                    cb.End();
+                    GD.SubmitCommands(cb);
                     GD.WaitForIdle();
                 }
 
@@ -1521,26 +1559,14 @@ namespace XenoAtom.Graphics.Tests
                     for (uint y = 0; y < output.Height; y++)
                         for (uint x = 0; x < output.Width; x++)
                         {
-                            Assert.Equal(mask.HasFlag(ColorWriteMask.Red) ? 1 : 0.25f, readView[x, y].R);
-                            Assert.Equal(mask.HasFlag(ColorWriteMask.Green) ? 1 : 0.25f, readView[x, y].G);
-                            Assert.Equal(mask.HasFlag(ColorWriteMask.Blue) ? 1 : 0.25f, readView[x, y].B);
-                            Assert.Equal(mask.HasFlag(ColorWriteMask.Alpha) ? 1 : 0.25f, readView[x, y].A);
+                            Assert.AreEqual(mask.HasFlag(ColorWriteMask.Red) ? 1 : 0.25f, readView[x, y].R);
+                            Assert.AreEqual(mask.HasFlag(ColorWriteMask.Green) ? 1 : 0.25f, readView[x, y].G);
+                            Assert.AreEqual(mask.HasFlag(ColorWriteMask.Blue) ? 1 : 0.25f, readView[x, y].B);
+                            Assert.AreEqual(mask.HasFlag(ColorWriteMask.Alpha) ? 1 : 0.25f, readView[x, y].A);
                         }
                     GD.Unmap(readback);
                 }
             }
-        }
-
-        protected RenderTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
-        }
-    }
-
-    [Trait("Backend", "Vulkan")]
-    public class VulkanRenderTests : RenderTests
-    {
-        public VulkanRenderTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
         }
     }
 }

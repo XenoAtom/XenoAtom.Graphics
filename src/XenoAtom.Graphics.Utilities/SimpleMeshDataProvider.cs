@@ -16,7 +16,7 @@ namespace XenoAtom.Graphics.Utilities
             Indices = indices;
         }
 
-        public DeviceBuffer CreateVertexBuffer(GraphicsDevice device, CommandList cl)
+        public DeviceBuffer CreateVertexBuffer(GraphicsDevice device, CommandBuffer cl)
         {
             DeviceBuffer vb = device.CreateBuffer(
                 new BufferDescription(
@@ -26,7 +26,7 @@ namespace XenoAtom.Graphics.Utilities
             return vb;
         }
 
-        public DeviceBuffer CreateIndexBuffer(GraphicsDevice device, CommandList cl, out int indexCount)
+        public DeviceBuffer CreateIndexBuffer(GraphicsDevice device, CommandBuffer cl, out int indexCount)
         {
             DeviceBuffer ib = device.CreateBuffer(new BufferDescription((uint)(Indices.Length * sizeof(ushort)), BufferUsage.IndexBuffer));
             cl.UpdateBuffer(ib, 0, Indices);

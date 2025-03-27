@@ -1,22 +1,22 @@
 using System;
-using Xunit;
-using Xunit.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace XenoAtom.Graphics.Tests
 {
 
-    public abstract class VertexLayoutTests : GraphicsDeviceTestBase
+    [TestClass]
+    public class VertexLayoutTests : GraphicsDeviceTestBase
     {
-        [Theory]
-        [InlineData(0, 0, 0, 0, -1, true)]
-        [InlineData(0, 12, 28, 36, -1, true)]
-        [InlineData(0, 16, 32, 48, -1, true)]
-        [InlineData(0, 16, 32, 48, 64, true)]
-        [InlineData(0, 16, 32, 48, 128, true)]
-        [InlineData(0, 16, 32, 48, 49, false)]
-        [InlineData(0, 12, 12, 12, -1, false)]
-        [InlineData(0, 12, 0, 36, -1, false)]
-        [InlineData(0, 12, 28, 35, -1, false)]
+        [DataTestMethod]
+        [DataRow(0U, 0u, 0u, 0u, -1, true)]
+        [DataRow(0U, 12u, 28u, 36u, -1, true)]
+        [DataRow(0U, 16u, 32u, 48u, -1, true)]
+        [DataRow(0U, 16u, 32u, 48u, 64, true)]
+        [DataRow(0U, 16u, 32u, 48u, 128, true)]
+        [DataRow(0U, 16u, 32u, 48u, 49, false)]
+        [DataRow(0U, 12u, 12u, 12u, -1, false)]
+        [DataRow(0U, 12u, 0u, 36u, -1, false)]
+        [DataRow(0U, 12u, 28u, 35u, -1, false)]
         public void ExplicitOffsets(uint firstOffset, uint secondOffset, uint thirdOffset, uint fourthOffset, int stride, bool succeeds)
         {
             Texture outTex = GD.CreateTexture(
@@ -55,15 +55,15 @@ namespace XenoAtom.Graphics.Tests
             catch when (!succeeds) { }
         }
 
-        protected VertexLayoutTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        protected VertexLayoutTests() : base()
         {
         }
     }
 
-    [Trait("Backend", "Vulkan")]
+    [TestClass]
     public class VulkanVertexLayoutTests : VertexLayoutTests
     {
-        public VulkanVertexLayoutTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        public VulkanVertexLayoutTests()
         {
         }
     }

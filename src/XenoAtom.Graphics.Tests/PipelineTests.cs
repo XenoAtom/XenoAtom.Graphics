@@ -3,14 +3,14 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Xunit;
-using Xunit.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace XenoAtom.Graphics.Tests
 {
-    public abstract class PipelineTests : GraphicsDeviceTestBase
+    [TestClass]
+    public class PipelineTests : GraphicsDeviceTestBase
     {
-        [Fact]
+        [TestMethod]
         public void CreatePipelines_DifferentInstanceStepRate_Succeeds()
         {
             Texture colorTex = GD.CreateTexture(TextureDescription.Texture2D(1, 1, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.RenderTarget));
@@ -48,18 +48,6 @@ namespace XenoAtom.Graphics.Tests
 
             gpd.ShaderSet.VertexLayouts[0].InstanceStepRate = 5;
             Pipeline pipeline4 = GD.CreateGraphicsPipeline(gpd);
-        }
-
-        protected PipelineTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
-        }
-    }
-
-    [Trait("Backend", "Vulkan")]
-    public class VulkanPipelineTests : PipelineTests
-    {
-        public VulkanPipelineTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
         }
     }
 }

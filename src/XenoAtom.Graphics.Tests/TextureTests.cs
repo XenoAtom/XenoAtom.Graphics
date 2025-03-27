@@ -2,14 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Xunit;
-using Xunit.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace XenoAtom.Graphics.Tests
 {
-    public abstract class TextureTestBase : GraphicsDeviceTestBase
+    [TestClass]
+    public class TextureTests : GraphicsDeviceTestBase
     {
-        [Fact]
+        [TestMethod]
         public void Map_Succeeds()
         {
             Texture texture = GD.CreateTexture(
@@ -19,7 +19,7 @@ namespace XenoAtom.Graphics.Tests
             GD.Unmap(texture, 0);
         }
 
-        [Fact]
+        [TestMethod]
         public void Map_Succeeds_R32_G32_B32_A32_UInt()
         {
             Texture texture = GD.CreateTexture(
@@ -29,9 +29,9 @@ namespace XenoAtom.Graphics.Tests
             GD.Unmap(texture, 0);
         }
 
-        [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
         public unsafe void Update_ThenMapRead_Succeeds_R32Float(bool useArrayOverload)
         {
             Texture texture = GD.CreateTexture(
@@ -59,14 +59,14 @@ namespace XenoAtom.Graphics.Tests
                 for (int x = 0; x < 1024; x++)
                 {
                     int index = y * 1024 + x;
-                    Assert.Equal(index, mappedFloatPtr[index]);
+                    Assert.AreEqual(index, mappedFloatPtr[index]);
                 }
             }
         }
 
-        [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
         public unsafe void Update_ThenMapRead_SingleMip_Succeeds_R16UNorm(bool useArrayOverload)
         {
             Texture texture = GD.CreateTexture(
@@ -95,12 +95,12 @@ namespace XenoAtom.Graphics.Tests
                 {
                     uint mapIndex = (uint)(y * (map.RowPitch / sizeof(ushort)) + x);
                     ushort value = (ushort)(y * 256 + x);
-                    Assert.Equal(value, mappedUShortPtr[mapIndex]);
+                    Assert.AreEqual(value, mappedUShortPtr[mapIndex]);
                 }
             }
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void Update_ThenCopySingleMip_Succeeds_R16UNorm()
         {
             TextureDescription desc = TextureDescription.Texture2D(
@@ -115,12 +115,15 @@ namespace XenoAtom.Graphics.Tests
                 GD.UpdateTexture(src, (IntPtr)dataPtr, 256 * 256 * sizeof(ushort), 0, 0, 0, 256, 256, 1, 2, 0);
             }
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyTexture(src, dst, 2, 0);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyTexture(src, dst, 2, 0);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResource map = GD.Map(dst, MapMode.Read, 2);
             ushort* mappedFloatPtr = (ushort*)map.Data;
@@ -131,13 +134,13 @@ namespace XenoAtom.Graphics.Tests
                 {
                     uint mapIndex = (uint)(y * (map.RowPitch / sizeof(ushort)) + x);
                     ushort value = (ushort)(y * 256 + x);
-                    Assert.Equal(value, mappedFloatPtr[mapIndex]);
+                    Assert.AreEqual(value, mappedFloatPtr[mapIndex]);
                 }
             }
         }
 
 
-        [Fact]
+        [TestMethod]
         public void CreateTextureViewFromTextureWithArrayLayers()
         {
             const uint TexSize = 4;
@@ -159,10 +162,10 @@ namespace XenoAtom.Graphics.Tests
             }
 
             var textureView = GD.CreateTextureView(tex);
-            Assert.NotNull(textureView);
+            Assert.IsNotNull(textureView);
         }
 
-        [Fact]
+        [TestMethod]
         public void CubeMap_UpdateAndRead()
         {
             const uint TexSize = 4;
@@ -197,7 +200,7 @@ namespace XenoAtom.Graphics.Tests
                     {
                         foreach (var y in Enumerable.Range(0, (int)mipSize))
                         {
-                            Assert.Equal(expectedColor, map[x, y]);
+                            Assert.AreEqual(expectedColor, map[x, y]);
                         }
                     }
 
@@ -206,7 +209,7 @@ namespace XenoAtom.Graphics.Tests
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void CubeMap_CreateViewWithSingleMipLevel()
         {
             const uint TexSize = 4;
@@ -227,10 +230,10 @@ namespace XenoAtom.Graphics.Tests
             }
 
             var view = GD.CreateTextureView(new TextureViewDescription(tex, 0, 1, 0, 1));
-            Assert.NotNull(view);
+            Assert.IsNotNull(view);
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void CubeMap_Copy_OneMip()
         {
             const uint TexSize = 64;
@@ -249,12 +252,15 @@ namespace XenoAtom.Graphics.Tests
                 GD.UpdateTexture(src, data, 0, 0, 0, TexSize, TexSize, 1, 0, face);
             }
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyTexture(src, dst);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyTexture(src, dst);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             foreach (var mip in Enumerable.Range(0, (int)MipLevels))
             {
@@ -269,7 +275,7 @@ namespace XenoAtom.Graphics.Tests
                     {
                         foreach (var y in Enumerable.Range(0, (int)mipSize))
                         {
-                            Assert.Equal(expectedColor, map[x, y]);
+                            Assert.AreEqual(expectedColor, map[x, y]);
                         }
                     }
 
@@ -278,7 +284,7 @@ namespace XenoAtom.Graphics.Tests
             }
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void CubeMap_Copy_FromNonCubeMapWith6ArrayLayers()
         {
             const uint TexSize = 64;
@@ -297,13 +303,16 @@ namespace XenoAtom.Graphics.Tests
                 GD.UpdateTexture(src, data, 0, 0, 0, TexSize, TexSize, 1, 0, face);
             }
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            for (uint face = 0; face < 6; face++)
-                cl.CopyTexture(src, dst, 0, face);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                for (uint face = 0; face < 6; face++)
+                    cb.CopyTexture(src, dst, 0, face);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             var readback = GetReadback(dst);
 
@@ -320,7 +329,7 @@ namespace XenoAtom.Graphics.Tests
                     {
                         foreach (var y in Enumerable.Range(0, (int)mipSize))
                         {
-                            Assert.Equal(expectedColor, map[x, y]);
+                            Assert.AreEqual(expectedColor, map[x, y]);
                         }
                     }
 
@@ -329,7 +338,7 @@ namespace XenoAtom.Graphics.Tests
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void CubeMap_Copy_MultipleMip_CopySingleMipFaces()
         {
             const uint TexSize = 64;
@@ -353,14 +362,17 @@ namespace XenoAtom.Graphics.Tests
                 }
             }
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.ClearTexture(dst); // Clear the dest texture otherwise we will get garbage in the assert below
-            for (uint face = 0; face < 6; face++)
-                cl.CopyTexture(src, dst, CopiedMip, face);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.ClearTexture(dst); // Clear the dest texture otherwise we will get garbage in the assert below
+                for (uint face = 0; face < 6; face++)
+                    cb.CopyTexture(src, dst, CopiedMip, face);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             for (uint mip = 0; mip < MipLevels; mip++)
             {
@@ -373,14 +385,14 @@ namespace XenoAtom.Graphics.Tests
                     for (int y = 0; y < mipSize; y++)
                         for (int x = 0; x < mipSize; x++)
                         {
-                            Assert.Equal(expectedColor, map[x, y]);
+                            Assert.AreEqual(expectedColor, map[x, y]);
                         }
                     GD.Unmap(dst, subresource);
                 }
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void CubeMap_Copy_MultipleMip_AllAtOnce()
         {
             const uint TexSize = 64;
@@ -403,12 +415,15 @@ namespace XenoAtom.Graphics.Tests
                 }
             }
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyTexture(src, dst);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyTexture(src, dst);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             foreach (var mip in Enumerable.Range(0, (int)MipLevels))
             {
@@ -423,7 +438,7 @@ namespace XenoAtom.Graphics.Tests
                     {
                         foreach (var y in Enumerable.Range(0, (int)mipSize))
                         {
-                            Assert.Equal(expectedColor, map[x, y]);
+                            Assert.AreEqual(expectedColor, map[x, y]);
                         }
                     }
 
@@ -432,7 +447,7 @@ namespace XenoAtom.Graphics.Tests
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void CubeMap_Copy_MultipleMip_SpecificArrayLayer()
         {
             const uint TexSize = 64;
@@ -456,14 +471,17 @@ namespace XenoAtom.Graphics.Tests
                 }
             }
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.ClearTexture(dst); // need to clear otherwise we get garbage as we copy only a specific layer
-            for (uint mip = 0; mip < MipLevels; mip++)
-                cl.CopyTexture(src, dst, mip, CopiedArrayLayer);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.ClearTexture(dst); // need to clear otherwise we get garbage as we copy only a specific layer
+                for (uint mip = 0; mip < MipLevels; mip++)
+                    cb.CopyTexture(src, dst, mip, CopiedArrayLayer);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             for (uint mip = 0; mip < MipLevels; mip++)
             {
@@ -476,23 +494,23 @@ namespace XenoAtom.Graphics.Tests
                     for (int y = 0; y < mipSize; y++)
                         for (int x = 0; x < mipSize; x++)
                         {
-                            Assert.Equal(expectedColor, map[x, y]);
+                            Assert.AreEqual(expectedColor, map[x, y]);
                         }
                     GD.Unmap(dst, subresource);
                 }
             }
         }
 
-        [Theory]
-        [InlineData(64, 7)]
-        [InlineData(64, 4)]
-        [InlineData(64, 2)]
-        [InlineData(32, 6)]
-        [InlineData(32, 4)]
-        [InlineData(32, 2)]
-        [InlineData(4, 3)]
-        [InlineData(4, 2)]
-        [InlineData(2, 2)]
+        [TestMethod]
+        [DataRow(64, 7)]
+        [DataRow(64, 4)]
+        [DataRow(64, 2)]
+        [DataRow(32, 6)]
+        [DataRow(32, 4)]
+        [DataRow(32, 2)]
+        [DataRow(4, 3)]
+        [DataRow(4, 2)]
+        [DataRow(2, 2)]
         public void CubeMap_GenerateMipmaps(uint TexSize, uint MipLevels)
         {
             TextureDescription texDesc = TextureDescription.Texture2D(
@@ -517,19 +535,22 @@ namespace XenoAtom.Graphics.Tests
                 {
                     foreach (var y in Enumerable.Range(0, (int)mipSize))
                     {
-                        Assert.Equal(expectedColor, map[x, y]);
+                        Assert.AreEqual(expectedColor, map[x, y]);
                     }
                 }
 
                 GD.Unmap(readback, subresource);
             }
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.GenerateMipmaps(tex);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.GenerateMipmaps(tex);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             readback = GetReadback(tex);
             foreach (var mip in Enumerable.Range(0, (int)MipLevels))
@@ -545,7 +566,7 @@ namespace XenoAtom.Graphics.Tests
                     {
                         foreach (var y in Enumerable.Range(0, (int)mipSize))
                         {
-                            Assert.Equal(expectedColor, map[x, y]);
+                            Assert.AreEqual(expectedColor, map[x, y]);
                         }
                     }
 
@@ -554,12 +575,12 @@ namespace XenoAtom.Graphics.Tests
             }
         }
 
-        [Theory]
-        [InlineData(2)]
-        [InlineData(4)]
-        [InlineData(8)]
-        [InlineData(16)]
-        [InlineData(32)]
+        [TestMethod]
+        [DataRow(2)]
+        [DataRow(4)]
+        [DataRow(8)]
+        [DataRow(16)]
+        [DataRow(32)]
         public void ArrayLayers_StagingWriteAndRead_SmallTextures(uint TexSize)
         {
             const uint ArrayLayers = 6;
@@ -583,13 +604,13 @@ namespace XenoAtom.Graphics.Tests
                 for (int y = 0; y < TexSize; y++)
                     for (int x = 0; x < TexSize; x++)
                     {
-                        Assert.Equal(expectedColor, map[x, y]);
+                        Assert.AreEqual(expectedColor, map[x, y]);
                     }
                 GD.Unmap(tex, subresource);
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void ArrayLayers_StagingWriteAndRead()
         {
             const uint TexSize = 64;
@@ -614,13 +635,13 @@ namespace XenoAtom.Graphics.Tests
                 for (int y = 0; y < TexSize; y++)
                     for (int x = 0; x < TexSize; x++)
                     {
-                        Assert.Equal(expectedColor, map[x, y]);
+                        Assert.AreEqual(expectedColor, map[x, y]);
                     }
                 GD.Unmap(tex, subresource);
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void ArrayLayers_WriteAndCopyAndRead()
         {
             const uint TexSize = 64;
@@ -644,12 +665,15 @@ namespace XenoAtom.Graphics.Tests
                 }
             }
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyTexture(tex, readback);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyTexture(tex, readback);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             for (uint mip = 0; mip < MipLevels; mip++)
             {
@@ -662,42 +686,42 @@ namespace XenoAtom.Graphics.Tests
                     for (int y = 0; y < mipSize; y++)
                         for (int x = 0; x < mipSize; x++)
                         {
-                            Assert.Equal(expectedColor, map[x, y]);
+                            Assert.AreEqual(expectedColor, map[x, y]);
                         }
                     GD.Unmap(readback, subresource);
                 }
             }
         }
 
-        [Theory]
-        [InlineData(PixelFormat.BC1_Rgb_UNorm, 8, 0, 0, 64, 64)]
-        [InlineData(PixelFormat.BC1_Rgb_UNorm, 8, 8, 4, 16, 16)]
-        [InlineData(PixelFormat.BC1_Rgb_UNorm_SRgb, 8, 0, 0, 64, 64)]
-        [InlineData(PixelFormat.BC1_Rgb_UNorm_SRgb, 8, 8, 4, 16, 16)]
-        [InlineData(PixelFormat.BC1_Rgba_UNorm, 8, 0, 0, 64, 64)]
-        [InlineData(PixelFormat.BC1_Rgba_UNorm, 8, 8, 4, 16, 16)]
-        [InlineData(PixelFormat.BC1_Rgba_UNorm_SRgb, 8, 0, 0, 64, 64)]
-        [InlineData(PixelFormat.BC1_Rgba_UNorm_SRgb, 8, 8, 4, 16, 16)]
-        [InlineData(PixelFormat.BC2_UNorm, 16, 0, 0, 64, 64)]
-        [InlineData(PixelFormat.BC2_UNorm, 16, 8, 4, 16, 16)]
-        [InlineData(PixelFormat.BC2_UNorm_SRgb, 16, 0, 0, 64, 64)]
-        [InlineData(PixelFormat.BC2_UNorm_SRgb, 16, 8, 4, 16, 16)]
-        [InlineData(PixelFormat.BC3_UNorm, 16, 0, 0, 64, 64)]
-        [InlineData(PixelFormat.BC3_UNorm, 16, 8, 4, 16, 16)]
-        [InlineData(PixelFormat.BC3_UNorm_SRgb, 16, 0, 0, 64, 64)]
-        [InlineData(PixelFormat.BC3_UNorm_SRgb, 16, 8, 4, 16, 16)]
-        [InlineData(PixelFormat.BC4_UNorm, 8, 0, 0, 16, 16)]
-        [InlineData(PixelFormat.BC4_UNorm, 8, 8, 4, 16, 16)]
-        [InlineData(PixelFormat.BC4_SNorm, 8, 0, 0, 16, 16)]
-        [InlineData(PixelFormat.BC4_SNorm, 8, 8, 4, 16, 16)]
-        [InlineData(PixelFormat.BC5_UNorm, 16, 0, 0, 16, 16)]
-        [InlineData(PixelFormat.BC5_UNorm, 16, 8, 4, 16, 16)]
-        [InlineData(PixelFormat.BC5_SNorm, 16, 0, 0, 16, 16)]
-        [InlineData(PixelFormat.BC5_SNorm, 16, 8, 4, 16, 16)]
-        [InlineData(PixelFormat.BC7_UNorm, 16, 0, 0, 16, 16)]
-        [InlineData(PixelFormat.BC7_UNorm, 16, 8, 4, 16, 16)]
-        [InlineData(PixelFormat.BC7_UNorm_SRgb, 16, 0, 0, 16, 16)]
-        [InlineData(PixelFormat.BC7_UNorm_SRgb, 16, 8, 4, 16, 16)]
+        [TestMethod]
+        [DataRow(PixelFormat.BC1_Rgb_UNorm, 8, 0, 0, 64, 64)]
+        [DataRow(PixelFormat.BC1_Rgb_UNorm, 8, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC1_Rgb_UNorm_SRgb, 8, 0, 0, 64, 64)]
+        [DataRow(PixelFormat.BC1_Rgb_UNorm_SRgb, 8, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC1_Rgba_UNorm, 8, 0, 0, 64, 64)]
+        [DataRow(PixelFormat.BC1_Rgba_UNorm, 8, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC1_Rgba_UNorm_SRgb, 8, 0, 0, 64, 64)]
+        [DataRow(PixelFormat.BC1_Rgba_UNorm_SRgb, 8, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC2_UNorm, 16, 0, 0, 64, 64)]
+        [DataRow(PixelFormat.BC2_UNorm, 16, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC2_UNorm_SRgb, 16, 0, 0, 64, 64)]
+        [DataRow(PixelFormat.BC2_UNorm_SRgb, 16, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC3_UNorm, 16, 0, 0, 64, 64)]
+        [DataRow(PixelFormat.BC3_UNorm, 16, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC3_UNorm_SRgb, 16, 0, 0, 64, 64)]
+        [DataRow(PixelFormat.BC3_UNorm_SRgb, 16, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC4_UNorm, 8, 0, 0, 16, 16)]
+        [DataRow(PixelFormat.BC4_UNorm, 8, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC4_SNorm, 8, 0, 0, 16, 16)]
+        [DataRow(PixelFormat.BC4_SNorm, 8, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC5_UNorm, 16, 0, 0, 16, 16)]
+        [DataRow(PixelFormat.BC5_UNorm, 16, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC5_SNorm, 16, 0, 0, 16, 16)]
+        [DataRow(PixelFormat.BC5_SNorm, 16, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC7_UNorm, 16, 0, 0, 16, 16)]
+        [DataRow(PixelFormat.BC7_UNorm, 16, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC7_UNorm_SRgb, 16, 0, 0, 16, 16)]
+        [DataRow(PixelFormat.BC7_UNorm_SRgb, 16, 8, 4, 16, 16)]
         public unsafe void Copy_Compressed_Texture(PixelFormat format, uint blockSizeInBytes, uint srcX, uint srcY, uint copyWidth, uint copyHeight)
         {
             if (!GD.GetPixelFormatSupport(format, TextureKind.Texture2D, TextureUsage.Sampled))
@@ -725,15 +749,18 @@ namespace XenoAtom.Graphics.Tests
                 GD.UpdateTexture(copySrc, (IntPtr)dataPtr, totalDataSize, srcX, srcY, 0, copyWidth, copyHeight, 1, 0, 0);
             }
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyTexture(
-                copySrc, srcX, srcY, 0, 0, 0,
-                copyDst, 0, 0, 0, 0, 0,
-                copyWidth, copyHeight, 1, 1);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyTexture(
+                    copySrc, srcX, srcY, 0, 0, 0,
+                    copyDst, 0, 0, 0, 0, 0,
+                    copyWidth, copyHeight, 1, 1);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             uint numBytesPerRow = copyWidth / numPixelsInBlockSide * blockSizeInBytes;
             MappedResourceView<byte> view = GD.Map<byte>(copyDst, MapMode.Read);
@@ -741,14 +768,14 @@ namespace XenoAtom.Graphics.Tests
             {
                 uint viewRow = i / numBytesPerRow;
                 uint viewIndex = (view.MappedResource.RowPitch * viewRow) + (i % numBytesPerRow);
-                Assert.Equal(data[i], view[viewIndex]);
+                Assert.AreEqual(data[i], view[viewIndex]);
             }
             GD.Unmap(copyDst);
         }
 
-        // [InlineData(true)]
-        [InlineData(false)]
-        [Theory]
+        // [DataRow(true)]
+        [DataRow(false)]
+        [TestMethod]
         public unsafe void Copy_Compressed_Array(bool separateLayerCopies)
         {
             PixelFormat format = PixelFormat.BC3_UNorm;
@@ -779,23 +806,27 @@ namespace XenoAtom.Graphics.Tests
                     0, layer);
             }
 
-            CommandList copyCL = GD.CreateCommandList();
-            copyCL.Begin();
-            if (separateLayerCopies)
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var copyCL = cbp.CreateCommandBuffer())
             {
-                for (uint layer = 0; layer < copySrc.ArrayLayers; layer++)
+                copyCL.Begin();
+                if (separateLayerCopies)
                 {
-                    copyCL.CopyTexture(copySrc, 0, 0, 0, 0, layer, copyDst, 0, 0, 0, 0, layer, 16, 16, 1, 1);
+                    for (uint layer = 0; layer < copySrc.ArrayLayers; layer++)
+                    {
+                        copyCL.CopyTexture(copySrc, 0, 0, 0, 0, layer, copyDst, 0, 0, 0, 0, layer, 16, 16, 1, 1);
+                    }
                 }
+                else
+                {
+                    copyCL.CopyTexture(copySrc, 0, 0, 0, 0, 0, copyDst, 0, 0, 0, 0, 0, 16, 16, 1, copySrc.ArrayLayers);
+                }
+
+                copyCL.End();
+                Fence fence = GD.CreateFence(false);
+                GD.SubmitCommands(copyCL, fence);
+                GD.WaitForFence(fence);
             }
-            else
-            {
-                copyCL.CopyTexture(copySrc, 0, 0, 0, 0, 0, copyDst, 0, 0, 0, 0, 0, 16, 16, 1, copySrc.ArrayLayers);
-            }
-            copyCL.End();
-            Fence fence = GD.CreateFence(false);
-            GD.SubmitCommands(copyCL, fence);
-            GD.WaitForFence(fence);
 
             for (uint layer = 0; layer < copyDst.ArrayLayers; layer++)
             {
@@ -810,7 +841,7 @@ namespace XenoAtom.Graphics.Tests
                     byte* rowBase = basePtr + (row * map.RowPitch);
                     for (uint x = 0; x < rowSize; x++)
                     {
-                        Assert.Equal((byte)(index + layer), rowBase[x]);
+                        Assert.AreEqual((byte)(index + layer), rowBase[x]);
                         index += 1;
                     }
                 }
@@ -819,7 +850,7 @@ namespace XenoAtom.Graphics.Tests
             }
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void Update_ThenMapRead_3D()
         {
             Texture tex3D = GD.CreateTexture(TextureDescription.Texture3D(
@@ -847,12 +878,12 @@ namespace XenoAtom.Graphics.Tests
                 for (int y = 0; y < tex3D.Height; y++)
                     for (int x = 0; x < tex3D.Width; x++)
                     {
-                        Assert.Equal(new RgbaByte((byte)x, (byte)y, (byte)z, 1), view[x, y, z]);
+                        Assert.AreEqual(new RgbaByte((byte)x, (byte)y, (byte)z, 1), view[x, y, z]);
                     }
             GD.Unmap(tex3D);
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void MapWrite_ThenMapRead_3D()
         {
             Texture tex3D = GD.CreateTexture(TextureDescription.Texture3D(
@@ -872,12 +903,12 @@ namespace XenoAtom.Graphics.Tests
                 for (int y = 0; y < tex3D.Height; y++)
                     for (int x = 0; x < tex3D.Width; x++)
                     {
-                        Assert.Equal(new RgbaByte((byte)x, (byte)y, (byte)z, 1), readView[x, y, z]);
+                        Assert.AreEqual(new RgbaByte((byte)x, (byte)y, (byte)z, 1), readView[x, y, z]);
                     }
             GD.Unmap(tex3D);
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void Update_ThenMapRead_1D()
         {
             if (!GD.Features.Texture1D) { return; }
@@ -893,12 +924,12 @@ namespace XenoAtom.Graphics.Tests
             MappedResourceView<ushort> view = GD.Map<ushort>(tex1D, MapMode.Read);
             for (int i = 0; i < tex1D.Width; i++)
             {
-                Assert.Equal((ushort)(i * 2), view[i]);
+                Assert.AreEqual((ushort)(i * 2), view[i]);
             }
             GD.Unmap(tex1D);
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void MapWrite_ThenMapRead_1D()
         {
             if (!GD.Features.Texture1D) { return; }
@@ -916,13 +947,13 @@ namespace XenoAtom.Graphics.Tests
             MappedResourceView<ushort> view = GD.Map<ushort>(tex1D, MapMode.Read);
             for (int i = 0; i < tex1D.Width; i++)
             {
-                Assert.Equal((ushort)(i * 2), view[i]);
+                Assert.AreEqual((ushort)(i * 2), view[i]);
             }
             GD.Unmap(tex1D);
         }
 
 
-        [Fact]
+        [TestMethod]
         public unsafe void Copy_DepthStencil()
         {
             Texture depthTarget = GD.CreateTexture(
@@ -932,40 +963,37 @@ namespace XenoAtom.Graphics.Tests
                 TextureDescription.Texture2D(64, 64, 1, 1, PixelFormat.D32_Float_S8_UInt, TextureUsage.DepthStencil));
 
             Framebuffer fb = GD.CreateFramebuffer(new FramebufferDescription(depthTarget));
-            {
-                using CommandList cl = GD.CreateCommandList();
-                cl.Begin();
-                cl.SetFramebuffer(fb);
-                cl.ClearDepthStencil(0.5f, 12);
-                cl.End();
-                GD.SubmitCommands(cl);
-            }
+            using var cbp = GD.CreateCommandBufferPool();
+            using var cb1 = cbp.CreateCommandBuffer();
+            cb1.Begin();
+            cb1.SetFramebuffer(fb);
+            cb1.ClearDepthStencil(0.5f, 12);
+            cb1.End();
+            GD.SubmitCommands(cb1);
 
             Texture copySrcFromDepth = GD.CreateTexture(TextureDescription.Texture2D(
                 64, 64, 1, 1, PixelFormat.R32_Float, TextureUsage.Staging));
 
-            {
-                using CommandList cl = GD.CreateCommandList();
-                cl.Begin();
-                cl.CopyTexture(depthTarget, 0, 0, 0, 0, 0, depthTarget1, 0, 0, 0, 0, 0, 64, 64, 1, 1);
-                cl.CopyTexture(depthTarget1, 0, 0, 0, 0, 0, copySrcFromDepth, 0, 0, 0, 0, 0, 64, 64, 1, 1);
-                cl.End();
-                GD.SubmitCommands(cl);
-            }
+            using var cb2 = cbp.CreateCommandBuffer();
+            cb2.Begin();
+            cb2.CopyTexture(depthTarget, 0, 0, 0, 0, 0, depthTarget1, 0, 0, 0, 0, 0, 64, 64, 1, 1);
+            cb2.CopyTexture(depthTarget1, 0, 0, 0, 0, 0, copySrcFromDepth, 0, 0, 0, 0, 0, 64, 64, 1, 1);
+            cb2.End();
+            GD.SubmitCommands(cb2);
             GD.WaitForIdle();
 
             {
                 MappedResourceView<float> view = GD.Map<float>(copySrcFromDepth, MapMode.Read);
                 for (int i = 0; i < 64 * 64; i++)
                 {
-                    Assert.Equal(0.5f, view[i]);
+                    Assert.AreEqual(0.5f, view[i]);
                 }
                 GD.Unmap(copySrcFromDepth);
             }
         }
 
 
-        [Fact]
+        [TestMethod]
         public unsafe void Copy_1DTo2D()
         {
             if (!GD.Features.Texture1D) { return; }
@@ -982,26 +1010,28 @@ namespace XenoAtom.Graphics.Tests
             }
             GD.Unmap(tex1D);
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyTexture(
-                tex1D, 0, 0, 0, 0, 0,
-                tex2D, 0, 5, 0, 0, 0,
-                tex1D.Width, 1, 1, 1);
-            cl.End();
-            GD.SubmitCommands(cl);
-            cl.Dispose();
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyTexture(
+                    tex1D, 0, 0, 0, 0, 0,
+                    tex2D, 0, 5, 0, 0, 0,
+                    tex1D.Width, 1, 1, 1);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResourceView<ushort> readView = GD.Map<ushort>(tex2D, MapMode.Read);
             for (int i = 0; i < tex2D.Width; i++)
             {
-                Assert.Equal((ushort)(i * 2), readView[i, 5]);
+                Assert.AreEqual((ushort)(i * 2), readView[i, 5]);
             }
             GD.Unmap(tex2D);
         }
 
-        [Fact]
+        [TestMethod]
         public void Update_MultipleMips_1D()
         {
             if (!GD.Features.Texture1D) { return; }
@@ -1024,13 +1054,13 @@ namespace XenoAtom.Graphics.Tests
                 MappedResourceView<RgbaByte> readView = GD.Map<RgbaByte>(tex1D, MapMode.Read, level);
                 for (int i = 0; i < readView.Count; i++)
                 {
-                    Assert.Equal(new RgbaByte((byte)i, (byte)(i * 2), (byte)level, 1), readView[i]);
+                    Assert.AreEqual(new RgbaByte((byte)i, (byte)(i * 2), (byte)level, 1), readView[i]);
                 }
                 GD.Unmap(tex1D, level);
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void Copy_DifferentMip_1DTo2D()
         {
             if (!GD.Features.Texture1D) { return; }
@@ -1047,30 +1077,32 @@ namespace XenoAtom.Graphics.Tests
             }
             GD.Unmap(tex1D, 1);
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyTexture(
-                tex1D, 0, 0, 0, 1, 0,
-                tex2D, 0, 5, 0, 0, 0,
-                tex2D.Width, 1, 1, 1);
-            cl.End();
-            GD.SubmitCommands(cl);
-            cl.Dispose();
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyTexture(
+                    tex1D, 0, 0, 0, 1, 0,
+                    tex2D, 0, 5, 0, 0, 0,
+                    tex2D.Width, 1, 1, 1);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResourceView<ushort> readView = GD.Map<ushort>(tex2D, MapMode.Read);
             for (int i = 0; i < tex2D.Width; i++)
             {
-                Assert.Equal((ushort)(i * 2), readView[i, 5]);
+                Assert.AreEqual((ushort)(i * 2), readView[i, 5]);
             }
             GD.Unmap(tex2D);
         }
 
-        [InlineData(TextureUsage.Staging, TextureUsage.Staging)]
-        [InlineData(TextureUsage.Staging, TextureUsage.Sampled)]
-        [InlineData(TextureUsage.Sampled, TextureUsage.Staging)]
-        [InlineData(TextureUsage.Sampled, TextureUsage.Sampled)]
-        [Theory]
+        [DataRow(TextureUsage.Staging, TextureUsage.Staging)]
+        [DataRow(TextureUsage.Staging, TextureUsage.Sampled)]
+        [DataRow(TextureUsage.Sampled, TextureUsage.Staging)]
+        [DataRow(TextureUsage.Sampled, TextureUsage.Sampled)]
+        [TestMethod]
         public void Copy_WithOffsets_2D(TextureUsage srcUsage, TextureUsage dstUsage)
         {
             Texture src = GD.CreateTexture(TextureDescription.Texture2D(
@@ -1088,29 +1120,32 @@ namespace XenoAtom.Graphics.Tests
 
             GD.UpdateTexture(src, srcData, 0, 0, 0, src.Width, src.Height, 1, 0, 0);
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyTexture(
-                src,
-                50, 50, 0, 0, 0,
-                dst,
-                10, 10, 0, 0, 0,
-                50, 50, 1, 1);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyTexture(
+                    src,
+                    50, 50, 0, 0, 0,
+                    dst,
+                    10, 10, 0, 0, 0,
+                    50, 50, 1, 1);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             Texture readback = GetReadback(dst);
             MappedResourceView<RgbaByte> readView = GD.Map<RgbaByte>(readback, MapMode.Read);
             for (int y = 10; y < 60; y++)
                 for (int x = 10; x < 60; x++)
                 {
-                    Assert.Equal(new RgbaByte((byte)(x + 40), (byte)(y + 40), 0, 1), readView[x, y]);
+                    Assert.AreEqual(new RgbaByte((byte)(x + 40), (byte)(y + 40), 0, 1), readView[x, y]);
                 }
             GD.Unmap(readback);
         }
 
-        [Fact]
+        [TestMethod]
         public void Copy_ArrayToNonArray()
         {
             Texture src = GD.CreateTexture(TextureDescription.Texture2D(
@@ -1126,26 +1161,29 @@ namespace XenoAtom.Graphics.Tests
                 }
             GD.Unmap(src, 5);
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyTexture(
-                src, 0, 0, 0, 0, 5,
-                dst, 0, 0, 0, 0, 0,
-                10, 10, 1, 1);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyTexture(
+                    src, 0, 0, 0, 0, 5,
+                    dst, 0, 0, 0, 0, 0,
+                    10, 10, 1, 1);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResourceView<RgbaByte> readView = GD.Map<RgbaByte>(dst, MapMode.Read);
             for (int y = 0; y < dst.Height; y++)
                 for (int x = 0; x < dst.Width; x++)
                 {
-                    Assert.Equal(new RgbaByte((byte)x, (byte)y, 0, 1), readView[x, y]);
+                    Assert.AreEqual(new RgbaByte((byte)x, (byte)y, 0, 1), readView[x, y]);
                 }
             GD.Unmap(dst);
         }
 
-        [Fact]
+        [TestMethod]
         public void Map_ThenRead_MultipleArrayLayers()
         {
             Texture src = GD.CreateTexture(TextureDescription.Texture2D(
@@ -1168,13 +1206,13 @@ namespace XenoAtom.Graphics.Tests
                 for (int y = 0; y < src.Height; y++)
                     for (int x = 0; x < src.Width; x++)
                     {
-                        Assert.Equal(new RgbaByte((byte)x, (byte)y, (byte)layer, 1), readView[x, y]);
+                        Assert.AreEqual(new RgbaByte((byte)x, (byte)y, (byte)layer, 1), readView[x, y]);
                     }
                 GD.Unmap(src, layer);
             }
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void Update_WithOffset_2D()
         {
             Texture tex2D = GD.CreateTexture(TextureDescription.Texture2D(
@@ -1200,11 +1238,11 @@ namespace XenoAtom.Graphics.Tests
             for (int y = 0; y < 30; y++)
                 for (int x = 0; x < 50; x++)
                 {
-                    Assert.Equal(new RgbaByte((byte)x, (byte)y, 0, 1), readView[x + 50, y + 70]);
+                    Assert.AreEqual(new RgbaByte((byte)x, (byte)y, 0, 1), readView[x + 50, y + 70]);
                 }
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void Update_NonMultipleOfFourWithCompressedTexture_2D()
         {
             Texture tex2D = GD.CreateTexture(TextureDescription.Texture2D(
@@ -1222,7 +1260,7 @@ namespace XenoAtom.Graphics.Tests
             }
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void Map_NonZeroMip_3D()
         {
             Texture tex3D = GD.CreateTexture(TextureDescription.Texture3D(
@@ -1242,12 +1280,12 @@ namespace XenoAtom.Graphics.Tests
                 for (int y = 0; y < 10; y++)
                     for (int x = 0; x < 10; x++)
                     {
-                        Assert.Equal(new RgbaByte((byte)x, (byte)y, (byte)z, 1), readView[x, y, z]);
+                        Assert.AreEqual(new RgbaByte((byte)x, (byte)y, (byte)z, 1), readView[x, y, z]);
                     }
             GD.Unmap(tex3D, 2);
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void Update_NonStaging_3D()
         {
             Texture tex3D = GD.CreateTexture(TextureDescription.Texture3D(
@@ -1272,24 +1310,27 @@ namespace XenoAtom.Graphics.Tests
             Texture staging = GD.CreateTexture(TextureDescription.Texture3D(
                 16, 16, 16, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Staging));
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyTexture(tex3D, staging);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyTexture(tex3D, staging);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResourceView<RgbaByte> view = GD.Map<RgbaByte>(staging, MapMode.Read);
             for (int z = 0; z < tex3D.Depth; z++)
                 for (int y = 0; y < tex3D.Height; y++)
                     for (int x = 0; x < tex3D.Width; x++)
                     {
-                        Assert.Equal(new RgbaByte((byte)x, (byte)y, (byte)z, 1), view[x, y, z]);
+                        Assert.AreEqual(new RgbaByte((byte)x, (byte)y, (byte)z, 1), view[x, y, z]);
                     }
             GD.Unmap(staging);
         }
 
-        [Fact]
+        [TestMethod]
         public unsafe void Copy_NonSquareTexture()
         {
             Texture src = GD.CreateTexture(
@@ -1314,25 +1355,28 @@ namespace XenoAtom.Graphics.Tests
                     0, 0);
             }
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyTexture(src, dst);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyTexture(src, dst);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResourceView<byte> readView = GD.Map<byte>(dst, MapMode.Read);
             for (uint y = 0; y < dst.Height; y++)
                 for (uint x = 0; x < dst.Width; x++)
                 {
-                    Assert.Equal(255, readView[x, y]);
+                    Assert.AreEqual(255, readView[x, y]);
                 }
 
             GD.Unmap(dst);
         }
 
-        [Theory]
-        [MemberData(nameof(FormatCoverageData))]
+        [TestMethod]
+        [DynamicData(nameof(FormatCoverageData))]
         public unsafe void FormatCoverage_CopyThenRead(
             PixelFormat format, int rBits, int gBits, int bBits, int aBits,
             TextureKind srcKind,
@@ -1382,17 +1426,20 @@ namespace XenoAtom.Graphics.Tests
                 dstWidth, dstHeight, dstDepth, dstMipLevels, dstArrayLayers,
                 format, TextureUsage.Staging, dstKind));
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
 
-            cl.CopyTexture(
-                srcTex, srcX, srcY, srcZ, srcMipLevel, srcArrayLayer,
-                dstTex, dstX, dstY, dstZ, dstMipLevel, dstArrayLayer,
-                copyWidth, copyHeight, copyDepth, 1);
+                cb.CopyTexture(
+                    srcTex, srcX, srcY, srcZ, srcMipLevel, srcArrayLayer,
+                    dstTex, dstX, dstY, dstZ, dstMipLevel, dstArrayLayer,
+                    copyWidth, copyHeight, copyDepth, 1);
 
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             MappedResource map = GD.Map(dstTex, MapMode.Read);
             for (uint z = 0; z < copyDepth; z++)
@@ -1406,7 +1453,7 @@ namespace XenoAtom.Graphics.Tests
                             + (x + dstX) * tdrw.PixelBytes;
                         WidePixel expected = tdrw.GetTestPixel(x, y, z);
                         WidePixel actual = tdrw.ReadPixel((byte*)map.Data + offset);
-                        Assert.Equal(expected, actual);
+                        Assert.AreEqual(expected, actual);
                     }
                 }
             }
@@ -1434,11 +1481,11 @@ namespace XenoAtom.Graphics.Tests
             }
         }
 
-        [Theory]
-        [InlineData(TextureUsage.Sampled | TextureUsage.GenerateMipmaps)]
-        [InlineData(TextureUsage.RenderTarget | TextureUsage.GenerateMipmaps)]
-        [InlineData(TextureUsage.Storage | TextureUsage.GenerateMipmaps)]
-        [InlineData(TextureUsage.Sampled | TextureUsage.RenderTarget | TextureUsage.GenerateMipmaps)]
+        [TestMethod]
+        [DataRow(TextureUsage.Sampled | TextureUsage.GenerateMipmaps)]
+        [DataRow(TextureUsage.RenderTarget | TextureUsage.GenerateMipmaps)]
+        [DataRow(TextureUsage.Storage | TextureUsage.GenerateMipmaps)]
+        [DataRow(TextureUsage.Sampled | TextureUsage.RenderTarget | TextureUsage.GenerateMipmaps)]
         public unsafe void GenerateMipmaps(TextureUsage usage)
         {
             TextureDescription texDesc = TextureDescription.Texture2D(
@@ -1456,61 +1503,67 @@ namespace XenoAtom.Graphics.Tests
                 GD.UpdateTexture(tex, (IntPtr)pixelDataPtr, 1024 * 1024 * 16, 0, 0, 0, 1024, 1024, 1, 0, 0);
             }
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.GenerateMipmaps(tex);
-            cl.CopyTexture(tex, readback);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.GenerateMipmaps(tex);
+                cb.CopyTexture(tex, readback);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
 
             for (uint level = 1; level < 11; level++)
             {
                 MappedResourceView<RgbaFloat> readView = GD.Map<RgbaFloat>(readback, MapMode.Read, level);
                 uint mipWidth = Math.Max(1, (uint)(tex.Width / Math.Pow(2, level)));
                 uint mipHeight = Math.Max(1, (uint)(tex.Width / Math.Pow(2, level)));
-                Assert.Equal(RgbaFloat.Red, readView[mipWidth - 1, mipHeight - 1]);
+                Assert.AreEqual(RgbaFloat.Red, readView[mipWidth - 1, mipHeight - 1]);
                 GD.Unmap(readback, level);
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void CopyTexture_SmallCompressed()
         {
             Texture src = GD.CreateTexture(TextureDescription.Texture2D(16, 16, 4, 1, PixelFormat.BC3_UNorm, TextureUsage.Staging));
             Texture dst = GD.CreateTexture(TextureDescription.Texture2D(16, 16, 4, 1, PixelFormat.BC3_UNorm, TextureUsage.Sampled));
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.CopyTexture(
-                src, 0, 0, 0, 3, 0,
-                dst, 0, 0, 0, 3, 0,
-                4, 4, 1, 1);
-            cl.End();
-            GD.SubmitCommands(cl);
-            GD.WaitForIdle();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.CopyTexture(
+                    src, 0, 0, 0, 3, 0,
+                    dst, 0, 0, 0, 3, 0,
+                    4, 4, 1, 1);
+                cb.End();
+                GD.SubmitCommands(cb);
+                GD.WaitForIdle();
+            }
         }
 
-        [Theory]
-        [InlineData(PixelFormat.BC1_Rgb_UNorm)]
-        [InlineData(PixelFormat.BC1_Rgb_UNorm_SRgb)]
-        [InlineData(PixelFormat.BC1_Rgba_UNorm)]
-        [InlineData(PixelFormat.BC1_Rgba_UNorm_SRgb)]
-        [InlineData(PixelFormat.BC2_UNorm)]
-        [InlineData(PixelFormat.BC2_UNorm_SRgb)]
-        [InlineData(PixelFormat.BC3_UNorm)]
-        [InlineData(PixelFormat.BC3_UNorm_SRgb)]
-        [InlineData(PixelFormat.BC4_UNorm)]
-        [InlineData(PixelFormat.BC4_SNorm)]
-        [InlineData(PixelFormat.BC5_UNorm)]
-        [InlineData(PixelFormat.BC5_SNorm)]
-        [InlineData(PixelFormat.BC7_UNorm)]
-        [InlineData(PixelFormat.BC7_UNorm_SRgb)]
+        [TestMethod]
+        [DataRow(PixelFormat.BC1_Rgb_UNorm)]
+        [DataRow(PixelFormat.BC1_Rgb_UNorm_SRgb)]
+        [DataRow(PixelFormat.BC1_Rgba_UNorm)]
+        [DataRow(PixelFormat.BC1_Rgba_UNorm_SRgb)]
+        [DataRow(PixelFormat.BC2_UNorm)]
+        [DataRow(PixelFormat.BC2_UNorm_SRgb)]
+        [DataRow(PixelFormat.BC3_UNorm)]
+        [DataRow(PixelFormat.BC3_UNorm_SRgb)]
+        [DataRow(PixelFormat.BC4_UNorm)]
+        [DataRow(PixelFormat.BC4_SNorm)]
+        [DataRow(PixelFormat.BC5_UNorm)]
+        [DataRow(PixelFormat.BC5_SNorm)]
+        [DataRow(PixelFormat.BC7_UNorm)]
+        [DataRow(PixelFormat.BC7_UNorm_SRgb)]
         public void CreateSmallTexture(PixelFormat format)
         {
             Texture tex = GD.CreateTexture(TextureDescription.Texture2D(1, 1, 1, 1, format, TextureUsage.Sampled));
-            Assert.Equal(1u, tex.Width);
-            Assert.Equal(1u, tex.Height);
+            Assert.AreEqual(1u, tex.Width);
+            Assert.AreEqual(1u, tex.Height);
         }
 
         private static readonly FormatProps[] s_allFormatProps =
@@ -1584,15 +1637,7 @@ namespace XenoAtom.Graphics.Tests
             }
         }
 
-        protected TextureTestBase(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
-        }
-    }
-
-    [Trait("Backend", "Vulkan")]
-    public class VulkanTextureTests : TextureTestBase
-    {
-        public VulkanTextureTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
+        protected TextureTests()
         {
         }
     }

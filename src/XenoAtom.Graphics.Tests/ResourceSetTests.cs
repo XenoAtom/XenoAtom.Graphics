@@ -1,12 +1,12 @@
 using System.Numerics;
-using Xunit;
-using Xunit.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace XenoAtom.Graphics.Tests
 {
-    public abstract class ResourceSetTests : GraphicsDeviceTestBase
+    [TestClass]
+    public class ResourceSetTests : GraphicsDeviceTestBase
     {
-        [Fact]
+        [TestMethod]
         public void ResourceSet_BufferInsteadOfTextureView_Fails()
         {
             ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
@@ -21,7 +21,7 @@ namespace XenoAtom.Graphics.Tests
             });
         }
 
-        [Fact]
+        [TestMethod]
         public void ResourceSet_IncorrectTextureUsage_Fails()
         {
             ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
@@ -36,7 +36,7 @@ namespace XenoAtom.Graphics.Tests
             });
         }
 
-        [Fact]
+        [TestMethod]
         public void ResourceSet_IncorrectBufferUsage_Fails()
         {
             ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
@@ -50,7 +50,7 @@ namespace XenoAtom.Graphics.Tests
             });
         }
 
-        [Fact]
+        [TestMethod]
         public void ResourceSet_TooFewOrTooManyElements_Fails()
         {
             ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
@@ -81,7 +81,7 @@ namespace XenoAtom.Graphics.Tests
             });
         }
 
-        [Fact]
+        [TestMethod]
         public void ResourceSet_InvalidUniformOffset_Fails()
         {
             ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
@@ -102,7 +102,7 @@ namespace XenoAtom.Graphics.Tests
             });
         }
 
-        [Fact]
+        [TestMethod]
         public void ResourceSet_NoPipelineBound_Fails()
         {
             ResourceLayout layout = GD.CreateResourceLayout(new ResourceLayoutDescription(
@@ -112,13 +112,16 @@ namespace XenoAtom.Graphics.Tests
 
             ResourceSet rs = GD.CreateResourceSet(new ResourceSetDescription(layout, ub));
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(0, rs));
-            cl.End();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                Assert.Throws<GraphicsException>(() => cb.SetGraphicsResourceSet(0, rs));
+                cb.End();
+            }
         }
 
-        [Fact]
+        [TestMethod]
         public void ResourceSet_InvalidSlot_Fails()
         {
             DeviceBuffer infoBuffer = GD.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
@@ -150,16 +153,19 @@ namespace XenoAtom.Graphics.Tests
 
             Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.SetPipeline(pipeline);
-            Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(1, set));
-            Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(2, set));
-            Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(3, set));
-            cl.End();
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetPipeline(pipeline);
+                Assert.Throws<GraphicsException>(() => cb.SetGraphicsResourceSet(1, set));
+                Assert.Throws<GraphicsException>(() => cb.SetGraphicsResourceSet(2, set));
+                Assert.Throws<GraphicsException>(() => cb.SetGraphicsResourceSet(3, set));
+                cb.End();
+            }
         }
 
-        [Fact]
+        [TestMethod]
         public void ResourceSet_IncompatibleSet_Fails()
         {
             DeviceBuffer infoBuffer = GD.CreateBuffer(new BufferDescription(16, BufferUsage.UniformBuffer));
@@ -203,25 +209,16 @@ namespace XenoAtom.Graphics.Tests
 
             Pipeline pipeline = GD.CreateGraphicsPipeline(gpd);
 
-            CommandList cl = GD.CreateCommandList();
-            cl.Begin();
-            cl.SetPipeline(pipeline);
-            cl.SetGraphicsResourceSet(0, set);
-            Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(0, set2)); // Wrong type
-            Assert.Throws<GraphicsException>(() => cl.SetGraphicsResourceSet(0, set3)); // Wrong count
-            cl.End();
-        }
-
-        protected ResourceSetTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
-        }
-    }
-
-    [Trait("Backend", "Vulkan")]
-    public class VulkanResourceSetTests : ResourceSetTests
-    {
-        public VulkanResourceSetTests(ITestOutputHelper textOutputHelper) : base(textOutputHelper)
-        {
+            using (var cbp = GD.CreateCommandBufferPool())
+            using (var cb = cbp.CreateCommandBuffer())
+            {
+                cb.Begin();
+                cb.SetPipeline(pipeline);
+                cb.SetGraphicsResourceSet(0, set);
+                Assert.Throws<GraphicsException>(() => cb.SetGraphicsResourceSet(0, set2)); // Wrong type
+                Assert.Throws<GraphicsException>(() => cb.SetGraphicsResourceSet(0, set3)); // Wrong count
+                cb.End();
+            }
         }
     }
 }

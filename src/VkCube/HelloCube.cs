@@ -20,13 +20,12 @@ public class HelloCube
     private readonly GraphicsDevice _graphicsDevice;
     private readonly Swapchain _swapChain;
     private readonly DeviceBuffer _vertexBuffer;
-    private readonly Shader _vertexShader;
-    private readonly Shader _fragmentShader;
+    private readonly XenoAtom.Graphics.Shader _vertexShader;
+    private readonly XenoAtom.Graphics.Shader _fragmentShader;
     private readonly Pipeline _pipeline;
     private readonly Matrix4x4 _view;
     private Matrix4x4 _projection;
     private readonly Stopwatch _time;
-    private readonly CommandList _cl;
     private readonly DeviceBuffer _matrixBuffer;
     private readonly ResourceLayout _resourceLayout;
     private readonly ResourceSet _resourceSet;
@@ -43,9 +42,6 @@ public class HelloCube
         var swapchainDesc = new SwapchainDescription(SwapchainSource.CreateWin32(_window.Handle, 0), (uint)_windowClientSize.Width, (uint)_windowClientSize.Height, PixelFormat.D32_Float_S8_UInt, true);
         _swapChain = _graphicsDevice.CreateSwapchain(swapchainDesc);
 
-        // Create command list
-        _cl = _graphicsDevice.CreateCommandList();
-
         // Define vertex and index buffers
         _vertexBuffer = _graphicsDevice.CreateBuffer(new BufferDescription((uint)(Vertices.Length * Unsafe.SizeOf<VertexPositionColor>()), BufferUsage.VertexBuffer));
 
@@ -56,7 +52,7 @@ public class HelloCube
         _vertexShader = _graphicsDevice.CreateShader(new ShaderDescription(ShaderStages.Vertex, CompiledShaders.ColoredQuadRenderer_vert));
         _fragmentShader = _graphicsDevice.CreateShader(new ShaderDescription(ShaderStages.Fragment, CompiledShaders.ColoredQuadRenderer_frag));
 
-        var shaders = new Shader[] { _vertexShader, _fragmentShader };
+        var shaders = new XenoAtom.Graphics.Shader[] { _vertexShader, _fragmentShader };
 
 
         var shaderSet = new ShaderSetDescription(
@@ -115,32 +111,39 @@ public class HelloCube
 
         Matrix4x4 mvp = model * _view * _projection;
 
-        // Update command list
-        _cl.Begin();
-        _cl.SetFramebuffer(_swapChain.Framebuffer);
-        _cl.SetFullViewports();
-        _cl.ClearColorTarget(0, RgbaFloat.Black);
-        _cl.ClearDepthStencil(1f);
-        _cl.SetPipeline(_pipeline);
-        _cl.SetGraphicsResourceSet(0, _resourceSet);
-        _cl.UpdateBuffer(_matrixBuffer, 0, mvp);
-        _cl.SetVertexBuffer(0, _vertexBuffer);
-        _cl.Draw((uint)Vertices.Length);
-        _cl.End();
-        _graphicsDevice.SubmitCommands(_cl);
+        // Update command buffer
+        // We use the default pool manager to rent a command buffers
+        using var cbp = _graphicsDevice.PoolManager.Rent();
+        //Console.WriteLine($"PoolManager AvailableCommandBufferPools = {_graphicsDevice.PoolManager.AvailableCommandBufferPoolsCount}, InUseCommandBufferPools = {_graphicsDevice.PoolManager.InUseCommandBufferPoolsCount}");
+
+        using var cb = cbp.CreateCommandBuffer();
+        cb.Begin();
+        cb.SetFramebuffer(_swapChain.Framebuffer);
+        cb.SetFullViewports();
+        cb.ClearColorTarget(0, RgbaFloat.Black);
+        cb.ClearDepthStencil(1f);
+        cb.SetPipeline(_pipeline);
+        cb.SetGraphicsResourceSet(0, _resourceSet);
+        cb.UpdateBuffer(_matrixBuffer, 0, mvp);
+        cb.SetVertexBuffer(0, _vertexBuffer);
+        cb.Draw((uint)Vertices.Length);
+        cb.End();
+        _graphicsDevice.SubmitCommands(cb);
 
         _swapChain.SwapBuffers();
     }
     
     public void Dispose()
     {
-        _graphicsDevice.WaitForIdle();
+        var builder = new System.Text.StringBuilder();
+        _graphicsDevice.DumpStatistics(builder);
+        System.Console.WriteLine(builder.ToString());
 
+        _graphicsDevice.WaitForIdle();
         _vertexBuffer.Dispose();
         _vertexShader.Dispose();
         _fragmentShader.Dispose();
         _pipeline.Dispose();
-        _cl.Dispose();
         _matrixBuffer.Dispose();
         _resourceLayout.Dispose();
         _resourceSet.Dispose();

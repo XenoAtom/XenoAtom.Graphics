@@ -212,6 +212,11 @@ namespace XenoAtom.Graphics.Vk
                         // Required for the validation layer in 1.2 while it is 1.3.
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
                     }
+                    else if (extensionName == VK_KHR_WORKGROUP_MEMORY_EXPLICIT_LAYOUT_EXTENSION_NAME)
+                    {
+                        // Required for compute shaders threadgroup memory reinterpret cast.
+                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                    }
                 }
             }
 
@@ -244,28 +249,33 @@ namespace XenoAtom.Graphics.Vk
             // ------------------
             // TODO: TEMP LIST of features that we are forcing/enabling
             // BEGIN
-            VkPhysicalDeviceVulkan11Features vulkan11Features = new()
+            VkPhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR workgroupMemoryExplicitLayoutFeatures = new()
             {
-                sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-                storageBuffer16BitAccess = VK_TRUE
+                workgroupMemoryExplicitLayout = VK_TRUE,
+                workgroupMemoryExplicitLayoutScalarBlockLayout = VK_TRUE,
+                workgroupMemoryExplicitLayout8BitAccess = VK_TRUE,
+                workgroupMemoryExplicitLayout16BitAccess = VK_TRUE
             };
-
 
             VkPhysicalDeviceSubgroupSizeControlFeatures subgroupSizeControlFeatures = new()
             {
-                sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES,
                 subgroupSizeControl = VK_TRUE,
                 computeFullSubgroups = false // Not sure if this is needed
             };
 
             if (is_VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME_available)
             {
-                vulkan11Features.pNext = &subgroupSizeControlFeatures;
+                workgroupMemoryExplicitLayoutFeatures.pNext = &subgroupSizeControlFeatures;
             }
 
+            VkPhysicalDeviceVulkan11Features vulkan11Features = new()
+            {
+                pNext = &workgroupMemoryExplicitLayoutFeatures,
+                storageBuffer16BitAccess = VK_TRUE
+            };
+            
             VkPhysicalDeviceVulkan12Features vulkan12Features = new()
             {
-                sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
                 pNext = &vulkan11Features,
                 bufferDeviceAddress = VK_TRUE,
                 shaderFloat16 = VK_TRUE,
@@ -371,28 +381,26 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        private protected override void SubmitCommandsCore(CommandList cl, Fence? fence)
+        private protected override void SubmitCommandsCore(CommandBuffer cl, Fence? fence)
         {
             SubmitCommandList(cl, 0, null, 0, null, fence);
         }
 
         private void SubmitCommandList(
-            CommandList cl,
+            CommandBuffer cb,
             uint waitSemaphoreCount,
             VkSemaphore* waitSemaphoresPtr,
             uint signalSemaphoreCount,
             VkSemaphore* signalSemaphoresPtr,
             Fence? fence)
         {
-            VkCommandList vkCL = Util.AssertSubtype<CommandList, VkCommandList>(cl);
-            VkCommandBuffer vkCB = vkCL.CommandBuffer;
+            VkCommandBufferExt vkCL = Util.AssertSubtype<CommandBuffer, VkCommandBufferExt>(cb);
 
-            vkCL.CommandBufferSubmitted(vkCB);
-            SubmitCommandBuffer(vkCL, vkCB, waitSemaphoreCount, waitSemaphoresPtr, signalSemaphoreCount, signalSemaphoresPtr, fence);
+            SubmitCommandBuffer(vkCL, vkCL.CommandBuffer, waitSemaphoreCount, waitSemaphoresPtr, signalSemaphoreCount, signalSemaphoresPtr, fence);
         }
 
         private void SubmitCommandBuffer(
-            VkCommandList? vkCL,
+            VkCommandBufferExt? vkCL,
             VkCommandBuffer vkCB,
             uint waitSemaphoreCount,
             VkSemaphore* waitSemaphoresPtr,
@@ -402,16 +410,17 @@ namespace XenoAtom.Graphics.Vk
         {
             CheckSubmittedFences();
 
-            VkSubmitInfo si = new VkSubmitInfo();
-            si.commandBufferCount = 1;
-            si.pCommandBuffers = &vkCB;
             VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            si.pWaitDstStageMask = &waitDstStageMask;
-
-            si.pWaitSemaphores = waitSemaphoresPtr;
-            si.waitSemaphoreCount = waitSemaphoreCount;
-            si.pSignalSemaphores = signalSemaphoresPtr;
-            si.signalSemaphoreCount = signalSemaphoreCount;
+            var si = new VkSubmitInfo
+            {
+                commandBufferCount = 1,
+                pCommandBuffers = &vkCB,
+                pWaitDstStageMask = &waitDstStageMask,
+                pWaitSemaphores = waitSemaphoresPtr,
+                waitSemaphoreCount = waitSemaphoreCount,
+                pSignalSemaphores = signalSemaphoresPtr,
+                signalSemaphoreCount = signalSemaphoreCount
+            };
 
             XenoAtom.Interop.vulkan.VkFence vkFence = default;
             XenoAtom.Interop.vulkan.VkFence submissionFence = default;
@@ -426,6 +435,7 @@ namespace XenoAtom.Graphics.Vk
                 submissionFence = vkFence;
             }
 
+            vkCL?.CommandBufferSubmitted();
             lock (GraphicsQueueLock)
             {
                 vkQueueSubmit(_vkGraphicsQueue, 1, &si, vkFence)
@@ -469,7 +479,7 @@ namespace XenoAtom.Graphics.Vk
         {
             XenoAtom.Interop.vulkan.VkFence fence = fsi.Fence;
             VkCommandBuffer completedCB = fsi.CommandBuffer;
-            fsi.CommandList?.CommandBufferCompleted(completedCB);
+            fsi.CommandBufferImpl?.CommandBufferCompleted();
             vkResetFences(_vkDevice, 1, &fence)
                 .VkCheck("Unable to reset fence");
             ReturnSubmissionFence(fence);
@@ -542,15 +552,18 @@ namespace XenoAtom.Graphics.Vk
                 case VkBuffer buffer:
                     SetDebugMarkerName(VK_OBJECT_TYPE_BUFFER, (ulong)buffer.DeviceBuffer.Value.Handle, name);
                     break;
-                case VkCommandList commandList:
-                    SetDebugMarkerName(
-                        VK_OBJECT_TYPE_COMMAND_BUFFER,
-                        (ulong)commandList.CommandBuffer.Value.Handle,
-                        $"{name}_CommandBuffer");
+                case VkCommandBufferPool commandList:
                     SetDebugMarkerName(
                         VK_OBJECT_TYPE_COMMAND_POOL,
                         (ulong)commandList.CommandPool.Value.Handle,
                         $"{name}_CommandPool");
+                    break;
+
+                case VkCommandBufferExt commandList:
+                    SetDebugMarkerName(
+                        VK_OBJECT_TYPE_COMMAND_BUFFER,
+                        (ulong)commandList.CommandBuffer.Value.Handle,
+                        $"{name}_CommandBuffer");
                     break;
                 case VkFramebuffer framebuffer:
                     SetDebugMarkerName(
@@ -908,7 +921,7 @@ namespace XenoAtom.Graphics.Vk
                 UpdateTexture(stagingTex, source, sizeInBytes, 0, 0, 0, width, height, depth, 0, 0);
                 SharedCommandPool pool = GetFreeCommandPool();
                 VkCommandBuffer cb = pool.BeginNewCommandBuffer();
-                VkCommandList.CopyTextureCore_VkCommandBuffer(
+                VkCommandBufferExt.CopyTextureCore_VkCommandBuffer(
                     cb,
                     stagingTex, 0, 0, 0, 0, 0,
                     texture, x, y, z, mipLevel, arrayLayer,
@@ -1058,6 +1071,12 @@ namespace XenoAtom.Graphics.Vk
         internal override uint GetStructuredBufferMinOffsetAlignmentCore()
             => (uint)Adapter.PhysicalDeviceProperties.limits.minStorageBufferOffsetAlignment;
 
+        public override void Refresh()
+        {
+            // During a refresh, we update the submitted fences
+            CheckSubmittedFences();
+        }
+
         internal void TransitionImageLayout(VkTexture texture, VkImageLayout layout)
         {
             SharedCommandPool pool = GetFreeCommandPool();
@@ -1065,6 +1084,9 @@ namespace XenoAtom.Graphics.Vk
             texture.TransitionImageLayout(cb, 0, texture.MipLevels, 0, texture.ActualArrayLayers, layout);
             pool.EndAndSubmit(cb);
         }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator VkDevice(VkGraphicsDevice gd) => gd._vkDevice;
 
         private class SharedCommandPool
         {
@@ -1123,21 +1145,6 @@ namespace XenoAtom.Graphics.Vk
             }
         }
 
-        private struct FenceSubmissionInfo
-        {
-            public XenoAtom.Interop.vulkan.VkFence Fence;
-
-            public VkCommandList? CommandList;
-
-            public VkCommandBuffer CommandBuffer;
-            public FenceSubmissionInfo(XenoAtom.Interop.vulkan.VkFence fence, VkCommandList? commandList, VkCommandBuffer commandBuffer)
-            {
-                Fence = fence;
-                CommandList = commandList;
-                CommandBuffer = commandBuffer;
-            }
-        }
-
         internal override void Destroy()
         {
             WaitForIdle();
@@ -1175,6 +1182,7 @@ namespace XenoAtom.Graphics.Vk
                 }
             }
 
+            PoolManager.Dispose();
             _memoryManager.Dispose();
 
             vkDeviceWaitIdle(_vkDevice)
@@ -1182,8 +1190,21 @@ namespace XenoAtom.Graphics.Vk
             vkDestroyDevice(_vkDevice, null);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator VkDevice(VkGraphicsDevice gd) => gd._vkDevice;
+        private readonly struct FenceSubmissionInfo
+        {
+            public readonly XenoAtom.Interop.vulkan.VkFence Fence;
+
+            public readonly VkCommandBufferExt? CommandBufferImpl;
+
+            public readonly VkCommandBuffer CommandBuffer;
+
+            public FenceSubmissionInfo(XenoAtom.Interop.vulkan.VkFence fence, VkCommandBufferExt? commandBufferImpl, VkCommandBuffer commandBuffer)
+            {
+                Fence = fence;
+                CommandBufferImpl = commandBufferImpl;
+                CommandBuffer = commandBuffer;
+            }
+        }
     }
 }
 
