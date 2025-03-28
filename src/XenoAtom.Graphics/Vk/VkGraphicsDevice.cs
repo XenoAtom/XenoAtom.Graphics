@@ -1010,7 +1010,10 @@ namespace XenoAtom.Graphics.Vk
         {
             XenoAtom.Interop.vulkan.VkFence vkFence = Util.AssertSubtype<Fence, VkFence>(fence).DeviceFence;
             VkResult result = vkWaitForFences(_vkDevice, 1, &vkFence, true, nanosecondTimeout);
-            return result == VK_SUCCESS;
+            bool success = result == VK_SUCCESS;
+            // It is most likely that a fence was used to submit a command buffer, so we check for completed fences
+            CheckSubmittedFences(false);
+            return success;
         }
 
         public override bool WaitForFences(Fence[] fences, bool waitAll, ulong nanosecondTimeout)
@@ -1023,7 +1026,10 @@ namespace XenoAtom.Graphics.Vk
             }
 
             VkResult result = vkWaitForFences(_vkDevice, (uint)fenceCount, fencesPtr, waitAll, nanosecondTimeout);
-            return result == VK_SUCCESS;
+            bool success = result == VK_SUCCESS;
+            // It is most likely that a fence was used to submit a command buffer, so we check for completed fences
+            CheckSubmittedFences(false);
+            return success;
         }
 
         internal void ClearColorTexture(VkTexture texture, VkClearColorValue color)
