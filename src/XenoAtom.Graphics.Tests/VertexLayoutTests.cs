@@ -54,17 +54,5 @@ namespace XenoAtom.Graphics.Tests
             }
             catch when (!succeeds) { }
         }
-
-        protected VertexLayoutTests() : base()
-        {
-        }
-    }
-
-    [TestClass]
-    public class VulkanVertexLayoutTests : VertexLayoutTests
-    {
-        public VulkanVertexLayoutTests()
-        {
-        }
     }
 }

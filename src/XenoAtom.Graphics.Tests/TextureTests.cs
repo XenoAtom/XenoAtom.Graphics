@@ -502,15 +502,15 @@ namespace XenoAtom.Graphics.Tests
         }
 
         [TestMethod]
-        [DataRow(64, 7)]
-        [DataRow(64, 4)]
-        [DataRow(64, 2)]
-        [DataRow(32, 6)]
-        [DataRow(32, 4)]
-        [DataRow(32, 2)]
-        [DataRow(4, 3)]
-        [DataRow(4, 2)]
-        [DataRow(2, 2)]
+        [DataRow(64u, 7u)]
+        [DataRow(64u, 4u)]
+        [DataRow(64u, 2u)]
+        [DataRow(32u, 6u)]
+        [DataRow(32u, 4u)]
+        [DataRow(32u, 2u)]
+        [DataRow(4u, 3u)]
+        [DataRow(4u, 2u)]
+        [DataRow(2u, 2u)]
         public void CubeMap_GenerateMipmaps(uint TexSize, uint MipLevels)
         {
             TextureDescription texDesc = TextureDescription.Texture2D(
@@ -576,11 +576,11 @@ namespace XenoAtom.Graphics.Tests
         }
 
         [TestMethod]
-        [DataRow(2)]
-        [DataRow(4)]
-        [DataRow(8)]
-        [DataRow(16)]
-        [DataRow(32)]
+        [DataRow(2u)]
+        [DataRow(4u)]
+        [DataRow(8u)]
+        [DataRow(16u)]
+        [DataRow(32u)]
         public void ArrayLayers_StagingWriteAndRead_SmallTextures(uint TexSize)
         {
             const uint ArrayLayers = 6;
@@ -694,34 +694,34 @@ namespace XenoAtom.Graphics.Tests
         }
 
         [TestMethod]
-        [DataRow(PixelFormat.BC1_Rgb_UNorm, 8, 0, 0, 64, 64)]
-        [DataRow(PixelFormat.BC1_Rgb_UNorm, 8, 8, 4, 16, 16)]
-        [DataRow(PixelFormat.BC1_Rgb_UNorm_SRgb, 8, 0, 0, 64, 64)]
-        [DataRow(PixelFormat.BC1_Rgb_UNorm_SRgb, 8, 8, 4, 16, 16)]
-        [DataRow(PixelFormat.BC1_Rgba_UNorm, 8, 0, 0, 64, 64)]
-        [DataRow(PixelFormat.BC1_Rgba_UNorm, 8, 8, 4, 16, 16)]
-        [DataRow(PixelFormat.BC1_Rgba_UNorm_SRgb, 8, 0, 0, 64, 64)]
-        [DataRow(PixelFormat.BC1_Rgba_UNorm_SRgb, 8, 8, 4, 16, 16)]
-        [DataRow(PixelFormat.BC2_UNorm, 16, 0, 0, 64, 64)]
-        [DataRow(PixelFormat.BC2_UNorm, 16, 8, 4, 16, 16)]
-        [DataRow(PixelFormat.BC2_UNorm_SRgb, 16, 0, 0, 64, 64)]
-        [DataRow(PixelFormat.BC2_UNorm_SRgb, 16, 8, 4, 16, 16)]
-        [DataRow(PixelFormat.BC3_UNorm, 16, 0, 0, 64, 64)]
-        [DataRow(PixelFormat.BC3_UNorm, 16, 8, 4, 16, 16)]
-        [DataRow(PixelFormat.BC3_UNorm_SRgb, 16, 0, 0, 64, 64)]
-        [DataRow(PixelFormat.BC3_UNorm_SRgb, 16, 8, 4, 16, 16)]
-        [DataRow(PixelFormat.BC4_UNorm, 8, 0, 0, 16, 16)]
-        [DataRow(PixelFormat.BC4_UNorm, 8, 8, 4, 16, 16)]
-        [DataRow(PixelFormat.BC4_SNorm, 8, 0, 0, 16, 16)]
-        [DataRow(PixelFormat.BC4_SNorm, 8, 8, 4, 16, 16)]
-        [DataRow(PixelFormat.BC5_UNorm, 16, 0, 0, 16, 16)]
-        [DataRow(PixelFormat.BC5_UNorm, 16, 8, 4, 16, 16)]
-        [DataRow(PixelFormat.BC5_SNorm, 16, 0, 0, 16, 16)]
-        [DataRow(PixelFormat.BC5_SNorm, 16, 8, 4, 16, 16)]
-        [DataRow(PixelFormat.BC7_UNorm, 16, 0, 0, 16, 16)]
-        [DataRow(PixelFormat.BC7_UNorm, 16, 8, 4, 16, 16)]
-        [DataRow(PixelFormat.BC7_UNorm_SRgb, 16, 0, 0, 16, 16)]
-        [DataRow(PixelFormat.BC7_UNorm_SRgb, 16, 8, 4, 16, 16)]
+        [DataRow(PixelFormat.BC1_Rgb_UNorm, 8u, 0u, 0u, 64u, 64u)]
+        [DataRow(PixelFormat.BC1_Rgb_UNorm, 8u, 8u, 4u, 16u, 16u)]
+        [DataRow(PixelFormat.BC1_Rgb_UNorm_SRgb, 8u, 0u, 0u, 64u, 64u)]
+        [DataRow(PixelFormat.BC1_Rgb_UNorm_SRgb, 8u, 8u, 4u, 16u, 16u)]
+        [DataRow(PixelFormat.BC1_Rgba_UNorm, 8u, 0u, 0u, 64u, 64u)]
+        [DataRow(PixelFormat.BC1_Rgba_UNorm, 8u, 8u, 4u, 16u, 16u)]
+        [DataRow(PixelFormat.BC1_Rgba_UNorm_SRgb, 8u, 0u, 0u, 64u, 64u)]
+        [DataRow(PixelFormat.BC1_Rgba_UNorm_SRgb, 8u, 8u, 4u, 16u, 16u)]
+        [DataRow(PixelFormat.BC2_UNorm, 16u, 0u, 0u, 64u, 64u)]
+        [DataRow(PixelFormat.BC2_UNorm, 16u, 8u, 4u, 16u, 16u)]
+        [DataRow(PixelFormat.BC2_UNorm_SRgb, 16u, 0u, 0u, 64u, 64u)]
+        [DataRow(PixelFormat.BC2_UNorm_SRgb, 16u, 8u, 4u, 16u, 16u)]
+        [DataRow(PixelFormat.BC3_UNorm, 16u, 0u, 0u, 64u, 64u)]
+        [DataRow(PixelFormat.BC3_UNorm, 16u, 8u, 4u, 16u, 16u)]
+        [DataRow(PixelFormat.BC3_UNorm_SRgb, 16u, 0u, 0u, 64u, 64u)]
+        [DataRow(PixelFormat.BC3_UNorm_SRgb, 16u, 8u, 4u, 16u, 16u)]
+        [DataRow(PixelFormat.BC4_UNorm, 8u, 0u, 0u, 16u, 16u)]
+        [DataRow(PixelFormat.BC4_UNorm, 8u, 8u, 4u, 16u, 16u)]
+        [DataRow(PixelFormat.BC4_SNorm, 8u, 0u, 0u, 16u, 16u)]
+        [DataRow(PixelFormat.BC4_SNorm, 8u, 8u, 4u, 16u, 16u)]
+        [DataRow(PixelFormat.BC5_UNorm, 16u, 0u, 0u, 16u, 16u)]
+        [DataRow(PixelFormat.BC5_UNorm, 16u, 8u, 4u, 16u, 16u)]
+        [DataRow(PixelFormat.BC5_SNorm, 16u, 0u, 0u, 16u, 16u)]
+        [DataRow(PixelFormat.BC5_SNorm, 16u, 8u, 4u, 16u, 16u)]
+        [DataRow(PixelFormat.BC7_UNorm, 16u, 0u, 0u, 16u, 16u)]
+        [DataRow(PixelFormat.BC7_UNorm, 16u, 8u, 4u, 16u, 16u)]
+        [DataRow(PixelFormat.BC7_UNorm_SRgb, 16u, 0u, 0u, 16u, 16u)]
+        [DataRow(PixelFormat.BC7_UNorm_SRgb, 16u, 8u, 4u, 16u, 16u)]
         public unsafe void Copy_Compressed_Texture(PixelFormat format, uint blockSizeInBytes, uint srcX, uint srcY, uint copyWidth, uint copyHeight)
         {
             if (!GD.GetPixelFormatSupport(format, TextureKind.Texture2D, TextureUsage.Sampled))
@@ -774,8 +774,8 @@ namespace XenoAtom.Graphics.Tests
         }
 
         // [DataRow(true)]
-        [DataRow(false)]
         [TestMethod]
+        [DataRow(false)]
         public unsafe void Copy_Compressed_Array(bool separateLayerCopies)
         {
             PixelFormat format = PixelFormat.BC3_UNorm;
@@ -1469,14 +1469,14 @@ namespace XenoAtom.Graphics.Tests
                 {
                     props.Format, props.RedBits, props.GreenBits, props.BlueBits, props.AlphaBits,
                     TextureKind.Texture2D,
-                    64, 64, 1, 1, 1,
+                    64u, 64u, 1u, 1u, 1u,
                     TextureKind.Texture2D,
-                    64, 64, 1, 1, 1,
-                    64, 64, 1,
-                    0, 0, 0,
-                    0, 0,
-                    0, 0, 0,
-                    0, 0
+                    64u, 64u, 1u, 1u, 1u,
+                    64u, 64u, 1u,
+                    0u, 0u, 0u,
+                    0u, 0u,
+                    0u, 0u, 0u,
+                    0u, 0u
                 };
             }
         }
@@ -1635,10 +1635,6 @@ namespace XenoAtom.Graphics.Tests
                 GreenBits = greenBits;
                 AlphaBits = alphaBits;
             }
-        }
-
-        protected TextureTests()
-        {
         }
     }
 }
