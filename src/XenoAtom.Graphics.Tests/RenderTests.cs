@@ -761,8 +761,7 @@ namespace XenoAtom.Graphics.Tests
 
             Pipeline computePipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
                 TestShaders.LoadCompute(GD, "ComputeColoredQuadGenerator"),
-                computeLayout,
-                1, 1, 1));
+                computeLayout));
 
             ResourceLayout graphicsLayout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("InputVertices", ResourceKind.StructuredBufferReadOnly, ShaderStages.Vertex)));
@@ -834,8 +833,7 @@ namespace XenoAtom.Graphics.Tests
 
             Pipeline computePipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
                 TestShaders.LoadCompute(GD, "ComputeTextureGenerator"),
-                computeLayout,
-                4, 1, 1));
+                computeLayout));
 
             ResourceLayout graphicsLayout = GD.CreateResourceLayout(new ResourceLayoutDescription(
                 new ResourceLayoutElementDescription("Input", ResourceKind.TextureReadOnly, ShaderStages.Fragment),
@@ -906,8 +904,7 @@ namespace XenoAtom.Graphics.Tests
 
             Pipeline computePipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
                 TestShaders.LoadCompute(GD, "ComputeImage2DArrayGenerator"),
-                computeLayout,
-                32, 32, 1));
+                computeLayout));
 
             using (var cbp = GD.CreateCommandBufferPool())
             using (var cb = cbp.CreateCommandBuffer())

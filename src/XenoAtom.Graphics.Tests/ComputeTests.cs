@@ -43,8 +43,7 @@ namespace XenoAtom.Graphics.Tests
 
             using Pipeline computePipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
                 computeShader,
-                computeLayout,
-                16, 16, 1));
+                computeLayout));
 
             using DeviceBuffer fillValueBuffer = GD.CreateBuffer(new BufferDescription((uint)Marshal.SizeOf<FillValueStruct>(), BufferUsage.UniformBuffer));
 
@@ -194,8 +193,7 @@ namespace XenoAtom.Graphics.Tests
 
             Pipeline pipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
                 TestShaders.LoadCompute(GD, "BasicComputeTest"),
-                layout,
-                16, 16, 1));
+                layout));
 
             using (var cbp = GD.CreateCommandBufferPool())
             using (var cb = cbp.CreateCommandBuffer())
@@ -261,8 +259,7 @@ namespace XenoAtom.Graphics.Tests
 
             Pipeline computePipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
                 TestShaders.LoadCompute(GD, "ComputeCubemapGenerator"),
-                computeLayout,
-                32, 32, 1));
+                computeLayout));
 
             using (var cbp = GD.CreateCommandBufferPool())
             using (var cb = cbp.CreateCommandBuffer())
@@ -336,8 +333,7 @@ namespace XenoAtom.Graphics.Tests
 
             Pipeline computePipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
                 TestShaders.LoadCompute(GD, "ComputeCubemapGenerator"),
-                computeLayout,
-                32, 32, 1));
+                computeLayout));
 
             using var cbp = GD.CreateCommandBufferPool(new(CommandBufferPoolFlags.CanResetCommandBuffer));
             using var cb = cbp.CreateCommandBuffer();
@@ -480,8 +476,7 @@ namespace XenoAtom.Graphics.Tests
 
             Pipeline pipeline = GD.CreateComputePipeline(new ComputePipelineDescription(
                 TestShaders.LoadCompute(GD, combinedLayout ? "FillBuffer" : "FillBuffer_SeparateLayout"),
-                layouts,
-                1, 1, 1));
+                layouts));
 
             uint[] srcData = Enumerable.Range(0, (int)copySrc.SizeInBytes / sizeof(uint)).Select(i => (uint)i).ToArray();
             GD.UpdateBuffer(copySrc, 0, srcData);
