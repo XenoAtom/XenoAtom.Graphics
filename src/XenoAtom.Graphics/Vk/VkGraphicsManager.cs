@@ -137,6 +137,11 @@ internal sealed unsafe class VkGraphicsManager : GraphicsManager
             }
         }
 
+        if (availableInstanceExtensions.Contains(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+        {
+            instanceExtensions.Add((nint)(byte*)VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        }
+
         foreach (var ext in _surfaceExtensions)
         {
             instanceExtensions.Add((nint)(byte*)ext);
