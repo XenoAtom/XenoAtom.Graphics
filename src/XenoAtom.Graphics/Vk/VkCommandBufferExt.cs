@@ -521,7 +521,7 @@ internal unsafe class VkCommandBufferExt : CommandBuffer
         // Reset the query so it’s ready for a new timestamp.
         vkCmdResetQueryPool(_cb, vkQueryPool, queryIndex.Value, 1);
         
-        vkCmdWriteTimestamp(_cb, VulkanUtil.VdToVkPipelineStage(stage), vkQueryPool, queryIndex.Value);
+        vkCmdWriteTimestamp(_cb, VulkanUtil.ToVkPipelineStage(stage), vkQueryPool, queryIndex.Value);
     }
 
     protected override void SetFramebufferCore(Framebuffer fb)
