@@ -146,6 +146,15 @@ namespace XenoAtom.Graphics
         }
 
         /// <summary>
+        /// Write a timestamp query.
+        /// </summary>
+        /// <param name="queryPool">The timestamp query</param>
+        /// <param name="queryIndex"></param>
+        /// <param name="stage">The stage to insert the query.</param>
+        /// <returns>The query index.</returns>
+        public abstract void WriteTimestampQuery(GraphicsQueryPool<TimeSpan> queryPool, GraphicsQueryIndex queryIndex, GraphicsPipelineStage stage);
+        
+        /// <summary>
         /// Pushes a constant value to the active <see cref="Pipeline"/> for the given shader stage.
         /// </summary>
         public abstract void PushConstant(ShaderStages shaderStage, ReadOnlySpan<byte> buffer, uint offset = 0);

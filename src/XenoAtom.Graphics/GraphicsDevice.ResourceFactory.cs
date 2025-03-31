@@ -78,6 +78,13 @@ namespace XenoAtom.Graphics
         protected abstract Pipeline CreateGraphicsPipelineCore(in GraphicsPipelineDescription description);
 
         /// <summary>
+        /// Creates a new <see cref="GraphicsQueryPool{TQueryData}"/> object.
+        /// </summary>
+        /// <param name="queryCount">The maximum number of queries that can be used for this pool.</param>
+        /// <returns>An instance of <see cref="GraphicsQueryPool"/> for timestamp.</returns>
+        public abstract GraphicsQueryPool<TimeSpan> CreateTimestampQueryPool(uint queryCount);
+
+        /// <summary>
         /// Creates a new compute <see cref="Pipeline"/> object.
         /// </summary>
         /// <param name="description">The desirede properties of the created object.</param>

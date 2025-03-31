@@ -1,3 +1,4 @@
+using System;
 using static XenoAtom.Interop.vulkan;
 
 namespace XenoAtom.Graphics.Vk
@@ -12,6 +13,9 @@ namespace XenoAtom.Graphics.Vk
 
         protected override Pipeline CreateGraphicsPipelineCore(in GraphicsPipelineDescription description)
             => LogResourceCreated(new VkPipeline(this, description));
+
+        public override GraphicsQueryPool<TimeSpan> CreateTimestampQueryPool(uint queryCount)
+            => LogResourceCreated(new VkGraphicsTimestampQueryPool(this, queryCount));
 
         public override Pipeline CreateComputePipeline(in ComputePipelineDescription description)
             => LogResourceCreated(new VkPipeline(this, description));

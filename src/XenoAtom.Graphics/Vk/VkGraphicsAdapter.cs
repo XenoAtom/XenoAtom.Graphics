@@ -14,6 +14,8 @@ internal sealed unsafe class VkGraphicsAdapter : GraphicsAdapter
 {
     public readonly VkPhysicalDevice PhysicalDevice;
     public readonly VkPhysicalDeviceFeatures2 PhysicalDeviceFeatures2;
+    public readonly VkPhysicalDeviceVulkan11Features PhysicalDeviceVulkan11Features;
+    public readonly VkPhysicalDeviceVulkan12Features PhysicalDeviceVulkan12Features;
     public readonly VkPhysicalDeviceProperties PhysicalDeviceProperties;
     public readonly VkPhysicalDeviceVulkan11Properties PhysicalDeviceVulkan11Properties;
     public readonly VkPhysicalDeviceVulkan12Properties PhysicalDeviceVulkan12Properties;
@@ -23,7 +25,7 @@ internal sealed unsafe class VkGraphicsAdapter : GraphicsAdapter
     //public readonly VkPhysicalDeviceVulkan13Properties PhysicalDeviceVulkan13Properties;
 
     public readonly VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
-    public readonly VkPhysicalDeviceDriverProperties PhysicalDeviceDriverPropertie;
+    public readonly VkPhysicalDeviceDriverProperties PhysicalDeviceDriverProperties;
     public readonly VkPhysicalDeviceMemoryProperties PhysicalDeviceMemProperties;
     private readonly GraphicsVersion _apiVersion;
     private readonly GraphicsVersion _driverVersion;
@@ -37,11 +39,18 @@ internal sealed unsafe class VkGraphicsAdapter : GraphicsAdapter
 
         // Get features
         VkPhysicalDeviceFeatures2 features2 = new();
+        VkPhysicalDeviceVulkan11Features vulkan11Features = new();
+        VkPhysicalDeviceVulkan12Features vulkan12Features = new();
+        features2.pNext = &vulkan11Features;
+        vulkan11Features.pNext = &vulkan12Features;
+
         VkPhysicalDeviceSubgroupSizeControlFeatures subgroupSizeControlFeatures = new();
-        features2.pNext = &subgroupSizeControlFeatures;
+        vulkan12Features.pNext = &subgroupSizeControlFeatures;
         vkGetPhysicalDeviceFeatures2(physicalDevice, &features2);
         PhysicalDeviceFeatures2 = features2;
         PhysicalDeviceSubgroupSizeControlFeatures = subgroupSizeControlFeatures;
+        PhysicalDeviceVulkan11Features = vulkan11Features;
+        PhysicalDeviceVulkan12Features = vulkan12Features;
         
         // Get the properties of the physical device
         VkPhysicalDeviceProperties2 deviceProps = new();
@@ -60,7 +69,7 @@ internal sealed unsafe class VkGraphicsAdapter : GraphicsAdapter
 
         vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProps);
         PhysicalDeviceProperties = deviceProps.properties;
-        PhysicalDeviceDriverPropertie = driverProps;
+        PhysicalDeviceDriverProperties = driverProps;
         PhysicalDeviceVulkan11Properties = vulkan11Props;
         PhysicalDeviceVulkan12Properties = vulkan12Props;
         PhysicalDeviceSubgroupSizeControlProperties = subgroupSizeControlProperties;

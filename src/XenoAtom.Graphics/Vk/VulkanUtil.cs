@@ -9,6 +9,17 @@ namespace XenoAtom.Graphics.Vk
     internal static unsafe class VulkanUtil
     {
         private static Lazy<bool> s_isVulkanLoaded = new Lazy<bool>(TryLoadVulkan);
+        
+        public static VkPipelineStageFlags VdToVkPipelineStage(GraphicsPipelineStage stage)
+        {
+            return stage switch
+            {
+                GraphicsPipelineStage.None => 0,
+                GraphicsPipelineStage.TopOfPipe => VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                GraphicsPipelineStage.BottomOfPipe => VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                _ => throw new ArgumentOutOfRangeException(nameof(stage), stage, null)
+            };
+        }
 
         public static void CheckResult(VkResult result)
         {

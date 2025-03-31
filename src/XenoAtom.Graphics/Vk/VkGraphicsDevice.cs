@@ -273,18 +273,19 @@ namespace XenoAtom.Graphics.Vk
             VkPhysicalDeviceVulkan11Features vulkan11Features = new()
             {
                 pNext = &workgroupMemoryExplicitLayoutFeatures,
-                storageBuffer16BitAccess = VK_TRUE
+                storageBuffer16BitAccess = Adapter.PhysicalDeviceVulkan11Features.storageBuffer16BitAccess
             };
             
             VkPhysicalDeviceVulkan12Features vulkan12Features = new()
             {
                 pNext = &vulkan11Features,
-                bufferDeviceAddress = VK_TRUE,
-                shaderFloat16 = VK_TRUE,
-                shaderInt8 = VK_TRUE,
-                scalarBlockLayout = VK_TRUE,
-                vulkanMemoryModel = VK_TRUE,
-                vulkanMemoryModelDeviceScope = VK_TRUE
+                bufferDeviceAddress = Adapter.PhysicalDeviceVulkan12Features.bufferDeviceAddress,
+                shaderFloat16 = Adapter.PhysicalDeviceVulkan12Features.shaderFloat16,
+                shaderInt8 = Adapter.PhysicalDeviceVulkan12Features.shaderInt8,
+                scalarBlockLayout = Adapter.PhysicalDeviceVulkan12Features.scalarBlockLayout,
+                vulkanMemoryModel = Adapter.PhysicalDeviceVulkan12Features.vulkanMemoryModel,
+                vulkanMemoryModelDeviceScope = Adapter.PhysicalDeviceVulkan12Features.vulkanMemoryModelDeviceScope,
+                hostQueryReset = Adapter.PhysicalDeviceVulkan12Features.hostQueryReset
             };
             
             //VkPhysicalDeviceVulkan13Features vulkan13Features = new()

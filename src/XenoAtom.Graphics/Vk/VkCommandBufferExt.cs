@@ -513,6 +513,17 @@ internal unsafe class VkCommandBufferExt : CommandBuffer
         State =  CommandBufferState.Recorded;
     }
 
+    public override void WriteTimestampQuery(GraphicsQueryPool<TimeSpan> queryPool, GraphicsQueryIndex queryIndex, GraphicsPipelineStage stage)
+    {
+        EnsureBegin();
+        VkGraphicsTimestampQueryPool vkQueryPool = Util.AssertSubtype<GraphicsQueryPool<TimeSpan>, VkGraphicsTimestampQueryPool>(queryPool);
+
+        // Reset the query so it’s ready for a new timestamp.
+        vkCmdResetQueryPool(_cb, vkQueryPool, queryIndex.Value, 1);
+        
+        vkCmdWriteTimestamp(_cb, VulkanUtil.VdToVkPipelineStage(stage), vkQueryPool, queryIndex.Value);
+    }
+
     protected override void SetFramebufferCore(Framebuffer fb)
     {
         EnsureBegin();
