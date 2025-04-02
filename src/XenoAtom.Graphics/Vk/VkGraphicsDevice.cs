@@ -251,14 +251,7 @@ namespace XenoAtom.Graphics.Vk
             // ------------------
             // TODO: TEMP LIST of features that we are forcing/enabling
             // BEGIN
-            VkPhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR workgroupMemoryExplicitLayoutFeatures = new()
-            {
-                workgroupMemoryExplicitLayout = VK_TRUE,
-                workgroupMemoryExplicitLayoutScalarBlockLayout = VK_TRUE,
-                workgroupMemoryExplicitLayout8BitAccess = VK_TRUE,
-                workgroupMemoryExplicitLayout16BitAccess = VK_TRUE
-            };
-
+            VkPhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR workgroupMemoryExplicitLayoutFeatures = Adapter.PhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR;
             VkPhysicalDeviceSubgroupSizeControlFeatures subgroupSizeControlFeatures = new()
             {
                 subgroupSizeControl = VK_TRUE,

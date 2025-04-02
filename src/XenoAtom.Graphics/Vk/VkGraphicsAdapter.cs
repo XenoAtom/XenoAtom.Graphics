@@ -16,12 +16,13 @@ internal sealed unsafe class VkGraphicsAdapter : GraphicsAdapter
     public readonly VkPhysicalDeviceFeatures2 PhysicalDeviceFeatures2;
     public readonly VkPhysicalDeviceVulkan11Features PhysicalDeviceVulkan11Features;
     public readonly VkPhysicalDeviceVulkan12Features PhysicalDeviceVulkan12Features;
+    public readonly VkPhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR PhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR;
     public readonly VkPhysicalDeviceProperties PhysicalDeviceProperties;
     public readonly VkPhysicalDeviceVulkan11Properties PhysicalDeviceVulkan11Properties;
     public readonly VkPhysicalDeviceVulkan12Properties PhysicalDeviceVulkan12Properties;
     public readonly VkPhysicalDeviceSubgroupSizeControlFeatures PhysicalDeviceSubgroupSizeControlFeatures;
     public readonly VkPhysicalDeviceSubgroupSizeControlProperties PhysicalDeviceSubgroupSizeControlProperties;
-    
+
     //public readonly VkPhysicalDeviceVulkan13Properties PhysicalDeviceVulkan13Properties;
 
     public readonly VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
@@ -41,8 +42,10 @@ internal sealed unsafe class VkGraphicsAdapter : GraphicsAdapter
         VkPhysicalDeviceFeatures2 features2 = new();
         VkPhysicalDeviceVulkan11Features vulkan11Features = new();
         VkPhysicalDeviceVulkan12Features vulkan12Features = new();
+        VkPhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR workgroupMemoryExplicitLayoutFeatures = new();
         features2.pNext = &vulkan11Features;
         vulkan11Features.pNext = &vulkan12Features;
+        vulkan12Features.pNext = &workgroupMemoryExplicitLayoutFeatures;
 
         VkPhysicalDeviceSubgroupSizeControlFeatures subgroupSizeControlFeatures = new();
         vulkan12Features.pNext = &subgroupSizeControlFeatures;
@@ -51,7 +54,8 @@ internal sealed unsafe class VkGraphicsAdapter : GraphicsAdapter
         PhysicalDeviceSubgroupSizeControlFeatures = subgroupSizeControlFeatures;
         PhysicalDeviceVulkan11Features = vulkan11Features;
         PhysicalDeviceVulkan12Features = vulkan12Features;
-        
+        PhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR = workgroupMemoryExplicitLayoutFeatures;
+
         // Get the properties of the physical device
         VkPhysicalDeviceProperties2 deviceProps = new();
         VkPhysicalDeviceIDProperties idProps = new();
