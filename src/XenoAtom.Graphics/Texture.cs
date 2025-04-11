@@ -27,6 +27,14 @@ namespace XenoAtom.Graphics
         }
 
         /// <summary>
+        /// The handle to the platform specific texture handle.
+        /// </summary>
+        /// <remarks>
+        /// For Vulkan, this is a <c>VkImage</c>.
+        /// </remarks>
+        public abstract nint Handle { get; }
+
+        /// <summary>
         /// The format of individual texture elements stored in this instance.
         /// </summary>
         public abstract PixelFormat Format { get; }

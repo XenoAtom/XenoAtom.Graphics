@@ -35,6 +35,9 @@ namespace XenoAtom.Graphics
             _instanceLayers = new Lazy<ReadOnlyCollection<ReadOnlyMemoryUtf8>>(() => new ReadOnlyCollection<ReadOnlyMemoryUtf8>(VulkanUtil.EnumerateInstanceLayers()));
             _instanceExtensions = new ReadOnlyCollection<ReadOnlyMemoryUtf8>(VulkanUtil.EnumerateInstanceExtensions());
             _deviceExtensions = new Lazy<ReadOnlyCollection<ExtensionProperties>>(EnumerateDeviceExtensions);
+            GetInstanceProcAddr = (nint)gd._vkGetInstanceProcAddr.Pointer;
+            GetDeviceProcAddr = (nint)gd._vkGetDeviceProcAddr.Pointer;
+            ApiVersion = VkGraphicsManager.ApiVersion;
         }
 
         /// <summary>
@@ -61,6 +64,21 @@ namespace XenoAtom.Graphics
         /// Gets the queue family index of the graphics VkQueue.
         /// </summary>
         public uint MainQueueFamilyIndex => _gd.MainQueueFamilyIndex;
+
+        /// <summary>
+        /// Gets the VkInstanceProcAddr function pointer.
+        /// </summary>
+        public nint GetInstanceProcAddr { get; }
+
+        /// <summary>
+        /// Gets the VkDeviceProcAddr function pointer.
+        /// </summary>
+        public nint GetDeviceProcAddr { get; }
+        
+        /// <summary>
+        /// Gets the Vulkan API version used by the device.
+        /// </summary>
+        public uint ApiVersion { get; }
 
         ///// <summary>
         ///// Gets the driver name of the device. May be null.
@@ -97,22 +115,35 @@ namespace XenoAtom.Graphics
         }
 
         /// <summary>
-        /// Gets the underlying VkImage wrapped by the given XenoAtom.Graphics Texture. This method can not be used on Textures with
-        /// TextureUsage.Staging.
+        /// Gets the underlying VkImageLayout by the given XenoAtom.Graphics Texture.
         /// </summary>
-        /// <param name="texture">The Texture whose underlying VkImage will be returned.</param>
+        /// <param name="texture">The Texture whose underlying VkImageLayout will be returned.</param>
+        /// <param name="mipLevel">The miplevel to query.</param>
+        /// <param name="arrayLayer">The array layer to query.</param>
         /// <returns>The underlying VkImage for the given Texture.</returns>
-        public ulong GetVkImage(Texture texture)
+        /// <exception cref="ArgumentException">If the texture is staging.</exception>
+        public uint GetVkImageLayout(Texture texture, uint mipLevel = 0U, uint arrayLayer = 0U)
         {
             VkTexture vkTexture = Util.AssertSubtype<Texture, VkTexture>(texture);
-            if ((vkTexture.Usage & TextureUsage.Staging) != 0)
-            {
-                throw new GraphicsException(
-                    $"{nameof(GetVkImage)} cannot be used if the {nameof(Texture)} " +
-                    $"has {nameof(TextureUsage)}.{nameof(TextureUsage.Staging)}.");
-            }
+            if ((vkTexture.Usage & TextureUsage.Staging) != 0) throw new ArgumentException("Invalid staging texture. The texture cannot be a staging texture", nameof(texture));
+            return (uint)vkTexture.GetImageLayout(mipLevel, arrayLayer);
+        }
 
-            return (ulong)vkTexture.OptimalDeviceImage.Value.Handle;
+        /// <summary>
+        /// Gets the characteristics of the given Texture's underlying VkImage.
+        /// </summary>
+        /// <param name="texture">The texture to query.</param>
+        /// <param name="vkFormat">The VkFormat of the texture.</param>
+        /// <param name="vkImageUsageFlags">The VkImageUsageFlags of the texture.</param>
+        /// <param name="vkImageTiling">The VkImageTiling of the texture</param>
+        /// <exception cref="ArgumentException">If the texture is staging.</exception>
+        public void GetVkImageCharacteristics(Texture texture, out uint vkFormat, out uint vkImageUsageFlags, out uint vkImageTiling)
+        {
+            VkTexture vkTexture = Util.AssertSubtype<Texture, VkTexture>(texture);
+            if ((vkTexture.Usage & TextureUsage.Staging) != 0) throw new ArgumentException("Invalid staging texture. The texture cannot be a staging texture", nameof(texture));
+            vkFormat = (uint)vkTexture.VkFormat;
+            vkImageUsageFlags = (uint)vkTexture.VkImageUsageFlags;
+            vkImageTiling = (uint)vkTexture.VkImageTiling;
         }
 
         /// <summary>

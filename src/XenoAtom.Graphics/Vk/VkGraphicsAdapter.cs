@@ -45,9 +45,9 @@ internal sealed unsafe class VkGraphicsAdapter : GraphicsAdapter
         VkPhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR workgroupMemoryExplicitLayoutFeatures = new();
         features2.pNext = &vulkan11Features;
         vulkan11Features.pNext = &vulkan12Features;
-        vulkan12Features.pNext = &workgroupMemoryExplicitLayoutFeatures;
 
         VkPhysicalDeviceSubgroupSizeControlFeatures subgroupSizeControlFeatures = new();
+        subgroupSizeControlFeatures.pNext = &workgroupMemoryExplicitLayoutFeatures;
         vulkan12Features.pNext = &subgroupSizeControlFeatures;
         vkGetPhysicalDeviceFeatures2(physicalDevice, &features2);
         PhysicalDeviceFeatures2 = features2;

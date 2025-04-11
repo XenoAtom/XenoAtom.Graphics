@@ -52,6 +52,8 @@ internal sealed unsafe class VkGraphicsManager : GraphicsManager
 
     public override ReadOnlySpan<GraphicsAdapter> Adapters => _vkGraphicsAdapters;
 
+    public const uint ApiVersion = VK_API_VERSION_1_2;
+
     public VkGraphicsManager(in GraphicsManagerOptions options)
     {
         _thisGcHandle = GCHandle.Alloc(this);
@@ -78,7 +80,7 @@ internal sealed unsafe class VkGraphicsManager : GraphicsManager
         var instanceCI = new VkInstanceCreateInfo();
         var applicationInfo = new VkApplicationInfo
         {
-            apiVersion = VK_API_VERSION_1_2, // Requesting a minimum of Vulkan 1.2
+            apiVersion = ApiVersion, // Requesting a minimum of Vulkan 1.2
             applicationVersion = new VkVersion(1, 0, 0),
             engineVersion = new VkVersion(1, 0, 0),
             pApplicationName = (byte*)(vkOptions.ApplicationName.IsNull ? DefaultAppName : vkOptions.ApplicationName),

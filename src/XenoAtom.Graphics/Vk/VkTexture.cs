@@ -28,6 +28,8 @@ namespace XenoAtom.Graphics.Vk
 
         public override uint Depth => _depth;
 
+        public override IntPtr Handle => _optimalImage.Value.Handle;
+
         public override PixelFormat Format => _format;
 
         public override uint MipLevels { get; }
@@ -46,6 +48,11 @@ namespace XenoAtom.Graphics.Vk
         public VkDeviceMemoryChunkRange Memory => _memoryBlock;
 
         public VkFormat VkFormat { get; }
+
+        public VkImageUsageFlags VkImageUsageFlags { get; }
+
+        public VkImageTiling VkImageTiling => VK_IMAGE_TILING_OPTIMAL;
+
         public VkSampleCountFlags VkSampleCount { get; }
 
         private readonly VkImageLayout[] _imageLayouts = [];
@@ -74,14 +81,15 @@ namespace XenoAtom.Graphics.Vk
 
             if (!isStaging)
             {
+                this.VkImageUsageFlags = VkFormats.VdToVkTextureUsage(Usage);
                 VkImageCreateInfo imageCI = new VkImageCreateInfo
                 {
                     mipLevels = MipLevels,
                     arrayLayers = _actualImageArrayLayers,
                     imageType = VkFormats.VdToVkTextureType(Kind),
                     initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED,
-                    usage = VkFormats.VdToVkTextureUsage(Usage),
-                    tiling = isStaging ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL,
+                    usage = this.VkImageUsageFlags,
+                    tiling = VK_IMAGE_TILING_OPTIMAL,
                     format = VkFormat,
                     flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
                     extent = new(Width, Height, Depth),
@@ -131,7 +139,7 @@ namespace XenoAtom.Graphics.Vk
                 VkBufferCreateInfo bufferCI = new VkBufferCreateInfo();
                 bufferCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
                 bufferCI.size = stagingSize;
-
+                
                 //_gd.DebugLog(DebugLogLevel.Info, DebugLogKind.General, $"(StagingBuffer Texture) VkBuffer Created 0x{_stagingBuffer.Value.Handle:X16}");
 
                 var allocInfo = new VkDeviceMemoryAllocationCreateInfo

@@ -106,6 +106,8 @@ namespace XenoAtom.Graphics.Vk
         private UnsafeList<XenoAtom.Interop.vulkan.VkFence> _submittedFences = new();
 
         private readonly PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT;
+        public PFN_vkGetInstanceProcAddr _vkGetInstanceProcAddr;
+        public PFN_vkGetDeviceProcAddr _vkGetDeviceProcAddr;
 
         public new VkGraphicsAdapter Adapter => Unsafe.As<GraphicsAdapter, VkGraphicsAdapter>(ref Unsafe.AsRef(in base.Adapter));
 
@@ -219,6 +221,15 @@ namespace XenoAtom.Graphics.Vk
                         // Required for compute shaders threadgroup memory reinterpret cast.
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
                     }
+                    else if (extensionName == VK_KHR_SHADER_SUBGROUP_ROTATE_EXTENSION_NAME)
+                    {
+                        // Required by subgroup rotate
+                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                    }
+                    else if (extensionName == VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)
+                    {
+                        activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                    }
                 }
             }
 
@@ -251,16 +262,29 @@ namespace XenoAtom.Graphics.Vk
             // ------------------
             // TODO: TEMP LIST of features that we are forcing/enabling
             // BEGIN
+
+            VkPhysicalDeviceSynchronization2Features sync2Features = new()
+            {
+                synchronization2 = VK_TRUE
+            };
+
             VkPhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR workgroupMemoryExplicitLayoutFeatures = Adapter.PhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR;
+            workgroupMemoryExplicitLayoutFeatures.pNext = &sync2Features;
+
+            VkPhysicalDeviceShaderSubgroupRotateFeaturesKHR subgroupRotateFeatures = new()
+            {
+                shaderSubgroupRotate = true
+            };
+
             VkPhysicalDeviceSubgroupSizeControlFeatures subgroupSizeControlFeatures = new()
             {
+                pNext = &subgroupRotateFeatures,
                 subgroupSizeControl = VK_TRUE,
                 computeFullSubgroups = false // Not sure if this is needed
             };
-
             if (is_VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME_available)
             {
-                workgroupMemoryExplicitLayoutFeatures.pNext = &subgroupSizeControlFeatures;
+                sync2Features.pNext = &subgroupSizeControlFeatures;
             }
 
             VkPhysicalDeviceVulkan11Features vulkan11Features = new()
@@ -366,6 +390,9 @@ namespace XenoAtom.Graphics.Vk
             {
                 _sharedGraphicsCommandPools.Push(new SharedCommandPool(this, true));
             }
+
+            _vkGetInstanceProcAddr = vkGetInstanceProcAddr<PFN_vkGetInstanceProcAddr>(_vkInstance);
+            _vkGetDeviceProcAddr = vkGetDeviceProcAddr<PFN_vkGetDeviceProcAddr>(_vkDevice);
 
             _vulkanInfo = new GraphicsDeviceBackendInfoVulkan(this);
 
