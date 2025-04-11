@@ -34,7 +34,7 @@ namespace XenoAtom.Graphics.Tests
 
         public GraphicsDevice GD => _gd;
 
-        public TestContext TestContext { get; set; }
+        public TestContext? TestContext { get; set; }
         
         public GraphicsDeviceTestBase()
         {
@@ -51,7 +51,7 @@ namespace XenoAtom.Graphics.Tests
                 return;
             }
             _hasWarningOrErrorLogs = true;
-            TestContext.WriteLine($"[{debugLogLevel}] {kind} - {message}");
+            TestContext?.WriteLine($"[{debugLogLevel}] {kind} - {message}");
             _logBuilder.AppendLine($"[{debugLogLevel}] {kind} - {message}");
         }
 
