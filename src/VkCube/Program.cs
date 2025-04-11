@@ -31,10 +31,9 @@ internal class Program
                 // Update the background color if the theme changed
                 window.BackgroundColor = GetCurrentThemeColor();
             }
-            else if (evt.ChangeKind == FrameChangeKind.PositionAndSizeChanged || evt.ChangeKind == FrameChangeKind.Resized)
-            {
-                //helloCube.Draw();
-            }
+
+            // We always update the cube on frame events
+            helloCube.Draw();
         };
 
         mainWindow.Events.Keyboard += (_, evt) =>
