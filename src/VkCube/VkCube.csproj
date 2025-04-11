@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <PackageReference Include="NWindows" Version="0.1.0" />
-    <PackageReference Include="XenoAtom.ShaderCompiler.Build" Version="1.1.0" />
+    <PackageReference Include="XenoAtom.ShaderCompiler.Build" Version="1.2.2" />
   </ItemGroup>
 
   <ItemGroup>
