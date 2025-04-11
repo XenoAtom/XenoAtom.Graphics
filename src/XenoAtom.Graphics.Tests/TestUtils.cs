@@ -24,6 +24,7 @@ namespace XenoAtom.Graphics.Tests
         }
     }
 
+    [TestClass]
     public abstract class GraphicsDeviceTestBase : IDisposable
     {
         private readonly GraphicsDevice _gd;
@@ -34,8 +35,7 @@ namespace XenoAtom.Graphics.Tests
         public GraphicsDevice GD => _gd;
 
         public TestContext TestContext { get; set; }
-
-
+        
         public GraphicsDeviceTestBase()
         {
             _disposeCollector = new DisposeCollector();
