@@ -173,7 +173,10 @@ namespace XenoAtom.Graphics.Vk
             var activeExtensions = new nint[props.Length];
             uint activeExtensionCount = 0;
 
-            bool is_VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME_available = false;
+            bool subgroupSizeControlExtensionFound = false;
+            bool memoryExplicitLayoutExtensionFound = false;
+            bool subgroupRotateExtensionFound = false;
+            bool synchronization2ExtensionFound = false;
 
             fixed (VkExtensionProperties* properties = props)
             {
@@ -209,7 +212,7 @@ namespace XenoAtom.Graphics.Vk
                     {
                         // Compute Shader extensions (Vulkan 1.3)
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
-                        is_VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME_available = true;
+                        subgroupSizeControlExtensionFound = true;
                     }
                     else if (extensionName == VK_KHR_MAINTENANCE_4_EXTENSION_NAME)
                     {
@@ -220,15 +223,18 @@ namespace XenoAtom.Graphics.Vk
                     {
                         // Required for compute shaders threadgroup memory reinterpret cast.
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                        memoryExplicitLayoutExtensionFound = true;
                     }
                     else if (extensionName == VK_KHR_SHADER_SUBGROUP_ROTATE_EXTENSION_NAME)
                     {
                         // Required by subgroup rotate
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                        subgroupRotateExtensionFound = true;
                     }
                     else if (extensionName == VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)
                     {
                         activeExtensions[activeExtensionCount++] = (IntPtr)properties[property].extensionName;
+                        synchronization2ExtensionFound = true;
                     }
                 }
             }
@@ -262,40 +268,8 @@ namespace XenoAtom.Graphics.Vk
             // ------------------
             // TODO: TEMP LIST of features that we are forcing/enabling
             // BEGIN
-
-            VkPhysicalDeviceSynchronization2Features sync2Features = new()
-            {
-                synchronization2 = VK_TRUE
-            };
-
-            VkPhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR workgroupMemoryExplicitLayoutFeatures = Adapter.PhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR;
-            workgroupMemoryExplicitLayoutFeatures.pNext = &sync2Features;
-
-            VkPhysicalDeviceShaderSubgroupRotateFeaturesKHR subgroupRotateFeatures = new()
-            {
-                shaderSubgroupRotate = true
-            };
-
-            VkPhysicalDeviceSubgroupSizeControlFeatures subgroupSizeControlFeatures = new()
-            {
-                pNext = &subgroupRotateFeatures,
-                subgroupSizeControl = VK_TRUE,
-                computeFullSubgroups = false // Not sure if this is needed
-            };
-            if (is_VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME_available)
-            {
-                sync2Features.pNext = &subgroupSizeControlFeatures;
-            }
-
-            VkPhysicalDeviceVulkan11Features vulkan11Features = new()
-            {
-                pNext = &workgroupMemoryExplicitLayoutFeatures,
-                storageBuffer16BitAccess = Adapter.PhysicalDeviceVulkan11Features.storageBuffer16BitAccess
-            };
-            
             VkPhysicalDeviceVulkan12Features vulkan12Features = new()
             {
-                pNext = &vulkan11Features,
                 bufferDeviceAddress = Adapter.PhysicalDeviceVulkan12Features.bufferDeviceAddress,
                 shaderFloat16 = Adapter.PhysicalDeviceVulkan12Features.shaderFloat16,
                 shaderInt8 = Adapter.PhysicalDeviceVulkan12Features.shaderInt8,
@@ -304,6 +278,52 @@ namespace XenoAtom.Graphics.Vk
                 vulkanMemoryModelDeviceScope = Adapter.PhysicalDeviceVulkan12Features.vulkanMemoryModelDeviceScope,
                 hostQueryReset = Adapter.PhysicalDeviceVulkan12Features.hostQueryReset
             };
+            void* pCurrent = &vulkan12Features;
+            
+            VkPhysicalDeviceVulkan11Features vulkan11Features = new()
+            {
+                pNext = pCurrent,
+                storageBuffer16BitAccess = Adapter.PhysicalDeviceVulkan11Features.storageBuffer16BitAccess
+            };
+            pCurrent = &vulkan11Features;
+            
+            VkPhysicalDeviceSynchronization2Features sync2Features = new()
+            {
+                pNext = pCurrent,
+                synchronization2 = VK_TRUE
+            };
+            if (synchronization2ExtensionFound)
+            {
+                pCurrent = &sync2Features;
+            }
+            
+            VkPhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR workgroupMemoryExplicitLayoutFeatures = Adapter.PhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR;
+            workgroupMemoryExplicitLayoutFeatures.pNext = pCurrent;
+            if (memoryExplicitLayoutExtensionFound)
+            {
+                pCurrent = &workgroupMemoryExplicitLayoutFeatures;
+            }
+            
+            VkPhysicalDeviceShaderSubgroupRotateFeaturesKHR subgroupRotateFeatures = new()
+            {
+                pNext = pCurrent,
+                shaderSubgroupRotate = true
+            };
+            if (subgroupRotateExtensionFound)
+            {
+                pCurrent = &subgroupRotateFeatures;
+            }
+
+            VkPhysicalDeviceSubgroupSizeControlFeatures subgroupSizeControlFeatures = new()
+            {
+                pNext = pCurrent,
+                subgroupSizeControl = VK_TRUE,
+                computeFullSubgroups = false // Not sure if this is needed
+            };
+            if (subgroupSizeControlExtensionFound)
+            {
+                pCurrent = &subgroupSizeControlFeatures;
+            }
             
             //VkPhysicalDeviceVulkan13Features vulkan13Features = new()
             //{
@@ -321,7 +341,7 @@ namespace XenoAtom.Graphics.Vk
             {
                 deviceCreateInfo.enabledExtensionCount = activeExtensionCount;
                 deviceCreateInfo.ppEnabledExtensionNames = (byte**)activeExtensionsPtr;
-                deviceCreateInfo.pNext = &vulkan12Features;
+                deviceCreateInfo.pNext = pCurrent;
 
                 vkCreateDevice(_vkPhysicalDevice, deviceCreateInfo, null, out _vkDevice)
                     .VkCheck("Unable to create device.");
