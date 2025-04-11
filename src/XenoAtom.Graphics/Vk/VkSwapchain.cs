@@ -21,10 +21,10 @@ namespace XenoAtom.Graphics.Vk
         private bool _syncToVBlank;
         private readonly SwapchainSource _swapchainSource;
         private readonly bool _colorSrgb;
+        private readonly bool _preferBgraOrder;
         private bool? _newSyncToVBlank;
         private uint _currentImageIndex;
-
-
+        
         public override Framebuffer Framebuffer => _framebuffer;
         public override bool SyncToVerticalBlank
         {
@@ -76,6 +76,7 @@ namespace XenoAtom.Graphics.Vk
             _syncToVBlank = description.SyncToVerticalBlank;
             _swapchainSource = description.Source;
             _colorSrgb = description.ColorSrgb;
+            _preferBgraOrder = description.PreferBgraOrder;
 
             if (existingSurface == default)
             {
@@ -187,8 +188,8 @@ namespace XenoAtom.Graphics.Vk
             CheckResult(result);
 
             VkFormat desiredFormat = _colorSrgb
-                ? VK_FORMAT_B8G8R8A8_SRGB
-                : VK_FORMAT_B8G8R8A8_UNORM;
+                ? _preferBgraOrder ? VK_FORMAT_B8G8R8A8_SRGB : VkFormat.VK_FORMAT_R8G8B8A8_SRGB
+                : _preferBgraOrder ? VK_FORMAT_B8G8R8A8_UNORM : VkFormat.VK_FORMAT_R8G8B8A8_UNORM;
 
             VkSurfaceFormatKHR surfaceFormat = new VkSurfaceFormatKHR();
             if (formats.Length == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
@@ -207,7 +208,7 @@ namespace XenoAtom.Graphics.Vk
                 }
                 if (surfaceFormat.format == VK_FORMAT_UNDEFINED)
                 {
-                    if (_colorSrgb && surfaceFormat.format != VK_FORMAT_R8G8B8A8_SRGB)
+                    if (_colorSrgb)
                     {
                         throw new GraphicsException($"Unable to create an sRGB Swapchain for this surface.");
                     }
